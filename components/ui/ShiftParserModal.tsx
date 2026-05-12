@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createCalendarEvent } from '@/lib/calendar';
+import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import type { ParsedShift } from '@/app/api/parse-shift/route';
 
 type ShiftEntry = ParsedShift & { selected: boolean; key: string };
@@ -13,11 +14,6 @@ type Props = {
   onSaved: () => void;
 };
 
-function formatDisplayDate(iso: string): string {
-  const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-}
-
 function calcDuration(start: string, end: string): string {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
@@ -28,6 +24,7 @@ function calcDuration(start: string, end: string): string {
 }
 
 export default function ShiftParserModal({ visible, userId, onClose, onSaved }: Props) {
+  const { t, locale } = useLocale();
   const [step, setStep]         = useState<'input' | 'review'>('input');
   const [text, setText]         = useState('');
   const [shifts, setShifts]     = useState<ShiftEntry[]>([]);
@@ -54,8 +51,13 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
 
   if (!visible) return null;
 
+  function formatDisplayDate(iso: string): string {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString(LOCALE_DATE_TAG[locale], { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
   async function handleParse() {
-    if (!text.trim()) { setError('Paste your schedule text first.'); return; }
+    if (!text.trim()) { setError(t.parser_err_empty); return; }
     setError('');
     setParsing(true);
     try {
@@ -66,12 +68,12 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      if (!data.shifts?.length) { setError('No shifts detected. Try: "Mon 18h-23h" or "Wednesday 19:00-02:00"'); return; }
+      if (!data.shifts?.length) { setError(t.parser_err_none); return; }
       setShifts(data.shifts.map((s: ParsedShift, i: number) => ({ ...s, selected: true, key: `${i}` })));
       setAiPowered(data.aiPowered ?? false);
       setStep('review');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Parse failed.');
+      setError(err instanceof Error ? err.message : t.parser_err_failed);
     } finally {
       setParsing(false);
     }
@@ -94,7 +96,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
         const endISO = new Date(endDate).toISOString();
         return createCalendarEvent({
           user_id: userId,
-          title: s.title || 'Shift',
+          title: s.title || t.parser_shift_default,
           type: 'shift',
           start_at: startISO,
           end_at: endISO,
@@ -105,7 +107,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed.');
+      setError(err instanceof Error ? err.message : t.parser_err_save);
     } finally {
       setSaving(false);
     }
@@ -118,6 +120,10 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
   };
+
+  const headerSubtitle = step === 'input'
+    ? (aiPowered ? t.parser_ai_powered : t.parser_paste_schedule)
+    : `${shifts.length} ${shifts.length !== 1 ? t.parser_shifts_noun : t.parser_shift_noun} ${t.parser_detected}${aiPowered ? ' · AI' : ''}`;
 
   return (
     <div
@@ -136,12 +142,10 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
         >
           <div>
             <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-              🕐 Import Shifts
+              {t.parser_title}
             </h2>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {step === 'input'
-                ? (aiPowered ? '✨ AI-powered parsing' : 'Paste your schedule text')
-                : `${shifts.length} shift${shifts.length !== 1 ? 's' : ''} detected${aiPowered ? ' · AI' : ''}`}
+              {headerSubtitle}
             </p>
           </div>
           <button
@@ -158,7 +162,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
               className="rounded-xl px-4 py-3 text-xs"
               style={{ background: 'var(--primary-muted)', border: '1px solid var(--primary-muted)', color: 'var(--text-secondary)' }}
             >
-              <p className="font-semibold mb-1" style={{ color: 'var(--primary)' }}>Supported formats:</p>
+              <p className="font-semibold mb-1" style={{ color: 'var(--primary)' }}>{t.parser_formats}</p>
               <p>Mon 18h-23h &nbsp;·&nbsp; Wednesday 19:00-02:00</p>
               <p>Sat 20h30-23h00 &nbsp;·&nbsp; 15/05 18h-23h</p>
               <p>Mon, Wed, Fri 20h-23h</p>
@@ -184,7 +188,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
               className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all"
               style={{ background: parsing ? 'var(--text-muted)' : 'var(--secondary)', cursor: parsing ? 'not-allowed' : 'pointer' }}
             >
-              {parsing ? 'Parsing…' : '🔍 Parse shifts'}
+              {parsing ? t.parser_parsing : t.parser_parse_btn}
             </button>
           </div>
         )}
@@ -193,7 +197,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
         {step === 'review' && (
           <div className="px-6 py-5 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Select the shifts to import. Uncheck any you want to skip.
+              {t.parser_select}
             </p>
 
             <div className="flex flex-col gap-2">
@@ -259,7 +263,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
                 className="px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
                 style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}
               >
-                ← Back
+                {t.habit_back}
               </button>
               <button
                 onClick={handleSave}
@@ -270,7 +274,9 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
                   cursor: saving || selectedCount === 0 ? 'not-allowed' : 'pointer',
                 }}
               >
-                {saving ? 'Saving…' : `Save ${selectedCount} shift${selectedCount !== 1 ? 's' : ''}`}
+                {saving
+                  ? t.form_saving
+                  : `${t.parser_save} ${selectedCount} ${selectedCount !== 1 ? t.parser_shifts_noun : t.parser_shift_noun}`}
               </button>
             </div>
           </div>

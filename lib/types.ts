@@ -94,6 +94,26 @@ export type DisciplineScore = {
   completionRate: number;
 };
 
+// ─── Goals ────────────────────────────────────────────────────────────────────
+
+export type Goal = {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  deadline?: string;   // YYYY-MM-DD
+  color: string;
+  icon: string;
+  created_at: string;
+};
+
+export type HabitWithRate = Habit & { completionRate: number };
+
+export type GoalWithHabits = Goal & {
+  habits: HabitWithRate[];
+  completionRate: number;  // 0–100, average across linked habits
+};
+
 // ─── Form Values ──────────────────────────────────────────────────────────────
 
 export type HabitFormValues = {

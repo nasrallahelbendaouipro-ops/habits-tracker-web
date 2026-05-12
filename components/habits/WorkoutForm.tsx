@@ -1,13 +1,14 @@
 'use client';
 
+import { useLocale } from '@/lib/i18n';
 import type { WorkoutMetadata } from '@/lib/types';
 
 type Props = { value: WorkoutMetadata; onChange: (v: WorkoutMetadata) => void };
 
 const Field = ({
-  label, name, value, onChange, unit, min = 0,
+  label, value, onChange, unit, min = 0,
 }: {
-  label: string; name: keyof WorkoutMetadata; value: number;
+  label: string; value: number;
   onChange: (v: number) => void; unit?: string; min?: number;
 }) => (
   <div>
@@ -28,14 +29,15 @@ const Field = ({
 );
 
 export default function WorkoutForm({ value, onChange }: Props) {
+  const { t } = useLocale();
   const set = (k: keyof WorkoutMetadata) => (v: number) => onChange({ ...value, [k]: v });
   return (
     <div className="grid grid-cols-2 gap-3">
-      <Field label="Sets" name="sets" value={value.sets} onChange={set('sets')} min={1} />
-      <Field label="Reps" name="reps" value={value.reps} onChange={set('reps')} min={1} />
-      <Field label="Weight" name="weight" value={value.weight} onChange={set('weight')} unit="kg" />
-      <Field label="Rest time" name="rest_time" value={value.rest_time} onChange={set('rest_time')} unit="sec" />
-      <Field label="Duration" name="duration_min" value={value.duration_min} onChange={set('duration_min')} unit="min" />
+      <Field label={t.workout_sets}     value={value.sets}         onChange={set('sets')}         min={1} />
+      <Field label={t.workout_reps}     value={value.reps}         onChange={set('reps')}         min={1} />
+      <Field label={t.workout_weight}   value={value.weight}       onChange={set('weight')}       unit="kg" />
+      <Field label={t.workout_rest_time} value={value.rest_time}   onChange={set('rest_time')}    unit="sec" />
+      <Field label={t.workout_duration} value={value.duration_min} onChange={set('duration_min')} unit="min" />
     </div>
   );
 }

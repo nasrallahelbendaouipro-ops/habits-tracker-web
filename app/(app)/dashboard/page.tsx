@@ -1,45 +1,69 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { fetchHabitsWithStatus, toggleHabit, createHabit } from '@/lib/habits';
-import { getGreeting, formatDate } from '@/lib/utils';
+import { fetchGoals } from '@/lib/goals';
+import { TODAY, toISODate } from '@/lib/utils';
+import { useLocale, getGreeting, formatHabitsLabel, LOCALE_DATE_TAG } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
-import type { HabitWithStreak, HabitFormValues } from '@/lib/types';
+import type { HabitWithStreak, HabitFormValues, GoalWithHabits } from '@/lib/types';
 import GlassCard from '@/components/ui/GlassCard';
 import HabitModal from '@/components/habits/HabitModal';
 
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function shiftDate(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return toISODate(d);
+}
+
 // ─── Week Row ──────────────────────────────────────────────────────────────────
 
-function WeekRow() {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const today = new Date();
-  const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay());
+function WeekRow({ selectedDate, onSelect }: { selectedDate: string; onSelect: (d: string) => void }) {
+  const { locale } = useLocale();
+  const sel = new Date(selectedDate + 'T00:00:00');
+  const startOfWeek = new Date(sel);
+  startOfWeek.setDate(sel.getDate() - sel.getDay());
 
   return (
     <div className="flex gap-1.5 justify-between">
-      {days.map((d, i) => {
+      {Array.from({ length: 7 }, (_, i) => {
         const date = new Date(startOfWeek);
         date.setDate(startOfWeek.getDate() + i);
-        const isToday = date.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
-        const isPast = date < today && !isToday;
+        const dateS = toISODate(date);
+        const isSelected = dateS === selectedDate;
+        const isToday = dateS === TODAY;
+        const dayLabel = date.toLocaleDateString(
+          locale === 'en' ? 'en-US' : locale === 'fr' ? 'fr-FR' : 'ar-SA',
+          { weekday: 'short' }
+        );
         return (
-          <div key={d} className="flex flex-col items-center gap-1 flex-1">
-            <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              {d}
+          <button
+            key={i}
+            onClick={() => onSelect(dateS)}
+            className="flex flex-col items-center gap-1 flex-1"
+          >
+            <span
+              className="text-[10px] font-medium uppercase tracking-wide"
+              style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }}
+            >
+              {dayLabel}
             </span>
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all"
               style={{
-                background: isToday ? 'var(--primary)' : 'transparent',
-                color: isToday ? 'white' : isPast ? 'var(--text-secondary)' : 'var(--text-disabled)',
-                border: isToday ? 'none' : '1px solid var(--border)',
+                background: isSelected ? 'var(--primary)' : 'transparent',
+                color: isSelected ? 'white' : isToday ? 'var(--primary)' : 'var(--text-secondary)',
+                border: isSelected ? 'none' : isToday ? '1px solid var(--primary)' : '1px solid var(--border)',
               }}
             >
               {date.getDate()}
             </div>
-          </div>
+          </button>
         );
       })}
     </div>
@@ -48,13 +72,13 @@ function WeekRow() {
 
 // ─── Progress Bar ──────────────────────────────────────────────────────────────
 
-function ProgressBar({ completed, total }: { completed: number; total: number }) {
+function ProgressBar({ completed, total, label }: { completed: number; total: number; label: string }) {
   const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-          Today&apos;s progress
+          {label}
         </span>
         <span className="text-sm font-bold" style={{ color: 'var(--primary)' }}>
           {completed}/{total} · {pct}%
@@ -153,20 +177,23 @@ function HabitCard({
 
 // ─── Empty State ───────────────────────────────────────────────────────────────
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState({ onAdd, noHabitsLabel, noHabitsDesc, addHabitLabel }: {
+  onAdd: () => void;
+  noHabitsLabel: string;
+  noHabitsDesc: string;
+  addHabitLabel: string;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="text-5xl mb-4">🌱</div>
-      <p className="font-semibold text-lg mb-1" style={{ color: 'var(--text-primary)' }}>No habits yet</p>
-      <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-        Start building your life operating system — add your first habit.
-      </p>
+      <p className="font-semibold text-lg mb-1" style={{ color: 'var(--text-primary)' }}>{noHabitsLabel}</p>
+      <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>{noHabitsDesc}</p>
       <button
         onClick={onAdd}
         className="px-5 py-2.5 rounded-xl font-semibold text-sm text-white transition-all"
         style={{ background: 'var(--primary)' }}
       >
-        + Add habit
+        {addHabitLabel}
       </button>
     </div>
   );
@@ -176,10 +203,13 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 export default function DashboardPage() {
   const { toggleTheme, isDark } = useTheme();
+  const { t, locale } = useLocale();
   const [userId, setUserId] = useState<string | null>(null);
   const [habits, setHabits] = useState<HabitWithStreak[]>([]);
+  const [goals, setGoals] = useState<GoalWithHabits[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(TODAY);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -191,12 +221,16 @@ export default function DashboardPage() {
     if (!userId) return;
     setLoading(true);
     try {
-      const data = await fetchHabitsWithStatus(userId);
-      setHabits(data);
+      const [habitsData, goalsData] = await Promise.all([
+        fetchHabitsWithStatus(userId, selectedDate),
+        fetchGoals(userId),
+      ]);
+      setHabits(habitsData);
+      setGoals(goalsData);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, selectedDate]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -215,28 +249,56 @@ export default function DashboardPage() {
       )
     );
     try {
-      await toggleHabit(habit.id, userId!, habit.completedToday);
+      await toggleHabit(habit.id, userId!, habit.completedToday, selectedDate);
     } catch {
       load();
     }
   };
 
   const completed = habits.filter(h => h.completedToday).length;
-  const today = new Date();
+  const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+  const isToday = selectedDate === TODAY;
+  const habitsLabel = formatHabitsLabel(locale, selectedDateObj, isToday);
 
   return (
     <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <p className="text-sm font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>
-            {formatDate(today)}
-          </p>
+          {/* Day navigation */}
+          <div className="flex items-center gap-1 mb-0.5">
+            <button
+              onClick={() => setSelectedDate(d => shiftDate(d, -1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center transition-all"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+              {isToday ? `${t.today} · ` : ''}{selectedDateObj.toLocaleDateString(LOCALE_DATE_TAG[locale], { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            <button
+              onClick={() => setSelectedDate(d => shiftDate(d, 1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center transition-all"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {getGreeting()} 👋
+            {isToday ? `${getGreeting(locale)} 👋` : habitsLabel}
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          {!isToday && (
+            <button
+              onClick={() => setSelectedDate(TODAY)}
+              className="px-3 py-1.5 rounded-xl font-medium text-xs transition-all"
+              style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid var(--primary-muted)' }}
+            >
+              {t.today}
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-base transition-all"
@@ -250,20 +312,20 @@ export default function DashboardPage() {
             className="px-4 py-2 rounded-xl font-semibold text-sm text-white transition-all"
             style={{ background: 'var(--primary)', boxShadow: 'var(--shadow-glow)' }}
           >
-            + Add
+            {t.dashboard_add}
           </button>
         </div>
       </div>
 
       {/* Week Row */}
       <GlassCard className="mb-4">
-        <WeekRow />
+        <WeekRow selectedDate={selectedDate} onSelect={setSelectedDate} />
       </GlassCard>
 
       {/* Progress */}
       {habits.length > 0 && (
         <GlassCard className="mb-6">
-          <ProgressBar completed={completed} total={habits.length} />
+          <ProgressBar completed={completed} total={habits.length} label={t.dashboard_progress} />
         </GlassCard>
       )}
 
@@ -271,9 +333,9 @@ export default function DashboardPage() {
       {habits.length > 0 && (
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: 'Completed', value: `${completed}/${habits.length}`, icon: '✅' },
-            { label: 'Best streak', value: `${Math.max(...habits.map(h => h.streak), 0)}d`, icon: '🔥' },
-            { label: 'Total habits', value: habits.length, icon: '📋' },
+            { label: t.dashboard_completed, value: `${completed}/${habits.length}`, icon: '✅' },
+            { label: t.dashboard_best_streak, value: `${Math.max(...habits.map(h => h.streak), 0)}d`, icon: '🔥' },
+            { label: t.dashboard_total, value: habits.length, icon: '📋' },
           ].map(({ label, value, icon }) => (
             <GlassCard key={label} style={{ padding: '14px', textAlign: 'center' }}>
               <div className="text-xl mb-1">{icon}</div>
@@ -288,7 +350,7 @@ export default function DashboardPage() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-            Today&apos;s habits
+            {habitsLabel}
           </h2>
           {habits.length > 0 && (
             <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}>
@@ -308,7 +370,12 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : habits.length === 0 ? (
-          <EmptyState onAdd={() => setShowAdd(true)} />
+          <EmptyState
+            onAdd={() => setShowAdd(true)}
+            noHabitsLabel={t.dashboard_no_habits}
+            noHabitsDesc={t.dashboard_no_habits_desc}
+            addHabitLabel={t.dashboard_add_habit}
+          />
         ) : (
           <div className="flex flex-col gap-2">
             {habits.map(habit => (
@@ -317,6 +384,63 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Goals Section */}
+      {goals.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+              {t.goals_title}
+            </h2>
+            <Link
+              href="/goals"
+              className="text-xs font-semibold"
+              style={{ color: 'var(--primary)' }}
+            >
+              {t.goals_see_all}
+            </Link>
+          </div>
+          <div className="flex flex-col gap-3">
+            {goals.map(goal => (
+              <Link
+                key={goal.id}
+                href="/goals"
+                className="block rounded-2xl overflow-hidden transition-all"
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderLeft: `4px solid ${goal.color}`,
+                }}
+              >
+                <div className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg">{goal.icon}</span>
+                      <span className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                        {goal.title}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold flex-shrink-0" style={{ color: goal.color }}>
+                      {goal.completionRate}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-elevated)' }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${goal.completionRate}%`, background: goal.color }}
+                    />
+                  </div>
+                  {goal.habits.length > 0 && (
+                    <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
+                      {goal.habits.map(h => h.icon).join(' ')} {goal.habits.length} {goal.habits.length === 1 ? 'habit' : 'habits'}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <HabitModal
         mode="add"

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { HABIT_ICONS, HABIT_COLORS } from '@/lib/habits';
+import { useLocale } from '@/lib/i18n';
 import type { HabitFormValues, HabitType, HabitMetadata } from '@/lib/types';
 import TypePicker from './TypePicker';
 import WorkoutForm, { defaultWorkout } from './WorkoutForm';
@@ -24,37 +25,58 @@ type Props = {
   submitLabel: string;
 };
 
-export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
-  const [name, setName]       = useState(initial?.name ?? '');
-  const [icon, setIcon]       = useState(initial?.icon ?? '🎯');
-  const [color, setColor]     = useState(initial?.color ?? '#6C63FF');
-  const [type, setType]       = useState<HabitType>(initial?.type ?? 'simple');
-  const [metadata, setMeta]   = useState<HabitMetadata>(initial?.metadata ?? {});
-  const [error, setError]     = useState('');
-  const [loading, setLoading] = useState(false);
+// Mon=1 … Sun=7 (matches FullCalendar firstDay=1 convention)
+const WEEK_DAYS = [1, 2, 3, 4, 5, 6, 7];
 
-  function handleTypeChange(t: HabitType) {
-    setType(t);
-    setMeta(prev => {
-      // keep existing metadata if same type, reset otherwise
-      if (initial?.type === t) return initial?.metadata ?? DEFAULT_METADATA[t];
-      return DEFAULT_METADATA[t];
+function getDayLabel(dow: number, locale: string): string {
+  // dow: 1=Mon … 7=Sun → get a representative date for that weekday
+  const base = new Date('2024-01-01'); // Monday
+  base.setDate(base.getDate() + (dow - 1));
+  const tag = locale === 'fr' ? 'fr-FR' : locale === 'ar' ? 'ar-SA' : 'en-US';
+  return base.toLocaleDateString(tag, { weekday: 'short' });
+}
+
+export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
+  const { t, locale } = useLocale();
+  const [name, setName]           = useState(initial?.name ?? '');
+  const [icon, setIcon]           = useState(initial?.icon ?? '🎯');
+  const [color, setColor]         = useState(initial?.color ?? '#6C63FF');
+  const [type, setType]           = useState<HabitType>(initial?.type ?? 'simple');
+  const [metadata, setMeta]       = useState<HabitMetadata>(initial?.metadata ?? {});
+  const [targetDays, setTargetDays] = useState<number[]>(initial?.target_days ?? []);
+  const [error, setError]         = useState('');
+  const [loading, setLoading]     = useState(false);
+
+  const isSpecific = targetDays.length > 0;
+
+  function toggleDay(dow: number) {
+    setTargetDays(prev =>
+      prev.includes(dow) ? prev.filter(d => d !== dow) : [...prev, dow]
+    );
+  }
+
+  function handleTypeChange(newType: HabitType) {
+    setType(newType);
+    setMeta(() => {
+      if (initial?.type === newType) return initial?.metadata ?? DEFAULT_METADATA[newType];
+      return DEFAULT_METADATA[newType];
     });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { setError('Habit name is required.'); return; }
+    if (!name.trim()) { setError(t.form_err_name); return; }
     setError('');
     setLoading(true);
     try {
       await onSubmit({
         name: name.trim(), icon, color, type,
-        frequency: 'daily', target_days: [],
+        frequency: targetDays.length > 0 ? 'weekly' : 'daily',
+        target_days: targetDays,
         metadata,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      setError(err instanceof Error ? err.message : t.form_err_generic);
     } finally {
       setLoading(false);
     }
@@ -74,13 +96,13 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
       {/* Name */}
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          Name
+          {t.form_name}
         </label>
         <input
           type="text"
           value={name}
           onChange={e => { setName(e.target.value); setError(''); }}
-          placeholder="e.g. Morning run"
+          placeholder={t.form_name_placeholder}
           maxLength={40}
           className="w-full px-4 py-3 rounded-xl text-sm outline-none"
           style={inputBase}
@@ -92,7 +114,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
       {/* Icon picker */}
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          Icon
+          {t.form_icon}
         </label>
         <div className="flex flex-wrap gap-2">
           {HABIT_ICONS.map(ic => (
@@ -115,7 +137,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
       {/* Color picker */}
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          Color
+          {t.form_color}
         </label>
         <div className="flex flex-wrap gap-2">
           {HABIT_COLORS.map(c => (
@@ -135,11 +157,66 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         </div>
       </div>
 
+      {/* Schedule */}
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+          {t.sched_label}
+        </label>
+        <div className="flex gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => setTargetDays([])}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+            style={{
+              background: !isSpecific ? 'var(--primary)' : 'var(--surface-elevated)',
+              color: !isSpecific ? '#fff' : 'var(--text-secondary)',
+              border: `1px solid ${!isSpecific ? 'var(--primary)' : 'var(--border)'}`,
+            }}
+          >
+            {t.sched_everyday}
+          </button>
+          <button
+            type="button"
+            onClick={() => { if (!isSpecific) setTargetDays([1, 2, 3, 4, 5]); }}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+            style={{
+              background: isSpecific ? 'var(--primary)' : 'var(--surface-elevated)',
+              color: isSpecific ? '#fff' : 'var(--text-secondary)',
+              border: `1px solid ${isSpecific ? 'var(--primary)' : 'var(--border)'}`,
+            }}
+          >
+            {t.sched_specific}
+          </button>
+        </div>
+        {isSpecific && (
+          <div className="flex gap-1.5 flex-wrap">
+            {WEEK_DAYS.map(dow => {
+              const active = targetDays.includes(dow);
+              return (
+                <button
+                  key={dow}
+                  type="button"
+                  onClick={() => toggleDay(dow)}
+                  className="w-9 h-9 rounded-xl text-xs font-bold transition-all"
+                  style={{
+                    background: active ? color : 'var(--surface-elevated)',
+                    color: active ? '#fff' : 'var(--text-secondary)',
+                    border: `2px solid ${active ? color : 'var(--border)'}`,
+                  }}
+                >
+                  {getDayLabel(dow, locale)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Type-specific fields */}
       {type !== 'simple' && (
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-            Details
+            {t.form_details}
           </label>
           {type === 'workout' && (
             <WorkoutForm value={metadata as WorkoutMetadata} onChange={setMeta} />
@@ -159,7 +236,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
       {/* Preview */}
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          Preview
+          {t.form_preview}
         </label>
         <div
           className="flex items-center gap-3 px-4 py-3 rounded-xl"
@@ -172,7 +249,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
             {icon}
           </div>
           <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-            {name || 'Habit name'}
+            {name || t.form_habit_name_placeholder}
           </p>
         </div>
       </div>
@@ -187,7 +264,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all"
         style={{ background: loading ? 'var(--text-muted)' : color, cursor: loading ? 'not-allowed' : 'pointer' }}
       >
-        {loading ? 'Saving…' : submitLabel}
+        {loading ? t.form_saving : submitLabel}
       </button>
     </form>
   );

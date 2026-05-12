@@ -4,7 +4,7 @@ import { TODAY, dateStr } from '@/lib/utils';
 
 // ─── Read ──────────────────────────────────────────────────────────────────────
 
-export async function fetchHabitsWithStatus(userId: string): Promise<HabitWithStreak[]> {
+export async function fetchHabitsWithStatus(userId: string, forDate: string = TODAY): Promise<HabitWithStreak[]> {
   const supabase = createClient();
   const [{ data: habits, error: he }, { data: logs, error: le }] = await Promise.all([
     supabase.from('habits').select('*').eq('user_id', userId).order('created_at'),
@@ -20,14 +20,22 @@ export async function fetchHabitsWithStatus(userId: string): Promise<HabitWithSt
     logMap.get(log.habit_id)!.add(log.completed_at);
   }
 
-  return habits.map(h => {
-    const dates = logMap.get(h.id) ?? new Set<string>();
-    const completedToday = dates.has(TODAY);
-    let streak = 0;
-    let day = completedToday ? 0 : 1;
-    while (dates.has(dateStr(day))) { streak++; day++; }
-    return { ...h, streak, completedToday } as HabitWithStreak;
-  });
+  const forDateObj = new Date(forDate + 'T00:00:00');
+  const dow = forDateObj.getDay() === 0 ? 7 : forDateObj.getDay(); // Mon=1…Sun=7
+
+  return habits
+    .filter(h => {
+      if (h.frequency === 'daily' || !h.target_days?.length) return true;
+      return h.target_days.includes(dow);
+    })
+    .map(h => {
+      const dates = logMap.get(h.id) ?? new Set<string>();
+      const completedToday = dates.has(forDate);
+      let streak = 0;
+      let day = completedToday ? 0 : 1;
+      while (dates.has(dateStr(day))) { streak++; day++; }
+      return { ...h, streak, completedToday } as HabitWithStreak;
+    });
 }
 
 export async function fetchWeeklyLogs(userId: string, habitId?: string): Promise<HabitLog[]> {
@@ -45,7 +53,7 @@ export async function fetchWeeklyLogs(userId: string, habitId?: string): Promise
 
 // ─── Write ─────────────────────────────────────────────────────────────────────
 
-export async function toggleHabit(habitId: string, userId: string, completedToday: boolean) {
+export async function toggleHabit(habitId: string, userId: string, completedToday: boolean, date: string = TODAY) {
   const supabase = createClient();
   if (completedToday) {
     const { error } = await supabase
@@ -53,12 +61,12 @@ export async function toggleHabit(habitId: string, userId: string, completedToda
       .delete()
       .eq('habit_id', habitId)
       .eq('user_id', userId)
-      .eq('completed_at', TODAY);
+      .eq('completed_at', date);
     if (error) throw error;
   } else {
     const { error } = await supabase
       .from('habit_logs')
-      .insert({ habit_id: habitId, user_id: userId, completed_at: TODAY });
+      .insert({ habit_id: habitId, user_id: userId, completed_at: date });
     if (error) throw error;
   }
 }
