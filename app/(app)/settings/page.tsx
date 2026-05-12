@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/lib/theme';
+import { useLocale, LOCALE_LABELS, type Locale } from '@/lib/i18n';
 import type { User } from '@supabase/supabase-js';
 import GlassCard from '@/components/ui/GlassCard';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const { t, locale, setLocale } = useLocale();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function SettingsPage() {
 
   return (
     <div className="animate-fade-in max-w-lg">
-      <h1 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>Settings</h1>
+      <h1 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>{t.settings_title}</h1>
 
       {/* Profile Card */}
       <GlassCard className="mb-4 flex items-center gap-4">
@@ -38,7 +40,7 @@ export default function SettingsPage() {
         <div>
           <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{user?.email}</p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Member since {user ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '…'}
+            {t.settings_member_since} {user ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '…'}
           </p>
         </div>
       </GlassCard>
@@ -46,7 +48,7 @@ export default function SettingsPage() {
       {/* Appearance */}
       <GlassCard className="mb-4">
         <p className="text-xs uppercase tracking-wide font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-          Appearance
+          {t.settings_appearance}
         </p>
         <button
           onClick={toggleTheme}
@@ -55,7 +57,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <span>{theme === 'dark' ? '🌙' : '☀️'}</span>
-            <span>{theme === 'dark' ? 'Dark mode' : 'Light mode'}</span>
+            <span>{theme === 'dark' ? t.settings_dark_mode : t.settings_light_mode}</span>
           </div>
           <div
             className="w-10 h-5 rounded-full relative transition-all"
@@ -69,29 +71,56 @@ export default function SettingsPage() {
         </button>
       </GlassCard>
 
+      {/* Language */}
+      <GlassCard className="mb-4">
+        <p className="text-xs uppercase tracking-wide font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
+          {t.settings_language}
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          {(Object.keys(LOCALE_LABELS) as Locale[]).map(l => (
+            <button
+              key={l}
+              onClick={() => setLocale(l)}
+              className="flex-1 min-w-[100px] py-2.5 px-3 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: locale === l ? 'var(--primary-muted)' : 'var(--surface-elevated)',
+                border: `1px solid ${locale === l ? 'var(--primary)' : 'var(--border)'}`,
+                color: locale === l ? 'var(--primary)' : 'var(--text-secondary)',
+              }}
+            >
+              {LOCALE_LABELS[l]}
+            </button>
+          ))}
+        </div>
+      </GlassCard>
+
       {/* Integrations */}
       <GlassCard className="mb-4">
         <p className="text-xs uppercase tracking-wide font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-          Integrations
+          {t.settings_integrations}
         </p>
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center gap-3">
             <span>📅</span>
             <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Google Calendar</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Sync meetings and events</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t.settings_gcal}</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.settings_gcal_desc}</p>
             </div>
           </div>
-          <span className="text-xs px-2 py-1 rounded-lg font-medium" style={{ background: 'var(--surface-elevated)', color: 'var(--text-muted)' }}>
-            Phase 6
-          </span>
+          <a
+            href="/api/auth/google"
+            className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
+            style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid var(--primary-muted)' }}
+          >
+            {t.calendar_connect_google}
+          </a>
         </div>
       </GlassCard>
 
       {/* Account */}
       <GlassCard>
         <p className="text-xs uppercase tracking-wide font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-          Account
+          {t.settings_account}
         </p>
         <button
           onClick={handleSignOut}
@@ -101,7 +130,7 @@ export default function SettingsPage() {
           onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
         >
           <span>🚪</span>
-          Sign out
+          {t.settings_sign_out}
         </button>
       </GlassCard>
     </div>

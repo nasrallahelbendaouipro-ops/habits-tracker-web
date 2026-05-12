@@ -1,10 +1,12 @@
 'use client';
 
+import { useLocale } from '@/lib/i18n';
 import type { ReadingMetadata } from '@/lib/types';
 
 type Props = { value: ReadingMetadata; onChange: (v: ReadingMetadata) => void };
 
 export default function ReadingForm({ value, onChange }: Props) {
+  const { t } = useLocale();
   const set = <K extends keyof ReadingMetadata>(k: K, v: ReadingMetadata[K]) =>
     onChange({ ...value, [k]: v });
 
@@ -17,7 +19,7 @@ export default function ReadingForm({ value, onChange }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Book name</label>
+        <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.reading_book_name}</label>
         <input
           type="text"
           value={value.book_name}
@@ -31,8 +33,8 @@ export default function ReadingForm({ value, onChange }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         {([
-          ['Total pages', 'pages_target', 1],
-          ['Pages/session', 'duration_min', 1],
+          [t.reading_total_pages, 'pages_target', 1],
+          [t.reading_pages_session, 'duration_min', 1],
         ] as const).map(([label, key, min]) => (
           <div key={key}>
             <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{label}</label>

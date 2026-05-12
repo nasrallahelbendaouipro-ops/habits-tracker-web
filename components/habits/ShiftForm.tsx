@@ -1,10 +1,12 @@
 'use client';
 
+import { useLocale } from '@/lib/i18n';
 import type { ShiftMetadata } from '@/lib/types';
 
 type Props = { value: ShiftMetadata; onChange: (v: ShiftMetadata) => void };
 
 export default function ShiftForm({ value, onChange }: Props) {
+  const { t } = useLocale();
   const set = <K extends keyof ShiftMetadata>(k: K, v: ShiftMetadata[K]) =>
     onChange({ ...value, [k]: v });
 
@@ -19,7 +21,7 @@ export default function ShiftForm({ value, onChange }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Workplace</label>
+        <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.shift_workplace}</label>
         <input
           type="text"
           value={value.workplace}
@@ -33,7 +35,7 @@ export default function ShiftForm({ value, onChange }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Start time</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.shift_start_time}</label>
           <input
             type="time"
             value={value.start_time}
@@ -45,7 +47,7 @@ export default function ShiftForm({ value, onChange }: Props) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>End time</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.shift_end_time}</label>
           <input
             type="time"
             value={value.end_time}
@@ -59,7 +61,7 @@ export default function ShiftForm({ value, onChange }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Break (min)</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.shift_break_min}</label>
           <input
             type="number"
             min={0}
@@ -72,7 +74,7 @@ export default function ShiftForm({ value, onChange }: Props) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Hourly rate (€)</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.shift_hourly_rate}</label>
           <input
             type="number"
             min={0}

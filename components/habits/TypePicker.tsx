@@ -1,14 +1,7 @@
 'use client';
 
+import { useLocale } from '@/lib/i18n';
 import type { HabitType } from '@/lib/types';
-
-const TYPES: { value: HabitType; icon: string; label: string; desc: string }[] = [
-  { value: 'simple',  icon: '🎯', label: 'Simple',  desc: 'Basic daily habit' },
-  { value: 'workout', icon: '💪', label: 'Workout', desc: 'Sets, reps, weight' },
-  { value: 'reading', icon: '📚', label: 'Reading', desc: 'Book & page tracking' },
-  { value: 'study',   icon: '🧠', label: 'Study',   desc: 'Subject & time goal' },
-  { value: 'shift',   icon: '🕐', label: 'Shift',   desc: 'Work schedule' },
-];
 
 export default function TypePicker({
   value,
@@ -17,28 +10,38 @@ export default function TypePicker({
   value: HabitType;
   onChange: (t: HabitType) => void;
 }) {
+  const { t } = useLocale();
+
+  const TYPES: { value: HabitType; icon: string; label: string }[] = [
+    { value: 'simple',  icon: '🎯', label: t.type_simple },
+    { value: 'workout', icon: '💪', label: t.type_workout },
+    { value: 'reading', icon: '📚', label: t.type_reading },
+    { value: 'study',   icon: '🧠', label: t.type_study },
+    { value: 'shift',   icon: '🕐', label: t.type_shift },
+  ];
+
   return (
     <div>
       <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-        Habit type
+        {t.type_label}
       </label>
       <div className="grid grid-cols-5 gap-2">
-        {TYPES.map(t => {
-          const active = t.value === value;
+        {TYPES.map(type => {
+          const active = type.value === value;
           return (
             <button
-              key={t.value}
+              key={type.value}
               type="button"
-              onClick={() => onChange(t.value)}
+              onClick={() => onChange(type.value)}
               className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all text-center"
               style={{
                 background: active ? 'var(--primary-muted)' : 'var(--surface-elevated)',
                 border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
               }}
             >
-              <span className="text-xl">{t.icon}</span>
+              <span className="text-xl">{type.icon}</span>
               <span className="text-[10px] font-semibold" style={{ color: active ? 'var(--primary)' : 'var(--text-secondary)' }}>
-                {t.label}
+                {type.label}
               </span>
             </button>
           );

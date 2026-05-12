@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { updateHabit, deleteHabit } from '@/lib/habits';
 import { dateStr, TODAY } from '@/lib/utils';
+import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import GlassCard from '@/components/ui/GlassCard';
 import HabitModal from '@/components/habits/HabitModal';
 import type { Habit, HabitLog, HabitFormValues, WorkoutMetadata, ReadingMetadata, StudyMetadata, ShiftMetadata } from '@/lib/types';
@@ -12,6 +13,7 @@ import type { Habit, HabitLog, HabitFormValues, WorkoutMetadata, ReadingMetadata
 // ─── Mini Heatmap ──────────────────────────────────────────────────────────────
 
 function MiniHeatmap({ habitId, color }: { habitId: string; color: string }) {
+  const { t } = useLocale();
   const [doneDates, setDoneDates] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -32,7 +34,7 @@ function MiniHeatmap({ habitId, color }: { habitId: string; color: string }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>
-        Last 30 days
+        {t.habit_last_30}
       </p>
       <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(10, 1fr)' }}>
         {days.map(d => {
@@ -54,8 +56,8 @@ function MiniHeatmap({ habitId, color }: { habitId: string; color: string }) {
         })}
       </div>
       <div className="flex justify-between mt-1.5">
-        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>30 days ago</span>
-        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Today</span>
+        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{t.habit_30d_ago}</span>
+        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{t.today}</span>
       </div>
     </div>
   );
@@ -64,15 +66,17 @@ function MiniHeatmap({ habitId, color }: { habitId: string; color: string }) {
 // ─── Type-specific stats ───────────────────────────────────────────────────────
 
 function WorkoutStats({ metadata }: { metadata: WorkoutMetadata }) {
+  const { t } = useLocale();
+  const rows = [
+    { label: t.workout_sets,     value: metadata.sets },
+    { label: t.workout_reps,     value: metadata.reps },
+    { label: t.workout_weight,   value: `${metadata.weight} kg` },
+    { label: t.workout_duration, value: `${metadata.duration_min} min` },
+    { label: t.workout_rest,     value: `${metadata.rest_time}s` },
+  ];
   return (
     <div className="grid grid-cols-2 gap-3">
-      {[
-        { label: 'Sets', value: metadata.sets },
-        { label: 'Reps', value: metadata.reps },
-        { label: 'Weight', value: `${metadata.weight} kg` },
-        { label: 'Duration', value: `${metadata.duration_min} min` },
-        { label: 'Rest', value: `${metadata.rest_time}s` },
-      ].map(({ label, value }) => (
+      {rows.map(({ label, value }) => (
         <div key={label} className="rounded-xl p-3 text-center" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}>
           <p className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>{value}</p>
           <p className="text-[10px] uppercase tracking-wide font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
@@ -83,6 +87,7 @@ function WorkoutStats({ metadata }: { metadata: WorkoutMetadata }) {
 }
 
 function ReadingStats({ metadata }: { metadata: ReadingMetadata }) {
+  const { t } = useLocale();
   const pct = metadata.pages_target > 0
     ? Math.round((metadata.pages_done / metadata.pages_target) * 100)
     : 0;
@@ -90,15 +95,15 @@ function ReadingStats({ metadata }: { metadata: ReadingMetadata }) {
     <div className="flex flex-col gap-3">
       {metadata.book_name && (
         <div className="rounded-xl p-3" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}>
-          <p className="text-[10px] uppercase tracking-wide font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Book</p>
+          <p className="text-[10px] uppercase tracking-wide font-medium mb-1" style={{ color: 'var(--text-muted)' }}>{t.reading_book}</p>
           <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{metadata.book_name}</p>
         </div>
       )}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Done', value: `${metadata.pages_done}p` },
-          { label: 'Target', value: `${metadata.pages_target}p` },
-          { label: 'Progress', value: `${pct}%` },
+          { label: t.reading_done,     value: `${metadata.pages_done}p` },
+          { label: t.reading_target,   value: `${metadata.pages_target}p` },
+          { label: t.reading_progress, value: `${pct}%` },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-xl p-3 text-center" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}>
             <p className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>{value}</p>
@@ -116,18 +121,19 @@ function ReadingStats({ metadata }: { metadata: ReadingMetadata }) {
 }
 
 function StudyStats({ metadata }: { metadata: StudyMetadata }) {
+  const { t } = useLocale();
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         {metadata.subject && (
           <div className="rounded-xl p-3" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}>
-            <p className="text-[10px] uppercase tracking-wide font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Subject</p>
+            <p className="text-[10px] uppercase tracking-wide font-medium mb-1" style={{ color: 'var(--text-muted)' }}>{t.study_subject}</p>
             <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{metadata.subject}</p>
           </div>
         )}
         {metadata.chapter && (
           <div className="rounded-xl p-3" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}>
-            <p className="text-[10px] uppercase tracking-wide font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Chapter</p>
+            <p className="text-[10px] uppercase tracking-wide font-medium mb-1" style={{ color: 'var(--text-muted)' }}>{t.study_chapter}</p>
             <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{metadata.chapter}</p>
           </div>
         )}
@@ -135,7 +141,7 @@ function StudyStats({ metadata }: { metadata: StudyMetadata }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl p-3 text-center" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}>
           <p className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>{metadata.time_target_min} min</p>
-          <p className="text-[10px] uppercase tracking-wide font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>Target time</p>
+          <p className="text-[10px] uppercase tracking-wide font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{t.study_target_time}</p>
         </div>
         <div className="rounded-xl p-3 text-center" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}>
           <div className="flex justify-center gap-0.5 mb-1">
@@ -147,7 +153,7 @@ function StudyStats({ metadata }: { metadata: StudyMetadata }) {
               />
             ))}
           </div>
-          <p className="text-[10px] uppercase tracking-wide font-medium" style={{ color: 'var(--text-muted)' }}>Difficulty</p>
+          <p className="text-[10px] uppercase tracking-wide font-medium" style={{ color: 'var(--text-muted)' }}>{t.study_difficulty}</p>
         </div>
       </div>
     </div>
@@ -155,11 +161,12 @@ function StudyStats({ metadata }: { metadata: StudyMetadata }) {
 }
 
 function ShiftStats({ metadata }: { metadata: ShiftMetadata }) {
+  const { t } = useLocale();
   const start = metadata.start_time;
   const end = metadata.end_time;
 
-  const toMinutes = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
+  const toMinutes = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
     return h * 60 + (m || 0);
   };
 
@@ -169,16 +176,18 @@ function ShiftStats({ metadata }: { metadata: ShiftMetadata }) {
   const mins = durationMin % 60;
   const earnings = metadata.hourly_rate ? (metadata.hourly_rate * durationMin) / 60 : null;
 
+  const rows = [
+    { label: t.shift_workplace, value: metadata.workplace || '—' },
+    { label: t.shift_hours,     value: `${hours}h${mins > 0 ? ` ${mins}m` : ''}` },
+    { label: t.shift_start,     value: start },
+    { label: t.shift_end,       value: end },
+    { label: t.shift_break,     value: `${metadata.break_min} min` },
+    ...(earnings !== null ? [{ label: t.shift_earnings, value: `€${earnings.toFixed(2)}` }] : []),
+  ];
+
   return (
     <div className="grid grid-cols-2 gap-3">
-      {[
-        { label: 'Workplace', value: metadata.workplace || '—' },
-        { label: 'Hours', value: `${hours}h${mins > 0 ? ` ${mins}m` : ''}` },
-        { label: 'Start', value: start },
-        { label: 'End', value: end },
-        { label: 'Break', value: `${metadata.break_min} min` },
-        ...(earnings !== null ? [{ label: 'Earnings', value: `€${earnings.toFixed(2)}` }] : []),
-      ].map(({ label, value }) => (
+      {rows.map(({ label, value }) => (
         <div key={label} className="rounded-xl p-3 text-center" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}>
           <p className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>{value}</p>
           <p className="text-[10px] uppercase tracking-wide font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
@@ -191,6 +200,7 @@ function ShiftStats({ metadata }: { metadata: ShiftMetadata }) {
 // ─── Recent Logs ───────────────────────────────────────────────────────────────
 
 function RecentLogs({ habitId, color }: { habitId: string; color: string }) {
+  const { t, locale } = useLocale();
   const [logs, setLogs] = useState<HabitLog[]>([]);
 
   useEffect(() => {
@@ -205,7 +215,7 @@ function RecentLogs({ habitId, color }: { habitId: string; color: string }) {
   }, [habitId]);
 
   if (logs.length === 0) return (
-    <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No logs yet.</p>
+    <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>{t.habit_no_logs}</p>
   );
 
   return (
@@ -218,10 +228,10 @@ function RecentLogs({ habitId, color }: { habitId: string; color: string }) {
         >
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
           <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-            {new Date(log.completed_at + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            {new Date(log.completed_at + 'T00:00:00').toLocaleDateString(LOCALE_DATE_TAG[locale], { weekday: 'short', month: 'short', day: 'numeric' })}
           </span>
           <span className="ml-auto text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: color + '20', color }}>
-            ✓ Done
+            {t.habit_done}
           </span>
         </div>
       ))}
@@ -231,18 +241,11 @@ function RecentLogs({ habitId, color }: { habitId: string; color: string }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-const TYPE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
-  simple:  { label: 'Simple',  icon: '🎯', color: '#6C63FF' },
-  workout: { label: 'Workout', icon: '💪', color: '#FF6B35' },
-  reading: { label: 'Reading', icon: '📚', color: '#4ECDC4' },
-  study:   { label: 'Study',   icon: '🧠', color: '#45B7D1' },
-  shift:   { label: 'Shift',   icon: '🕐', color: '#96CEB4' },
-};
-
 export default function HabitDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
+  const { t } = useLocale();
 
   const [userId, setUserId] = useState<string | null>(null);
   const [habit, setHabit] = useState<Habit | null>(null);
@@ -290,7 +293,7 @@ export default function HabitDetailPage() {
   }
 
   async function handleDelete() {
-    if (!habit || !confirm('Delete this habit? This cannot be undone.')) return;
+    if (!habit || !confirm(t.habit_delete_confirm)) return;
     setDeleting(true);
     try {
       await deleteHabit(habit.id);
@@ -312,7 +315,15 @@ export default function HabitDetailPage() {
 
   if (!habit) return null;
 
-  const typeMeta = TYPE_LABELS[habit.type] ?? TYPE_LABELS.simple;
+  const TYPE_META = {
+    simple:  { label: t.type_simple,  icon: '🎯', color: '#6C63FF' },
+    workout: { label: t.type_workout, icon: '💪', color: '#FF6B35' },
+    reading: { label: t.type_reading, icon: '📚', color: '#4ECDC4' },
+    study:   { label: t.type_study,   icon: '🧠', color: '#45B7D1' },
+    shift:   { label: t.type_shift,   icon: '🕐', color: '#96CEB4' },
+  } as Record<string, { label: string; icon: string; color: string }>;
+
+  const typeMeta = TYPE_META[habit.type] ?? TYPE_META.simple;
 
   return (
     <div className="animate-fade-in flex flex-col gap-5">
@@ -322,7 +333,7 @@ export default function HabitDetailPage() {
         className="flex items-center gap-2 text-sm font-medium w-fit"
         style={{ color: 'var(--text-secondary)' }}
       >
-        ← Back
+        {t.habit_back}
       </button>
 
       {/* Header */}
@@ -355,7 +366,6 @@ export default function HabitDetailPage() {
               onClick={() => setEditing(true)}
               className="w-9 h-9 rounded-xl flex items-center justify-center text-sm transition-all"
               style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
-              title="Edit habit"
             >
               ✏️
             </button>
@@ -364,7 +374,6 @@ export default function HabitDetailPage() {
               disabled={deleting}
               className="w-9 h-9 rounded-xl flex items-center justify-center text-sm transition-all"
               style={{ background: 'rgba(255,107,107,0.12)', border: '1px solid rgba(255,107,107,0.2)', color: 'var(--error)' }}
-              title="Delete habit"
             >
               {deleting ? '…' : '🗑️'}
             </button>
@@ -381,7 +390,7 @@ export default function HabitDetailPage() {
       {habit.type !== 'simple' && (
         <GlassCard>
           <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>
-            {typeMeta.label} details
+            {typeMeta.label} {t.habit_details}
           </p>
           {habit.type === 'workout' && <WorkoutStats metadata={habit.metadata as WorkoutMetadata} />}
           {habit.type === 'reading' && <ReadingStats metadata={habit.metadata as ReadingMetadata} />}
@@ -393,12 +402,11 @@ export default function HabitDetailPage() {
       {/* Recent logs */}
       <GlassCard>
         <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>
-          Recent completions
+          {t.habit_recent}
         </p>
         <RecentLogs habitId={habit.id} color={habit.color} />
       </GlassCard>
 
-      {/* Edit modal */}
       <HabitModal
         mode="edit"
         habit={habit}

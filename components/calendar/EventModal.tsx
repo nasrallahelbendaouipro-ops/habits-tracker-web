@@ -2,16 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
+import { useLocale } from '@/lib/i18n';
 import type { CalendarEvent, CalendarEventType } from '@/lib/types';
 
 const EVENT_COLORS = ['#6C63FF', '#FF6B35', '#4ECDC4', '#45B7D1', '#FF6B6B', '#96CEB4', '#FFD93D', '#DDA0DD'];
-
-const TYPE_OPTIONS: { value: CalendarEventType; label: string; icon: string }[] = [
-  { value: 'event',     label: 'Event',     icon: '📅' },
-  { value: 'meeting',   label: 'Meeting',   icon: '🤝' },
-  { value: 'interview', label: 'Interview', icon: '💼' },
-  { value: 'shift',     label: 'Shift',     icon: '🕐' },
-];
 
 type Props = {
   visible: boolean;
@@ -41,6 +35,7 @@ function defaultEnd(start: string): string {
 }
 
 export default function EventModal({ visible, mode, initialStart, initialEnd, event, userId, onClose, onSaved }: Props) {
+  const { t } = useLocale();
   const [title, setTitle]   = useState('');
   const [type, setType]     = useState<CalendarEventType>('event');
   const [start, setStart]   = useState(initialStart ?? '');
@@ -50,6 +45,13 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
   const [loading, setLoading]   = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError]   = useState('');
+
+  const TYPE_OPTIONS: { value: CalendarEventType; label: string; icon: string }[] = [
+    { value: 'event',     label: t.event_type_event,     icon: '📅' },
+    { value: 'meeting',   label: t.event_type_meeting,   icon: '🤝' },
+    { value: 'interview', label: t.event_type_interview, icon: '💼' },
+    { value: 'shift',     label: t.event_type_shift,     icon: '🕐' },
+  ];
 
   useEffect(() => {
     if (!visible) return;
@@ -89,9 +91,9 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) { setError('Title is required.'); return; }
-    if (!start || !end) { setError('Start and end are required.'); return; }
-    if (new Date(start) >= new Date(end)) { setError('End must be after start.'); return; }
+    if (!title.trim()) { setError(t.event_err_title); return; }
+    if (!start || !end) { setError(t.event_err_dates); return; }
+    if (new Date(start) >= new Date(end)) { setError(t.event_err_order); return; }
     setError('');
     setLoading(true);
     try {
@@ -111,14 +113,14 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      setError(err instanceof Error ? err.message : t.form_err_generic);
     } finally {
       setLoading(false);
     }
   }
 
   async function handleDelete() {
-    if (!event || !confirm('Delete this event?')) return;
+    if (!event || !confirm(t.event_delete_confirm)) return;
     setDeleting(true);
     try {
       await deleteCalendarEvent(event.id);
@@ -154,7 +156,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
           style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
         >
           <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-            {mode === 'create' ? '+ New event' : 'Edit event'}
+            {mode === 'create' ? t.event_new : t.event_edit}
           </h2>
           <button
             onClick={onClose}
@@ -186,13 +188,13 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
           {/* Title */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>
-              Title
+              {t.event_title}
             </label>
             <input
               type="text"
               value={title}
               onChange={e => { setTitle(e.target.value); setError(''); }}
-              placeholder="e.g. Team standup"
+              placeholder={t.event_title_placeholder}
               maxLength={80}
               className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
               style={inputStyle}
@@ -205,7 +207,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
           {/* Start / End */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>Start</label>
+              <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>{t.event_start}</label>
               <input
                 type="datetime-local"
                 value={start}
@@ -217,7 +219,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>End</label>
+              <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>{t.event_end}</label>
               <input
                 type="datetime-local"
                 value={end}
@@ -232,7 +234,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
 
           {/* Color */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>Color</label>
+            <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>{t.form_color}</label>
             <div className="flex flex-wrap gap-2">
               {EVENT_COLORS.map(c => (
                 <button
@@ -254,12 +256,12 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
           {/* Notes */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>
-              Notes <span style={{ color: 'var(--text-disabled)' }}>(optional)</span>
+              {t.event_notes} <span style={{ color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0 }}>{t.event_optional}</span>
             </label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Any notes..."
+              placeholder={t.event_notes_placeholder}
               rows={2}
               className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-none"
               style={inputStyle}
@@ -288,7 +290,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
               className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all"
               style={{ background: loading ? 'var(--text-muted)' : color, cursor: loading ? 'not-allowed' : 'pointer' }}
             >
-              {loading ? 'Saving…' : mode === 'create' ? 'Add event' : 'Save changes'}
+              {loading ? t.form_saving : mode === 'create' ? t.event_add : t.modal_save_changes}
             </button>
           </div>
         </form>
