@@ -3,22 +3,24 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/theme';
+import { useLocale } from '@/lib/i18n';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-
-const NAV_ITEMS = [
-  { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
-  { href: '/calendar',  icon: '📅', label: 'Calendar' },
-  { href: '/habits',    icon: '✅', label: 'Habits' },
-  { href: '/analytics', icon: '📊', label: 'Analytics' },
-  { href: '/planner',   icon: '🤖', label: 'AI Planner' },
-  { href: '/settings',  icon: '⚙️', label: 'Settings' },
-];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isDark, toggleTheme } = useTheme();
+  const { t } = useLocale();
+
+  const NAV_ITEMS = [
+    { href: '/dashboard', icon: '🏠', label: t.nav_dashboard },
+    { href: '/calendar',  icon: '📅', label: t.nav_calendar },
+    { href: '/habits',    icon: '✅', label: t.nav_habits },
+    { href: '/goals',     icon: '🎯', label: t.nav_goals },
+    { href: '/analytics', icon: '📊', label: t.nav_analytics },
+    { href: '/settings',  icon: '⚙️', label: t.nav_settings },
+  ];
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -32,7 +34,7 @@ export default function Sidebar() {
       style={{
         width: 'var(--sidebar-width)',
         background: 'var(--surface)',
-        borderRight: '1px solid var(--border)',
+        borderInlineEnd: '1px solid var(--border)',
         flexShrink: 0,
       }}
     >
@@ -58,13 +60,11 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-              )}
+              className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all')}
               style={{
                 background: active ? 'var(--primary-muted)' : 'transparent',
                 color: active ? 'var(--primary)' : 'var(--text-secondary)',
-                borderLeft: active ? '2px solid var(--primary)' : '2px solid transparent',
+                borderInlineStart: active ? '2px solid var(--primary)' : '2px solid transparent',
               }}
               onMouseEnter={e => {
                 if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)';
@@ -75,14 +75,6 @@ export default function Sidebar() {
             >
               <span className="text-base">{icon}</span>
               {label}
-              {label === 'AI Planner' && (
-                <span
-                  className="ml-auto text-[9px] px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wide"
-                  style={{ background: 'var(--secondary-muted)', color: 'var(--secondary)' }}
-                >
-                  Soon
-                </span>
-              )}
             </Link>
           );
         })}
@@ -90,7 +82,6 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="px-3 pb-4 flex flex-col gap-1" style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left"
@@ -99,10 +90,9 @@ export default function Sidebar() {
           onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
         >
           <span>{isDark ? '☀️' : '🌙'}</span>
-          {isDark ? 'Light mode' : 'Dark mode'}
+          {isDark ? t.nav_light_mode : t.nav_dark_mode}
         </button>
 
-        {/* Sign out */}
         <button
           onClick={handleSignOut}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left"
@@ -111,7 +101,7 @@ export default function Sidebar() {
           onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
         >
           <span>🚪</span>
-          Sign out
+          {t.nav_sign_out}
         </button>
       </div>
     </aside>

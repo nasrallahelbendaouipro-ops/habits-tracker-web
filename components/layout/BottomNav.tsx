@@ -2,17 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-const NAV_ITEMS = [
-  { href: '/dashboard', icon: '🏠', label: 'Home' },
-  { href: '/calendar',  icon: '📅', label: 'Calendar' },
-  { href: '/habits',    icon: '✅', label: 'Habits' },
-  { href: '/analytics', icon: '📊', label: 'Stats' },
-  { href: '/settings',  icon: '👤', label: 'Profile' },
-];
+import { useLocale } from '@/lib/i18n';
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { t } = useLocale();
+
+  const NAV_ITEMS = [
+    { href: '/dashboard', icon: '🏠', label: t.nav_home },
+    { href: '/habits',    icon: '✅', label: t.nav_habits },
+    { href: '/goals',     icon: '🎯', label: t.nav_goals },
+    { href: '/calendar',  icon: '📅', label: t.nav_calendar },
+    { href: '/settings',  icon: '👤', label: t.nav_profile },
+  ];
 
   return (
     <nav

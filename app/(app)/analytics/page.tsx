@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { fetchHabitsWithStatus } from '@/lib/habits';
 import { calcDisciplineScore, dailyCompletionMap, weeklyTotals, habitCompletionRate } from '@/lib/analytics';
 import { dateStr, TODAY } from '@/lib/utils';
+import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import GlassCard from '@/components/ui/GlassCard';
 import ProgressRing from '@/components/charts/ProgressRing';
 import type { HabitWithStreak, HabitLog } from '@/lib/types';
@@ -15,6 +16,7 @@ import type { HabitWithStreak, HabitLog } from '@/lib/types';
 // ─── Heatmap (16 weeks) ────────────────────────────────────────────────────────
 
 function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHabits: number }) {
+  const { locale, t } = useLocale();
   const WEEKS = 16;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -23,7 +25,7 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
   for (let w = WEEKS - 1; w >= 0; w--) {
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay() - w * 7);
-    const label = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const label = weekStart.toLocaleDateString(LOCALE_DATE_TAG[locale], { month: 'short', day: 'numeric' });
     const days: { date: string; count: number }[] = [];
     for (let d = 0; d < 7; d++) {
       const day = new Date(weekStart);
@@ -35,7 +37,11 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
     cols.push({ weekLabel: label, days });
   }
 
-  const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  // Generate single-letter day abbreviations from locale
+  const DAY_LABELS = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(2024, 0, 7 + i); // Jan 7 2024 is Sunday
+    return d.toLocaleDateString(LOCALE_DATE_TAG[locale], { weekday: 'narrow' });
+  });
 
   function cellColor(count: number) {
     if (count === 0 || totalHabits === 0) return 'var(--border)';
@@ -69,7 +75,7 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
               return (
                 <div
                   key={di}
-                  title={`${day.date}: ${day.count} habit${day.count !== 1 ? 's' : ''}`}
+                  title={`${day.date}: ${day.count}`}
                   className="w-3 h-3 rounded-sm"
                   style={{
                     background: isFuture ? 'transparent' : cellColor(day.count),
@@ -85,11 +91,11 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
       </div>
       {/* Legend */}
       <div className="flex items-center gap-1.5 mt-3 justify-end">
-        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Less</span>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t.analytics_less}</span>
         {['var(--border)', 'rgba(108,99,255,0.35)', 'rgba(108,99,255,0.6)', '#6C63FF'].map((c, i) => (
           <div key={i} className="w-3 h-3 rounded-sm" style={{ background: c }} />
         ))}
-        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>More</span>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t.analytics_more}</span>
       </div>
     </div>
   );
@@ -98,6 +104,7 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
 // ─── Custom tooltip ────────────────────────────────────────────────────────────
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
+  const { t } = useLocale();
   if (!active || !payload?.length) return null;
   return (
     <div
@@ -105,7 +112,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
       style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
     >
       <p style={{ color: 'var(--text-muted)' }}>{label}</p>
-      <p>{payload[0].value}% completed</p>
+      <p>{payload[0].value}{t.analytics_completed}</p>
     </div>
   );
 }
@@ -149,6 +156,7 @@ function HabitStatRow({ habit, rate }: { habit: HabitWithStreak; rate: number })
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
+  const { t } = useLocale();
   const [userId, setUserId]   = useState<string | null>(null);
   const [habits, setHabits]   = useState<HabitWithStreak[]>([]);
   const [logs, setLogs]       = useState<HabitLog[]>([]);
@@ -201,10 +209,8 @@ export default function AnalyticsPage() {
     return (
       <div className="animate-fade-in flex flex-col items-center justify-center py-20 text-center">
         <div className="text-5xl mb-4">📊</div>
-        <p className="font-semibold text-lg mb-1" style={{ color: 'var(--text-primary)' }}>No data yet</p>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Create some habits and start tracking to see your analytics.
-        </p>
+        <p className="font-semibold text-lg mb-1" style={{ color: 'var(--text-primary)' }}>{t.analytics_empty}</p>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{t.analytics_empty_desc}</p>
       </div>
     );
   }
@@ -220,9 +226,9 @@ export default function AnalyticsPage() {
   return (
     <div className="animate-fade-in flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Analytics</h1>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{t.analytics_title}</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-          {habits.length} habit{habits.length !== 1 ? 's' : ''} · last 365 days
+          {habits.length} {habits.length !== 1 ? t.analytics_subtitle_other : t.analytics_subtitle_one}
         </p>
       </div>
 
@@ -230,26 +236,26 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-3 gap-3">
         <GlassCard style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
           <ProgressRing pct={todayPct} size={72} color="#6C63FF" />
-          <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>Today</p>
+          <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>{t.today}</p>
         </GlassCard>
 
         <GlassCard style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
           <span className="text-3xl">🔥</span>
           <p className="font-bold text-xl leading-none" style={{ color: 'var(--text-primary)' }}>{bestStreak}d</p>
-          <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>Best streak</p>
+          <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>{t.dashboard_best_streak}</p>
         </GlassCard>
 
         <GlassCard style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
           <span className="text-3xl">⚡</span>
           <p className="font-bold text-xl leading-none" style={{ color: 'var(--text-primary)' }}>{discScore}</p>
-          <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>Score /100</p>
+          <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>{t.analytics_score}</p>
         </GlassCard>
       </div>
 
       {/* Heatmap */}
       <GlassCard>
         <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
-          Activity — last 16 weeks
+          {t.analytics_activity}
         </p>
         <Heatmap logMap={logMap} totalHabits={habits.length} />
       </GlassCard>
@@ -258,7 +264,7 @@ export default function AnalyticsPage() {
       {mounted && (
         <GlassCard>
           <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
-            Weekly completion — last 8 weeks
+            {t.analytics_weekly}
           </p>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={weekly} barSize={22} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
@@ -311,7 +317,7 @@ export default function AnalyticsPage() {
       {/* Per-habit 30-day stats */}
       <GlassCard>
         <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
-          Habits — 30-day completion rate
+          {t.analytics_habits_rate}
         </p>
         <div className="flex flex-col gap-4">
           {sorted.map(habit => (
