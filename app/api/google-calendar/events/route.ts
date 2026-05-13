@@ -13,6 +13,10 @@ export async function GET(req: NextRequest) {
   if (!timeMin || !timeMax) {
     return NextResponse.json({ error: 'timeMin and timeMax are required' }, { status: 400 });
   }
+  const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+  if (!ISO_RE.test(timeMin) || !ISO_RE.test(timeMax)) {
+    return NextResponse.json({ error: 'timeMin and timeMax must be ISO 8601 datetime strings' }, { status: 400 });
+  }
 
   const accessToken = await getFreshAccessToken(user.id);
   if (!accessToken) {
