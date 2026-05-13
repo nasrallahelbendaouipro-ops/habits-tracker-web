@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useLocale } from '@/lib/i18n';
 import HabitForm from './HabitForm';
 import type { Habit, HabitFormValues } from '@/lib/types';
 
@@ -13,7 +14,8 @@ type Props = {
 };
 
 export default function HabitModal({ mode, habit, visible, onClose, onSubmit }: Props) {
-  // Close on Escape
+  const { t } = useLocale();
+
   useEffect(() => {
     if (!visible) return;
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -21,7 +23,6 @@ export default function HabitModal({ mode, habit, visible, onClose, onSubmit }: 
     return () => window.removeEventListener('keydown', handler);
   }, [visible, onClose]);
 
-  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = visible ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -45,7 +46,7 @@ export default function HabitModal({ mode, habit, visible, onClose, onSubmit }: 
           style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
         >
           <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-            {mode === 'add' ? '+ New habit' : 'Edit habit'}
+            {mode === 'add' ? t.modal_new_habit : t.modal_edit_habit}
           </h2>
           <button
             onClick={onClose}
@@ -65,7 +66,7 @@ export default function HabitModal({ mode, habit, visible, onClose, onSubmit }: 
               frequency: habit.frequency, target_days: habit.target_days,
             } : undefined}
             onSubmit={onSubmit}
-            submitLabel={mode === 'add' ? 'Add habit' : 'Save changes'}
+            submitLabel={mode === 'add' ? t.modal_add_habit_btn : t.modal_save_changes}
           />
         </div>
       </div>

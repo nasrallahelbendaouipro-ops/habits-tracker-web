@@ -1,10 +1,12 @@
 'use client';
 
+import { useLocale } from '@/lib/i18n';
 import type { StudyMetadata } from '@/lib/types';
 
 type Props = { value: StudyMetadata; onChange: (v: StudyMetadata) => void };
 
 export default function StudyForm({ value, onChange }: Props) {
+  const { t } = useLocale();
   const set = <K extends keyof StudyMetadata>(k: K, v: StudyMetadata[K]) =>
     onChange({ ...value, [k]: v });
 
@@ -18,7 +20,7 @@ export default function StudyForm({ value, onChange }: Props) {
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Subject</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.study_subject}</label>
           <input
             type="text"
             value={value.subject}
@@ -31,7 +33,7 @@ export default function StudyForm({ value, onChange }: Props) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Chapter / Topic</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.study_chapter_topic}</label>
           <input
             type="text"
             value={value.chapter}
@@ -46,7 +48,7 @@ export default function StudyForm({ value, onChange }: Props) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Time goal (min)</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.study_time_goal}</label>
           <input
             type="number"
             min={5}
@@ -59,7 +61,7 @@ export default function StudyForm({ value, onChange }: Props) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Difficulty</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>{t.study_difficulty}</label>
           <div className="flex gap-1.5 mt-1">
             {([1, 2, 3, 4, 5] as const).map(n => (
               <button

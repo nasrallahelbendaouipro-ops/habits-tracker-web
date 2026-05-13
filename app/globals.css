@@ -114,49 +114,155 @@ body {
 }
 
 /* ============================================
-   FULLCALENDAR DARK THEME
+   FULLCALENDAR — Sleek redesign
    ============================================ */
+
+/* Token overrides */
 .fc {
-  --fc-border-color: var(--border);
-  --fc-today-bg-color: var(--primary-muted);
+  --fc-border-color: var(--border-subtle);
+  --fc-today-bg-color: rgba(108, 99, 255, 0.07);
   --fc-page-bg-color: transparent;
-  --fc-neutral-bg-color: var(--surface);
+  --fc-neutral-bg-color: transparent;
   --fc-list-event-hover-bg-color: var(--surface-hover);
-  --fc-button-bg-color: var(--surface-elevated);
-  --fc-button-border-color: var(--border);
-  --fc-button-hover-bg-color: var(--surface-hover);
-  --fc-button-hover-border-color: var(--border);
-  --fc-button-active-bg-color: var(--primary);
-  --fc-button-active-border-color: var(--primary);
   --fc-event-bg-color: var(--primary);
   --fc-event-border-color: var(--primary);
+  --fc-non-business-color: transparent;
   color: var(--text-primary);
+  font-family: inherit;
 }
 
-.fc .fc-toolbar-title {
-  color: var(--text-primary);
-  font-size: 1.1rem;
-  font-weight: 600;
-}
+/* Remove the outer scrollgrid frame entirely */
+.fc .fc-scrollgrid { border: none !important; }
+.fc .fc-scrollgrid-section > td { border: none !important; }
+.fc .fc-scrollgrid-section-header > td { border: none !important; }
 
-.fc .fc-col-header-cell-cushion,
-.fc .fc-daygrid-day-number {
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.fc .fc-button {
-  color: var(--text-primary);
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 0.875rem;
-}
-
-.fc .fc-button:focus { box-shadow: 0 0 0 2px var(--primary); }
-
+/* All internal cell borders — very subtle */
 .fc-theme-standard td,
-.fc-theme-standard th,
-.fc-theme-standard .fc-scrollgrid { border-color: var(--border); }
+.fc-theme-standard th { border-color: var(--border-subtle) !important; }
+
+/* ─── Column headers ─────────────────────────────── */
+.fc .fc-col-header {
+  background: var(--surface-elevated);
+  border-radius: 12px 12px 0 0;
+}
+.fc .fc-col-header-cell {
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 10px 0 !important;
+}
+.fc .fc-col-header-cell-cushion {
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted) !important;
+  text-decoration: none !important;
+  padding: 0 8px;
+  display: inline-block;
+}
+/* Highlight today's column header */
+.fc .fc-day-today .fc-col-header-cell-cushion {
+  color: var(--primary) !important;
+  background: var(--primary-muted);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+
+/* ─── Time labels ───────────────────────────────── */
+.fc .fc-timegrid-axis { border: none !important; }
+.fc .fc-timegrid-slot-label { border-color: var(--border-subtle) !important; }
+.fc .fc-timegrid-slot-label-cushion {
+  font-size: 0.65rem !important;
+  font-weight: 600;
+  color: var(--text-muted) !important;
+  padding: 0 10px 0 0 !important;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Time slot rows ────────────────────────────── */
+.fc .fc-timegrid-slot {
+  height: 44px !important;
+  border-color: var(--border-subtle) !important;
+}
+.fc .fc-timegrid-slot-minor {
+  border-color: transparent !important;
+}
+.fc .fc-timegrid-col-bg { background: transparent !important; }
+
+/* ─── Today column glow ─────────────────────────── */
+.fc .fc-day-today {
+  background: rgba(108, 99, 255, 0.05) !important;
+}
+.fc .fc-daygrid-day.fc-day-today {
+  background: rgba(108, 99, 255, 0.07) !important;
+}
+
+/* ─── Now indicator ─────────────────────────────── */
+.fc .fc-timegrid-now-indicator-line {
+  border-color: var(--primary) !important;
+  border-width: 2px !important;
+  opacity: 0.8;
+}
+.fc .fc-timegrid-now-indicator-arrow {
+  border-top-color: var(--primary) !important;
+  border-bottom-color: var(--primary) !important;
+}
+
+/* ─── Events ────────────────────────────────────── */
+.fc .fc-event {
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  cursor: pointer !important;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.fc .fc-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+.fc .fc-timegrid-event { border-radius: 8px !important; }
+.fc .fc-daygrid-event { border-radius: 6px !important; margin: 1px 2px !important; }
+/* hide the default fc inner content — replaced by EventPill */
+.fc .fc-event-main { padding: 0 !important; }
+
+/* ─── Daygrid day cells ─────────────────────────── */
+.fc .fc-daygrid-day { min-height: 80px; }
+.fc .fc-daygrid-day-number {
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  text-decoration: none !important;
+  padding: 6px 8px !important;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px;
+  border-radius: 50%;
+}
+.fc .fc-day-today .fc-daygrid-day-number {
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+
+/* ─── Scheduled (ghost) habit events ───────────── */
+.fc .fc-habit-ghost { opacity: 0.5; }
+.fc .fc-habit-ghost:hover { opacity: 0.75 !important; }
+
+/* ─── More-events link ──────────────────────────── */
+.fc .fc-daygrid-more-link {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--primary) !important;
+}
+
+/* ─── All-day row ───────────────────────────────── */
+.fc .fc-daygrid-body { background: transparent; }
+.fc .fc-timegrid-divider { display: none; }
+
+/* ─── Scrollgrid section backgrounds ────────────── */
+.fc-scroller { background: transparent !important; }
 
 /* ============================================
    ANIMATIONS
@@ -175,15 +281,6 @@ body {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.5; }
 }
-
-/* FullCalendar UX polish */
-.fc .fc-event { cursor: pointer; border-radius: 6px !important; font-size: 0.75rem; }
-.fc .fc-event-title { font-weight: 500; }
-.fc .fc-timegrid-slot { background: transparent; }
-.fc .fc-timegrid-col { background: transparent; }
-.fc .fc-daygrid-day.fc-day-today { background: var(--primary-muted) !important; }
-.habit-event { opacity: 0.88; }
-.habit-event:hover { opacity: 1; }
 
 .animate-fade-in  { animation: fadeIn 0.3s ease forwards; }
 .animate-slide-up { animation: slideUp 0.4s ease forwards; }
