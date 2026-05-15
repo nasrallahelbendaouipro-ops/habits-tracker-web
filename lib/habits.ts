@@ -1,13 +1,49 @@
 import { createClient } from '@/lib/supabase/client';
-import type { Habit, HabitLog, HabitWithStreak, HabitFormValues } from '@/lib/types';
+import type { Habit, HabitLog, HabitWithStreak, HabitFormValues, HabitType, HabitDimension } from '@/lib/types';
 import { TODAY, dateStr } from '@/lib/utils';
+
+// ─── Dimension defaults ────────────────────────────────────────────────────────
+
+export const DIMENSION_DEFAULTS: Record<HabitType, HabitDimension> = {
+  workout:     'body',
+  shift:       'body',
+  body_metric: 'body',
+  simple:      'body',
+  reading:     'mind',
+  study:       'mind',
+  meditation:  'soul',
+  prayer:      'soul',
+  journaling:  'soul',
+};
+
+export const DIMENSION_LABELS: Record<HabitDimension, string> = {
+  body: 'Body',
+  mind: 'Mind',
+  soul: 'Soul',
+};
+
+export const DIMENSION_ICONS: Record<HabitDimension, string> = {
+  body: '💪',
+  mind: '🧠',
+  soul: '✨',
+};
+
+// Timed types show a "Start Session" button; others are binary complete
+export const TIMED_TYPES: HabitType[] = ['workout', 'reading', 'study', 'meditation', 'prayer'];
 
 // ─── Read ──────────────────────────────────────────────────────────────────────
 
-export async function fetchHabitsWithStatus(userId: string, forDate: string = TODAY): Promise<HabitWithStreak[]> {
+export async function fetchHabitsWithStatus(
+  userId: string,
+  forDate: string = TODAY,
+  dimension?: HabitDimension
+): Promise<HabitWithStreak[]> {
   const supabase = createClient();
+  let habitQuery = supabase.from('habits').select('*').eq('user_id', userId).order('created_at');
+  if (dimension) habitQuery = habitQuery.eq('dimension', dimension);
+
   const [{ data: habits, error: he }, { data: logs, error: le }] = await Promise.all([
-    supabase.from('habits').select('*').eq('user_id', userId).order('created_at'),
+    habitQuery,
     supabase.from('habit_logs').select('*').eq('user_id', userId).gte('completed_at', dateStr(90)),
   ]);
   if (he) throw he;
@@ -53,7 +89,13 @@ export async function fetchWeeklyLogs(userId: string, habitId?: string): Promise
 
 // ─── Write ─────────────────────────────────────────────────────────────────────
 
-export async function toggleHabit(habitId: string, userId: string, completedToday: boolean, date: string = TODAY) {
+export async function toggleHabit(
+  habitId: string,
+  userId: string,
+  completedToday: boolean,
+  date: string = TODAY,
+  logData?: Record<string, unknown>
+) {
   const supabase = createClient();
   if (completedToday) {
     const { error } = await supabase
@@ -66,7 +108,7 @@ export async function toggleHabit(habitId: string, userId: string, completedToda
   } else {
     const { error } = await supabase
       .from('habit_logs')
-      .insert({ habit_id: habitId, user_id: userId, completed_at: date });
+      .insert({ habit_id: habitId, user_id: userId, completed_at: date, log_data: logData ?? {} });
     if (error) throw error;
   }
 }

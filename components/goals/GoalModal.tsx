@@ -4,7 +4,19 @@ import { useState, useEffect } from 'react';
 import { useLocale } from '@/lib/i18n';
 import { HABIT_ICONS, HABIT_COLORS } from '@/lib/habits';
 import { createGoal, updateGoal, setGoalHabits } from '@/lib/goals';
-import type { Goal, GoalWithHabits, Habit } from '@/lib/types';
+import type { Goal, GoalWithHabits, Habit, HabitDimension } from '@/lib/types';
+
+const DIMENSION_COLORS: Record<HabitDimension, string> = {
+  body: 'var(--body)',
+  mind: 'var(--mind)',
+  soul: 'var(--soul)',
+};
+
+const DIMENSION_LABELS: Record<HabitDimension, string> = {
+  body: '💪 Body',
+  mind: '🧠 Mind',
+  soul: '✨ Soul',
+};
 
 type Props = {
   visible: boolean;
@@ -17,14 +29,19 @@ type Props = {
 
 export default function GoalModal({ visible, userId, allHabits, goal, onClose, onSaved }: Props) {
   const { t } = useLocale();
-  const [title, setTitle]       = useState('');
-  const [icon, setIcon]         = useState('🎯');
-  const [color, setColor]       = useState('#6C63FF');
-  const [description, setDesc]  = useState('');
-  const [deadline, setDeadline] = useState('');
-  const [habitIds, setHabitIds] = useState<string[]>([]);
-  const [saving, setSaving]     = useState(false);
-  const [error, setError]       = useState('');
+  const [title, setTitle]               = useState('');
+  const [icon, setIcon]                 = useState('🎯');
+  const [color, setColor]               = useState('#6C63FF');
+  const [description, setDesc]          = useState('');
+  const [deadline, setDeadline]         = useState('');
+  const [dimension, setDimension]       = useState<HabitDimension>('body');
+  const [startingPoint, setStartingPt]  = useState('');
+  const [targetPoint, setTargetPt]      = useState('');
+  const [currentValue, setCurrentVal]   = useState('');
+  const [unit, setUnit]                 = useState('');
+  const [habitIds, setHabitIds]         = useState<string[]>([]);
+  const [saving, setSaving]             = useState(false);
+  const [error, setError]               = useState('');
 
   useEffect(() => {
     if (!visible) return;
@@ -34,10 +51,17 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
       setColor(goal.color);
       setDesc(goal.description ?? '');
       setDeadline(goal.deadline ?? '');
+      setDimension((goal.dimension as HabitDimension) ?? 'body');
+      setStartingPt(goal.starting_point != null ? String(goal.starting_point) : '');
+      setTargetPt(goal.target_point != null ? String(goal.target_point) : '');
+      setCurrentVal(goal.current_value != null ? String(goal.current_value) : '');
+      setUnit(goal.unit ?? '');
       setHabitIds(goal.habits.map(h => h.id));
     } else {
       setTitle(''); setIcon('🎯'); setColor('#6C63FF');
-      setDesc(''); setDeadline(''); setHabitIds([]);
+      setDesc(''); setDeadline(''); setDimension('body');
+      setStartingPt(''); setTargetPt(''); setCurrentVal(''); setUnit('');
+      setHabitIds([]);
     }
     setError('');
   }, [visible, goal]);
@@ -66,9 +90,13 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
     setError('');
     try {
       const values: Omit<Goal, 'id' | 'created_at'> = {
-        user_id: userId, title: title.trim(), icon, color,
+        user_id: userId, title: title.trim(), icon, color, dimension,
         description: description.trim() || undefined,
         deadline: deadline || undefined,
+        starting_point: startingPoint !== '' ? Number(startingPoint) : undefined,
+        target_point: targetPoint !== '' ? Number(targetPoint) : undefined,
+        current_value: currentValue !== '' ? Number(currentValue) : undefined,
+        unit: unit.trim() || undefined,
       };
       const saved = goal
         ? (await updateGoal(goal.id, values), goal)
@@ -88,6 +116,8 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
   };
+
+  const dimColor = DIMENSION_COLORS[dimension];
 
   return (
     <div
@@ -113,6 +143,35 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
+
+          {/* Dimension picker */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+              Dimension
+            </label>
+            <div className="flex gap-2">
+              {(['body', 'mind', 'soul'] as HabitDimension[]).map(d => {
+                const active = dimension === d;
+                const c = DIMENSION_COLORS[d];
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDimension(d)}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                    style={{
+                      background: active ? c + '20' : 'var(--surface-elevated)',
+                      border: `1px solid ${active ? c : 'var(--border)'}`,
+                      color: active ? c : 'var(--text-secondary)',
+                    }}
+                  >
+                    {DIMENSION_LABELS[d]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Title */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
@@ -126,10 +185,64 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
               maxLength={60}
               className="w-full px-4 py-3 rounded-xl text-sm outline-none"
               style={inputBase}
-              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+              onFocus={e => (e.target.style.borderColor = dimColor)}
               onBlur={e => (e.target.style.borderColor = 'var(--border)')}
               autoFocus
             />
+          </div>
+
+          {/* KPI fields */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+              Progress KPI <span style={{ color: 'var(--text-disabled)' }}>(optional)</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>Starting point</label>
+                <input
+                  type="number"
+                  value={startingPoint}
+                  onChange={e => setStartingPt(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                  style={inputBase}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>Target</label>
+                <input
+                  type="number"
+                  value={targetPoint}
+                  onChange={e => setTargetPt(e.target.value)}
+                  placeholder="100"
+                  className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                  style={inputBase}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>Current value</label>
+                <input
+                  type="number"
+                  value={currentValue}
+                  onChange={e => setCurrentVal(e.target.value)}
+                  placeholder="—"
+                  className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                  style={inputBase}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>Unit</label>
+                <input
+                  type="text"
+                  value={unit}
+                  onChange={e => setUnit(e.target.value)}
+                  placeholder="kg, books, min…"
+                  maxLength={20}
+                  className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+                  style={inputBase}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Icon picker */}
@@ -190,8 +303,6 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
               rows={2}
               className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
               style={inputBase}
-              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             />
           </div>
 
@@ -206,8 +317,6 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
               onChange={e => setDeadline(e.target.value)}
               className="w-full px-4 py-3 rounded-xl text-sm outline-none"
               style={{ ...inputBase, colorScheme: 'dark' }}
-              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             />
           </div>
 
@@ -233,10 +342,7 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
                     >
                       <div
                         className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all"
-                        style={{
-                          background: selected ? h.color : 'transparent',
-                          border: `2px solid ${selected ? h.color : 'var(--border)'}`,
-                        }}
+                        style={{ background: selected ? h.color : 'transparent', border: `2px solid ${selected ? h.color : 'var(--border)'}` }}
                       >
                         {selected && (
                           <svg width="10" height="8" viewBox="0 0 10 8" fill="none">

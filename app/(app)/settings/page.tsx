@@ -1,12 +1,174 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/lib/theme';
 import { useLocale, LOCALE_LABELS, type Locale } from '@/lib/i18n';
+import { getHealthConnectAuthUrl } from '@/lib/integrations/health-connect';
 import type { User } from '@supabase/supabase-js';
 import GlassCard from '@/components/ui/GlassCard';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
+
+function AppleHealthSection() {
+  const [token, setToken]       = useState<string | null>(null);
+  const [lastUsed, setLastUsed] = useState<string | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [copied, setCopied]     = useState<'token' | 'url' | null>(null);
+  const [regen, setRegen]       = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
+
+  const fetchToken = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/health/token');
+      if (res.ok) {
+        const data = await res.json() as { token: string; last_used: string | null };
+        setToken(data.token);
+        setLastUsed(data.last_used);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchToken(); }, [fetchToken]);
+
+  async function handleRegenerate() {
+    setRegen(true);
+    try {
+      const res = await fetch('/api/health/token', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json() as { token: string; last_used: string | null };
+        setToken(data.token);
+        setLastUsed(data.last_used);
+      }
+    } finally {
+      setRegen(false);
+    }
+  }
+
+  function copy(text: string, which: 'token' | 'url') {
+    navigator.clipboard.writeText(text);
+    setCopied(which);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  const ingestUrl = `${APP_URL}/api/health/ingest`;
+
+  const STEPS = [
+    { n: 1, text: 'Open the Shortcuts app on your iPhone.' },
+    { n: 2, text: 'Tap the + button to create a new Shortcut.' },
+    { n: 3, text: 'Search for "Health" and add a "Find Health Samples" action. Choose the metric (e.g. Steps). Set "Sort by" = Date, "Limit" = 1, order = Latest.' },
+    { n: 4, text: 'Repeat step 3 for each metric you want to sync: Steps, Sleep Analysis, Heart Rate, HRV (Heart Rate Variability), Active Energy.' },
+    { n: 5, text: 'Add a "Get Contents of URL" action. Set the URL to the Ingest URL below. Set Method = POST, Request Body = JSON.' },
+    { n: 6, text: 'Add these JSON keys to the body: token (paste your Sync Token), date (use "Shortcut Input" or a "Format Date" action for today → YYYY-MM-DD), steps, sleep_hours, heart_rate_avg, hrv, active_calories.' },
+    { n: 7, text: 'Go to Automation → Create Personal Automation → Time of Day → set to e.g. 10 PM daily. Add "Run Shortcut" and select the one you just made. Disable "Ask Before Running".' },
+  ];
+
+  return (
+    <GlassCard className="mb-4">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-xs uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>Apple Health Sync</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>iPhone Shortcuts → automatic daily sync</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full" style={{ background: lastUsed ? 'var(--success)' : 'var(--border)' }} />
+          <span className="text-xs" style={{ color: lastUsed ? 'var(--success)' : 'var(--text-muted)' }}>
+            {lastUsed ? `Last sync ${new Date(lastUsed).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'Not yet synced'}
+          </span>
+        </div>
+      </div>
+
+      {/* Sync Token */}
+      <div className="mb-3">
+        <p className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>Sync Token</p>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 px-3 py-2 rounded-xl font-mono text-xs overflow-hidden text-ellipsis whitespace-nowrap" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+            {loading ? '…' : token}
+          </div>
+          <button
+            onClick={() => token && copy(token, 'token')}
+            disabled={!token}
+            className="px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
+            style={{ background: copied === 'token' ? 'var(--success)20' : 'var(--primary-muted)', color: copied === 'token' ? 'var(--success)' : 'var(--primary)', border: `1px solid ${copied === 'token' ? 'var(--success)' : 'var(--primary-muted)'}` }}
+          >
+            {copied === 'token' ? '✓ Copied' : 'Copy'}
+          </button>
+          <button
+            onClick={handleRegenerate}
+            disabled={regen}
+            className="px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
+            style={{ background: 'var(--surface-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+          >
+            {regen ? '…' : '↻'}
+          </button>
+        </div>
+        <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-disabled)' }}>Keep this private — anyone with it can write to your health data.</p>
+      </div>
+
+      {/* Ingest URL */}
+      <div className="mb-4">
+        <p className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>Ingest URL</p>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 px-3 py-2 rounded-xl font-mono text-xs overflow-hidden text-ellipsis whitespace-nowrap" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+            {ingestUrl}
+          </div>
+          <button
+            onClick={() => copy(ingestUrl, 'url')}
+            className="px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
+            style={{ background: copied === 'url' ? 'var(--success)20' : 'var(--primary-muted)', color: copied === 'url' ? 'var(--success)' : 'var(--primary)', border: `1px solid ${copied === 'url' ? 'var(--success)' : 'var(--primary-muted)'}` }}
+          >
+            {copied === 'url' ? '✓ Copied' : 'Copy'}
+          </button>
+        </div>
+      </div>
+
+      {/* Synced metrics chips */}
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {['Steps', 'Sleep', 'Heart Rate', 'HRV', 'Active Calories', 'Weight'].map(m => (
+          <span key={m} className="text-[10px] font-semibold px-2 py-1 rounded-full" style={{ background: 'var(--body)15', color: 'var(--body)', border: '1px solid var(--body)30' }}>{m}</span>
+        ))}
+      </div>
+
+      {/* Setup instructions toggle */}
+      <button
+        onClick={() => setShowSteps(s => !s)}
+        className="w-full text-left text-xs font-semibold py-2.5 px-3 rounded-xl transition-all flex items-center justify-between"
+        style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+      >
+        <span>📱 Step-by-step Shortcut setup</span>
+        <span style={{ color: 'var(--text-muted)' }}>{showSteps ? '▲' : '▼'}</span>
+      </button>
+
+      {showSteps && (
+        <div className="mt-3 flex flex-col gap-2">
+          {STEPS.map(({ n, text }) => (
+            <div key={n} className="flex gap-3 items-start">
+              <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5" style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}>{n}</div>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{text}</p>
+            </div>
+          ))}
+          <div className="mt-2 p-3 rounded-xl text-xs leading-relaxed" style={{ background: 'var(--mind)10', border: '1px solid var(--mind)30', color: 'var(--text-secondary)' }}>
+            <strong style={{ color: 'var(--mind)' }}>JSON body example:</strong>
+            <pre className="mt-1 text-[10px] whitespace-pre-wrap break-all" style={{ color: 'var(--text-muted)' }}>{`{
+  "token": "<your sync token>",
+  "date": "2026-05-14",
+  "steps": 8500,
+  "sleep_hours": 7.5,
+  "heart_rate_avg": 68,
+  "hrv": 45,
+  "active_calories": 420,
+  "weight_kg": 80.5
+}`}</pre>
+          </div>
+        </div>
+      )}
+    </GlassCard>
+  );
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -114,6 +276,68 @@ export default function SettingsPage() {
           >
             {t.calendar_connect_google}
           </a>
+        </div>
+      </GlassCard>
+
+      {/* Apple Health Sync */}
+      <AppleHealthSection />
+
+      {/* Connected Devices */}
+      <GlassCard className="mb-4">
+        <p className="text-xs uppercase tracking-wide font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
+          Connected Devices
+        </p>
+
+        {/* Google Health Connect */}
+        <div className="flex items-center justify-between py-2.5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: 'var(--body)20', border: '1px solid var(--body)30' }}>
+              💪
+            </div>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Google Health Connect</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Steps, sleep, heart rate (Android)</p>
+            </div>
+          </div>
+          <a
+            href={getHealthConnectAuthUrl()}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all flex-shrink-0"
+            style={{ background: 'var(--body)20', color: 'var(--body)', border: '1px solid var(--body)40' }}
+          >
+            Connect
+          </a>
+        </div>
+
+        {/* Apple Health */}
+        <div className="flex items-center justify-between py-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: 'var(--mind)20', border: '1px solid var(--mind)30' }}>
+              🍎
+            </div>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Apple Health</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Via iPhone Shortcuts — see setup above</p>
+            </div>
+          </div>
+          <span className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: 'var(--success)20', color: 'var(--success)', border: '1px solid var(--success)40' }}>
+            ✓ Active
+          </span>
+        </div>
+
+        {/* Wearables row */}
+        <div className="flex items-center justify-between py-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: 'var(--soul)20', border: '1px solid var(--soul)30' }}>
+              ⌚
+            </div>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Garmin / Fitbit / Oura / Whoop</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Via Health Connect aggregator</p>
+            </div>
+          </div>
+          <span className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: 'var(--surface-elevated)', color: 'var(--text-disabled)', border: '1px solid var(--border)' }}>
+            Coming soon
+          </span>
         </div>
       </GlassCard>
 

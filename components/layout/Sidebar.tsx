@@ -15,10 +15,14 @@ export default function Sidebar() {
 
   const NAV_ITEMS = [
     { href: '/dashboard', icon: '🏠', label: t.nav_dashboard },
-    { href: '/calendar',  icon: '📅', label: t.nav_calendar },
+    { href: '/checkin',   icon: '✍️', label: 'Check-In' },
     { href: '/habits',    icon: '✅', label: t.nav_habits },
     { href: '/goals',     icon: '🎯', label: t.nav_goals },
+    { href: '/body',      icon: '💪', label: 'Body Metrics' },
+    { href: '/mind',      icon: '🧠', label: 'Digital Mind' },
     { href: '/analytics', icon: '📊', label: t.nav_analytics },
+    { href: '/planner',   icon: '🤖', label: t.nav_planner },
+    { href: '/calendar',  icon: '📅', label: t.nav_calendar },
     { href: '/settings',  icon: '⚙️', label: t.nav_settings },
   ];
 
