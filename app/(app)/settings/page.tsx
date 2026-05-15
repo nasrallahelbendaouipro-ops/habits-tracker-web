@@ -22,7 +22,7 @@ function AppleHealthSection() {
   const fetchToken = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/health/token');
+      const res = await fetch('/api/health/token', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json() as { token: string; last_used: string | null };
         setToken(data.token);

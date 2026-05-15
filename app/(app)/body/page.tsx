@@ -10,13 +10,15 @@ import { fetchGoals } from '@/lib/goals';
 import GlassCard from '@/components/ui/GlassCard';
 import type { GoalWithHabits } from '@/lib/types';
 
-type MetricKey = 'weight' | 'sleep_hours' | 'mood' | 'body_fat';
+type MetricKey = 'weight' | 'sleep_hours' | 'mood' | 'body_fat' | 'steps' | 'active_calories';
 
-const METRICS: { key: MetricKey; label: string; icon: string; unit: string; color: string; max?: number }[] = [
-  { key: 'weight',      label: 'Weight',     icon: '⚖️', unit: 'kg',  color: 'var(--body)'  },
-  { key: 'sleep_hours', label: 'Sleep',      icon: '😴', unit: 'hrs', color: '#a78bfa'       },
-  { key: 'mood',        label: 'Mood',       icon: '😊', unit: '/10', color: 'var(--mind)',  max: 10 },
-  { key: 'body_fat',    label: 'Body Fat',   icon: '📊', unit: '%',   color: 'var(--secondary)' },
+const METRICS: { key: MetricKey; label: string; icon: string; unit: string; color: string; max?: number; higherIsBetter?: boolean }[] = [
+  { key: 'weight',           label: 'Weight',     icon: '⚖️', unit: 'kg',   color: 'var(--body)'  },
+  { key: 'sleep_hours',      label: 'Sleep',      icon: '😴', unit: 'hrs',  color: '#a78bfa'       },
+  { key: 'mood',             label: 'Mood',       icon: '😊', unit: '/10',  color: 'var(--mind)',  max: 10 },
+  { key: 'body_fat',         label: 'Body Fat',   icon: '📊', unit: '%',    color: 'var(--secondary)' },
+  { key: 'steps',            label: 'Steps',      icon: '👣', unit: 'steps', color: '#f59e0b', higherIsBetter: true },
+  { key: 'active_calories',  label: 'Calories',   icon: '🔥', unit: 'kcal', color: '#ef4444', higherIsBetter: true },
 ];
 
 function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payload?: { value: number }[]; label?: string; unit: string }) {
@@ -131,8 +133,8 @@ export default function BodyPage() {
             {delta != null && (
               <div className="text-right">
                 <p className="text-[10px] uppercase tracking-widest font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Change</p>
-                <p className="text-2xl font-bold" style={{ color: delta < 0 ? 'var(--success)' : delta > 0 ? 'var(--error)' : 'var(--text-muted)' }}>
-                  {delta > 0 ? '+' : ''}{delta.toFixed(1)} {metric.unit}
+                <p className="text-2xl font-bold" style={{ color: delta === 0 ? 'var(--text-muted)' : (delta > 0) === !!metric.higherIsBetter ? 'var(--success)' : 'var(--error)' }}>
+                  {delta > 0 ? '+' : ''}{delta.toFixed(metric.key === 'steps' || metric.key === 'active_calories' ? 0 : 1)} {metric.unit}
                 </p>
               </div>
             )}
