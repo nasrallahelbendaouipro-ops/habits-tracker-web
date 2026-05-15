@@ -6,12 +6,13 @@ import {
 } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { fetchHabitsWithStatus } from '@/lib/habits';
-import { calcDisciplineScore, dailyCompletionMap, weeklyTotals, habitCompletionRate } from '@/lib/analytics';
+import { fetchGoals } from '@/lib/goals';
+import { calcDisciplineScore, calcDimensionScores, dailyCompletionMap, weeklyTotals, habitCompletionRate } from '@/lib/analytics';
 import { dateStr, TODAY } from '@/lib/utils';
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import GlassCard from '@/components/ui/GlassCard';
 import ProgressRing from '@/components/charts/ProgressRing';
-import type { HabitWithStreak, HabitLog } from '@/lib/types';
+import type { HabitWithStreak, HabitLog, GoalWithHabits } from '@/lib/types';
 
 // ─── Heatmap (16 weeks) ────────────────────────────────────────────────────────
 
@@ -37,9 +38,8 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
     cols.push({ weekLabel: label, days });
   }
 
-  // Generate single-letter day abbreviations from locale
   const DAY_LABELS = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(2024, 0, 7 + i); // Jan 7 2024 is Sunday
+    const d = new Date(2024, 0, 7 + i);
     return d.toLocaleDateString(LOCALE_DATE_TAG[locale], { weekday: 'narrow' });
   });
 
@@ -54,7 +54,6 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
   return (
     <div>
       <div className="flex gap-0.5" style={{ overflowX: 'auto' }}>
-        {/* Day-of-week labels */}
         <div className="flex flex-col gap-0.5 mr-1 flex-shrink-0">
           <div className="h-4" />
           {DAY_LABELS.map((l, i) => (
@@ -63,7 +62,6 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
             </div>
           ))}
         </div>
-        {/* Week columns */}
         {cols.map((col, wi) => (
           <div key={wi} className="flex flex-col gap-0.5 flex-shrink-0">
             <div className="h-4 flex items-center" style={{ fontSize: 8, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
@@ -77,19 +75,13 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
                   key={di}
                   title={`${day.date}: ${day.count}`}
                   className="w-3 h-3 rounded-sm"
-                  style={{
-                    background: isFuture ? 'transparent' : cellColor(day.count),
-                    opacity: isFuture ? 0 : 1,
-                    outline: isToday ? '1.5px solid #6C63FF' : 'none',
-                    outlineOffset: '1px',
-                  }}
+                  style={{ background: isFuture ? 'transparent' : cellColor(day.count), opacity: isFuture ? 0 : 1, outline: isToday ? '1.5px solid #6C63FF' : 'none', outlineOffset: '1px' }}
                 />
               );
             })}
           </div>
         ))}
       </div>
-      {/* Legend */}
       <div className="flex items-center gap-1.5 mt-3 justify-end">
         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t.analytics_less}</span>
         {['var(--border)', 'rgba(108,99,255,0.35)', 'rgba(108,99,255,0.6)', '#6C63FF'].map((c, i) => (
@@ -101,53 +93,34 @@ function Heatmap({ logMap, totalHabits }: { logMap: Map<string, number>; totalHa
   );
 }
 
-// ─── Custom tooltip ────────────────────────────────────────────────────────────
-
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   const { t } = useLocale();
   if (!active || !payload?.length) return null;
   return (
-    <div
-      className="px-3 py-2 rounded-xl text-xs font-semibold"
-      style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-    >
+    <div className="px-3 py-2 rounded-xl text-xs font-semibold" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
       <p style={{ color: 'var(--text-muted)' }}>{label}</p>
       <p>{payload[0].value}{t.analytics_completed}</p>
     </div>
   );
 }
 
-// ─── Habit stat row ────────────────────────────────────────────────────────────
-
 function HabitStatRow({ habit, rate }: { habit: HabitWithStreak; rate: number }) {
   return (
     <div className="flex items-center gap-3">
-      <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-        style={{ background: habit.color + '20', border: `1px solid ${habit.color}30` }}
-      >
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: habit.color + '20', border: `1px solid ${habit.color}30` }}>
         {habit.icon}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-            {habit.name}
-          </span>
-          <span className="text-xs font-bold ml-2 flex-shrink-0" style={{ color: habit.color }}>
-            {rate}%
-          </span>
+          <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{habit.name}</span>
+          <span className="text-xs font-bold ml-2 flex-shrink-0" style={{ color: habit.color }}>{rate}%</span>
         </div>
         <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${rate}%`, background: habit.color }}
-          />
+          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate}%`, background: habit.color }} />
         </div>
       </div>
       {habit.streak > 0 && (
-        <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--secondary)' }}>
-          🔥{habit.streak}d
-        </span>
+        <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--secondary)' }}>🔥{habit.streak}d</span>
       )}
     </div>
   );
@@ -160,6 +133,7 @@ export default function AnalyticsPage() {
   const [userId, setUserId]   = useState<string | null>(null);
   const [habits, setHabits]   = useState<HabitWithStreak[]>([]);
   const [logs, setLogs]       = useState<HabitLog[]>([]);
+  const [goals, setGoals]     = useState<GoalWithHabits[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -176,16 +150,14 @@ export default function AnalyticsPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const [habitsData, logsRes] = await Promise.all([
+      const [habitsData, logsRes, goalsData] = await Promise.all([
         fetchHabitsWithStatus(userId),
-        supabase
-          .from('habit_logs')
-          .select('*')
-          .eq('user_id', userId)
-          .gte('completed_at', dateStr(365)),
+        supabase.from('habit_logs').select('*').eq('user_id', userId).gte('completed_at', dateStr(365)),
+        fetchGoals(userId),
       ]);
       setHabits(habitsData);
       setLogs((logsRes.data ?? []) as HabitLog[]);
+      setGoals(goalsData);
     } finally {
       setLoading(false);
     }
@@ -219,9 +191,35 @@ export default function AnalyticsPage() {
   const todayPct   = Math.round((completed / habits.length) * 100);
   const bestStreak = Math.max(...habits.map(h => h.streak));
   const discScore  = calcDisciplineScore(habits, logs);
+  const dimScores  = calcDimensionScores(habits, logs);
   const logMap     = dailyCompletionMap(logs);
   const weekly     = weeklyTotals(habits, logs, 8);
   const sorted     = [...habits].sort((a, b) => b.streak - a.streak);
+
+  // Dimension insights
+  const dimEntries = [
+    { dim: 'body', label: '💪 Body', color: 'var(--body)', score: dimScores.body },
+    { dim: 'mind', label: '🧠 Mind', color: 'var(--mind)', score: dimScores.mind },
+    { dim: 'soul', label: '✨ Soul', color: 'var(--soul)', score: dimScores.soul },
+  ] as const;
+  const weakest  = [...dimEntries].sort((a, b) => a.score - b.score)[0];
+  const strongest = [...dimEntries].sort((a, b) => b.score - a.score)[0];
+
+  // Goal KPI insights — goals with measurable KPI fields
+  const kpiGoals = goals.filter(g => g.starting_point != null && g.target_point != null && g.current_value != null);
+  const kpiGoalsWithPct = kpiGoals.map(g => {
+    const pct = Math.max(0, Math.min(100, Math.round(
+      ((g.current_value! - g.starting_point!) / (g.target_point! - g.starting_point!)) * 100
+    )));
+    const remaining = Math.abs(g.target_point! - g.current_value!);
+    // Rough days-remaining estimate based on completion rate (days since start ÷ pct × remaining pct)
+    let daysEst: number | null = null;
+    if (pct > 0 && g.deadline) {
+      const msLeft = new Date(g.deadline + 'T00:00:00').getTime() - Date.now();
+      daysEst = Math.max(0, Math.round(msLeft / 86_400_000));
+    }
+    return { ...g, pct, remaining, daysEst };
+  });
 
   return (
     <div className="animate-fade-in flex flex-col gap-5">
@@ -232,19 +230,17 @@ export default function AnalyticsPage() {
         </p>
       </div>
 
-      {/* Summary row */}
+      {/* Overall summary */}
       <div className="grid grid-cols-3 gap-3">
         <GlassCard style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
           <ProgressRing pct={todayPct} size={72} color="#6C63FF" />
           <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>{t.today}</p>
         </GlassCard>
-
         <GlassCard style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
           <span className="text-3xl">🔥</span>
           <p className="font-bold text-xl leading-none" style={{ color: 'var(--text-primary)' }}>{bestStreak}d</p>
           <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>{t.dashboard_best_streak}</p>
         </GlassCard>
-
         <GlassCard style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
           <span className="text-3xl">⚡</span>
           <p className="font-bold text-xl leading-none" style={{ color: 'var(--text-primary)' }}>{discScore}</p>
@@ -252,59 +248,104 @@ export default function AnalyticsPage() {
         </GlassCard>
       </div>
 
-      {/* Heatmap */}
+      {/* Dimension scores */}
       <GlassCard>
         <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
-          {t.analytics_activity}
+          Dimension Scores
         </p>
+        <div className="grid grid-cols-3 gap-3">
+          {([
+            { dim: 'body', label: '💪 Body', color: 'var(--body)', score: dimScores.body },
+            { dim: 'mind', label: '🧠 Mind', color: 'var(--mind)', score: dimScores.mind },
+            { dim: 'soul', label: '✨ Soul', color: 'var(--soul)', score: dimScores.soul },
+          ] as const).map(({ label, color, score }) => (
+            <div key={label} className="flex flex-col items-center gap-2 p-3 rounded-xl" style={{ background: color + '10', border: `1px solid ${color}30` }}>
+              <p className="text-xs font-bold" style={{ color }}>{label}</p>
+              <p className="text-2xl font-bold leading-none" style={{ color }}>{score}</p>
+              <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, background: color }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      {/* Dimension insights */}
+      <GlassCard>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>Dimension Insights</p>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: weakest.color + '10', border: `1px solid ${weakest.color}30` }}>
+            <span className="text-2xl">⚠️</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Needs attention: {weakest.label}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Score {weakest.score}/100 · focus here to balance your dimensions</p>
+            </div>
+            <span className="text-lg font-bold" style={{ color: weakest.color }}>{weakest.score}</span>
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: strongest.color + '10', border: `1px solid ${strongest.color}30` }}>
+            <span className="text-2xl">🏆</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Strongest: {strongest.label}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Score {strongest.score}/100 · keep the momentum going</p>
+            </div>
+            <span className="text-lg font-bold" style={{ color: strongest.color }}>{strongest.score}</span>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Goal KPI progress */}
+      {kpiGoalsWithPct.length > 0 && (
+        <GlassCard>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>Goal KPI Tracker</p>
+          <div className="flex flex-col gap-4">
+            {kpiGoalsWithPct.map(g => (
+              <div key={g.id}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">{g.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{g.title}</span>
+                      <span className="text-sm font-bold ml-2 flex-shrink-0" style={{ color: g.color }}>{g.pct}%</span>
+                    </div>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {g.current_value} → {g.target_point} {g.unit}
+                      {g.daysEst != null && ` · ${g.daysEst}d until deadline`}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-elevated)' }}>
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${g.pct}%`, background: g.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Heatmap */}
+      <GlassCard>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>{t.analytics_activity}</p>
         <Heatmap logMap={logMap} totalHabits={habits.length} />
       </GlassCard>
 
       {/* Weekly bar chart */}
       {mounted && (
         <GlassCard>
-          <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
-            {t.analytics_weekly}
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>{t.analytics_weekly}</p>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={weekly} barSize={22} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 10, fill: '#5E5A78' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                domain={[0, 100]}
-                tickFormatter={v => `${v}%`}
-                tick={{ fontSize: 10, fill: '#5E5A78' }}
-                axisLine={false}
-                tickLine={false}
-                ticks={[0, 25, 50, 75, 100]}
-              />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#5E5A78' }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: '#5E5A78' }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(108,99,255,0.06)' }} />
               <Bar dataKey="pct" radius={[4, 4, 0, 0]}>
                 {weekly.map((entry, i) => (
-                  <Cell
-                    key={i}
-                    fill={
-                      entry.pct === 100 ? '#4ECDC4'
-                      : entry.pct >= 70   ? '#6C63FF'
-                      : entry.pct >= 40   ? '#6C63FF99'
-                      : '#6C63FF44'
-                    }
-                  />
+                  <Cell key={i} fill={entry.pct === 100 ? '#4ECDC4' : entry.pct >= 70 ? '#6C63FF' : entry.pct >= 40 ? '#6C63FF99' : '#6C63FF44'} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
           <div className="flex items-center gap-4 mt-2 justify-center flex-wrap">
-            {[
-              { label: '< 40%', color: '#6C63FF44' },
-              { label: '40–70%', color: '#6C63FF99' },
-              { label: '70–99%', color: '#6C63FF' },
-              { label: '100% 🎉', color: '#4ECDC4' },
-            ].map(({ label, color }) => (
+            {[{ label: '< 40%', color: '#6C63FF44' }, { label: '40–70%', color: '#6C63FF99' }, { label: '70–99%', color: '#6C63FF' }, { label: '100% 🎉', color: '#4ECDC4' }].map(({ label, color }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm" style={{ background: color }} />
                 <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
@@ -314,18 +355,12 @@ export default function AnalyticsPage() {
         </GlassCard>
       )}
 
-      {/* Per-habit 30-day stats */}
+      {/* Per-habit stats */}
       <GlassCard>
-        <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
-          {t.analytics_habits_rate}
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>{t.analytics_habits_rate}</p>
         <div className="flex flex-col gap-4">
           {sorted.map(habit => (
-            <HabitStatRow
-              key={habit.id}
-              habit={habit}
-              rate={habitCompletionRate(habit.id, logs, 30)}
-            />
+            <HabitStatRow key={habit.id} habit={habit} rate={habitCompletionRate(habit.id, logs, 30)} />
           ))}
         </div>
       </GlassCard>
