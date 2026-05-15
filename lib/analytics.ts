@@ -1,4 +1,4 @@
-import type { HabitWithStreak, HabitLog } from '@/lib/types';
+import type { HabitWithStreak, HabitLog, DimensionScores } from '@/lib/types';
 
 // ─── Heatmap ───────────────────────────────────────────────────────────────────
 // Returns a Map<YYYY-MM-DD, count> of completions across all habits
@@ -34,6 +34,23 @@ export function calcDisciplineScore(
     total += Math.min(rate * 75 + bonus, 100);
   }
   return Math.round(total / habits.length);
+}
+
+// ─── Per-dimension discipline scores ──────────────────────────────────────────
+
+export function calcDimensionScores(
+  habits: HabitWithStreak[],
+  logs: HabitLog[],
+  days = 30
+): DimensionScores {
+  const body  = habits.filter(h => h.dimension === 'body');
+  const mind  = habits.filter(h => h.dimension === 'mind');
+  const soul  = habits.filter(h => h.dimension === 'soul');
+  return {
+    body: calcDisciplineScore(body, logs, days),
+    mind: calcDisciplineScore(mind, logs, days),
+    soul: calcDisciplineScore(soul, logs, days),
+  };
 }
 
 // ─── Weekly totals for bar chart ───────────────────────────────────────────────

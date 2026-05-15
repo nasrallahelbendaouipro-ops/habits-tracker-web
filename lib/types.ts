@@ -1,6 +1,12 @@
+// ─── Dimensions ───────────────────────────────────────────────────────────────
+
+export type HabitDimension = 'body' | 'mind' | 'soul';
+
 // ─── Habit Types ──────────────────────────────────────────────────────────────
 
-export type HabitType = 'simple' | 'workout' | 'reading' | 'study' | 'shift';
+export type HabitType =
+  | 'simple' | 'workout' | 'reading' | 'study' | 'shift'
+  | 'meditation' | 'prayer' | 'journaling' | 'body_metric';
 
 export type WorkoutMetadata = {
   sets: number;
@@ -32,7 +38,39 @@ export type ShiftMetadata = {
   hourly_rate?: number;
 };
 
-export type HabitMetadata = WorkoutMetadata | ReadingMetadata | StudyMetadata | ShiftMetadata | Record<string, never>;
+export type MeditationMetadata = {
+  duration_min: number;
+  technique?: string;
+};
+
+export type PrayerMetadata = {
+  name?: string;
+  duration_min: number;
+};
+
+export type JournalingMetadata = {
+  prompt?: string;
+};
+
+export type BodyMetricMetadata = {
+  metric: 'weight' | 'body_fat' | 'sleep_hours' | 'mood';
+  unit: string;
+};
+
+export type HabitMetadata =
+  | WorkoutMetadata | ReadingMetadata | StudyMetadata | ShiftMetadata
+  | MeditationMetadata | PrayerMetadata | JournalingMetadata | BodyMetricMetadata
+  | Record<string, never>;
+
+// ─── Session Log (stored in HabitLog.log_data) ────────────────────────────────
+
+export type SessionLog = {
+  duration_sec: number;
+  notes?: string;
+  metric_value?: number;
+};
+
+// ─── Habit ────────────────────────────────────────────────────────────────────
 
 export type Habit = {
   id: string;
@@ -41,6 +79,7 @@ export type Habit = {
   icon: string;
   color: string;
   type: HabitType;
+  dimension: HabitDimension;
   frequency: 'daily' | 'weekly';
   target_days: number[];
   metadata: HabitMetadata;
@@ -94,6 +133,12 @@ export type DisciplineScore = {
   completionRate: number;
 };
 
+export type DimensionScores = {
+  body: number;
+  mind: number;
+  soul: number;
+};
+
 // ─── Goals ────────────────────────────────────────────────────────────────────
 
 export type Goal = {
@@ -104,6 +149,11 @@ export type Goal = {
   deadline?: string;   // YYYY-MM-DD
   color: string;
   icon: string;
+  dimension: HabitDimension;
+  starting_point?: number;
+  target_point?: number;
+  current_value?: number;
+  unit?: string;
   created_at: string;
 };
 
@@ -121,6 +171,7 @@ export type HabitFormValues = {
   icon: string;
   color: string;
   type: HabitType;
+  dimension: HabitDimension;
   frequency: 'daily' | 'weekly';
   target_days: number[];
   metadata: HabitMetadata;
