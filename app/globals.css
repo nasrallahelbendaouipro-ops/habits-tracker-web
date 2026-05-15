@@ -39,6 +39,11 @@
 
   --sidebar-width: 240px;
   --bottomnav-height: 64px;
+
+  /* Dimension colors */
+  --body: #ef4444;
+  --mind: #3b82f6;
+  --soul: #a855f7;
 }
 
 [data-theme="light"] {

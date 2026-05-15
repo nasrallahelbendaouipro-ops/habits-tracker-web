@@ -1,22 +1,42 @@
 'use client';
 
 import { useState } from 'react';
-import { HABIT_ICONS, HABIT_COLORS } from '@/lib/habits';
+import { HABIT_ICONS, HABIT_COLORS, DIMENSION_DEFAULTS } from '@/lib/habits';
 import { useLocale } from '@/lib/i18n';
-import type { HabitFormValues, HabitType, HabitMetadata } from '@/lib/types';
+import type { HabitFormValues, HabitType, HabitMetadata, HabitDimension } from '@/lib/types';
 import TypePicker from './TypePicker';
 import WorkoutForm, { defaultWorkout } from './WorkoutForm';
 import ReadingForm, { defaultReading } from './ReadingForm';
 import StudyForm, { defaultStudy } from './StudyForm';
 import ShiftForm, { defaultShift } from './ShiftForm';
-import type { WorkoutMetadata, ReadingMetadata, StudyMetadata, ShiftMetadata } from '@/lib/types';
+import MeditationForm, { defaultMeditation } from './MeditationForm';
+import PrayerForm, { defaultPrayer } from './PrayerForm';
+import JournalingForm, { defaultJournaling } from './JournalingForm';
+import BodyMetricForm, { defaultBodyMetric } from './BodyMetricForm';
+import type { WorkoutMetadata, ReadingMetadata, StudyMetadata, ShiftMetadata, MeditationMetadata, PrayerMetadata, JournalingMetadata, BodyMetricMetadata } from '@/lib/types';
 
 const DEFAULT_METADATA: Record<HabitType, HabitMetadata> = {
-  simple:  {},
-  workout: defaultWorkout,
-  reading: defaultReading,
-  study:   defaultStudy,
-  shift:   defaultShift,
+  simple:      {},
+  workout:     defaultWorkout,
+  reading:     defaultReading,
+  study:       defaultStudy,
+  shift:       defaultShift,
+  meditation:  defaultMeditation,
+  prayer:      defaultPrayer,
+  journaling:  defaultJournaling,
+  body_metric: defaultBodyMetric,
+};
+
+const DIMENSION_COLORS: Record<HabitDimension, string> = {
+  body: 'var(--body)',
+  mind: 'var(--mind)',
+  soul: 'var(--soul)',
+};
+
+const DIMENSION_LABELS: Record<HabitDimension, string> = {
+  body: '💪 Body',
+  mind: '🧠 Mind',
+  soul: '✨ Soul',
 };
 
 type Props = {
@@ -25,16 +45,16 @@ type Props = {
   submitLabel: string;
 };
 
-// Mon=1 … Sun=7 (matches FullCalendar firstDay=1 convention)
 const WEEK_DAYS = [1, 2, 3, 4, 5, 6, 7];
 
 function getDayLabel(dow: number, locale: string): string {
-  // dow: 1=Mon … 7=Sun → get a representative date for that weekday
-  const base = new Date('2024-01-01'); // Monday
+  const base = new Date('2024-01-01');
   base.setDate(base.getDate() + (dow - 1));
   const tag = locale === 'fr' ? 'fr-FR' : locale === 'ar' ? 'ar-SA' : 'en-US';
   return base.toLocaleDateString(tag, { weekday: 'short' });
 }
+
+const HAS_SUBFORM: HabitType[] = ['workout', 'reading', 'study', 'shift', 'meditation', 'prayer', 'journaling', 'body_metric'];
 
 export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
   const { t, locale } = useLocale();
@@ -42,6 +62,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
   const [icon, setIcon]           = useState(initial?.icon ?? '🎯');
   const [color, setColor]         = useState(initial?.color ?? '#6C63FF');
   const [type, setType]           = useState<HabitType>(initial?.type ?? 'simple');
+  const [dimension, setDimension] = useState<HabitDimension>(initial?.dimension ?? DIMENSION_DEFAULTS[initial?.type ?? 'simple']);
   const [metadata, setMeta]       = useState<HabitMetadata>(initial?.metadata ?? {});
   const [targetDays, setTargetDays] = useState<number[]>(initial?.target_days ?? []);
   const [error, setError]         = useState('');
@@ -57,6 +78,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
 
   function handleTypeChange(newType: HabitType) {
     setType(newType);
+    setDimension(DIMENSION_DEFAULTS[newType]);
     setMeta(() => {
       if (initial?.type === newType) return initial?.metadata ?? DEFAULT_METADATA[newType];
       return DEFAULT_METADATA[newType];
@@ -70,7 +92,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
     setLoading(true);
     try {
       await onSubmit({
-        name: name.trim(), icon, color, type,
+        name: name.trim(), icon, color, type, dimension,
         frequency: targetDays.length > 0 ? 'weekly' : 'daily',
         target_days: targetDays,
         metadata,
@@ -92,6 +114,34 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {/* Type picker */}
       <TypePicker value={type} onChange={handleTypeChange} />
+
+      {/* Dimension override */}
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+          Dimension
+        </label>
+        <div className="flex gap-2">
+          {(['body', 'mind', 'soul'] as HabitDimension[]).map(d => {
+            const active = dimension === d;
+            const c = DIMENSION_COLORS[d];
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDimension(d)}
+                className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                style={{
+                  background: active ? c + '20' : 'var(--surface-elevated)',
+                  border: `1px solid ${active ? c : 'var(--border)'}`,
+                  color: active ? c : 'var(--text-secondary)',
+                }}
+              >
+                {DIMENSION_LABELS[d]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Name */}
       <div>
@@ -213,23 +263,19 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
       </div>
 
       {/* Type-specific fields */}
-      {type !== 'simple' && (
+      {HAS_SUBFORM.includes(type) && (
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
             {t.form_details}
           </label>
-          {type === 'workout' && (
-            <WorkoutForm value={metadata as WorkoutMetadata} onChange={setMeta} />
-          )}
-          {type === 'reading' && (
-            <ReadingForm value={metadata as ReadingMetadata} onChange={setMeta} />
-          )}
-          {type === 'study' && (
-            <StudyForm value={metadata as StudyMetadata} onChange={setMeta} />
-          )}
-          {type === 'shift' && (
-            <ShiftForm value={metadata as ShiftMetadata} onChange={setMeta} />
-          )}
+          {type === 'workout'     && <WorkoutForm    value={metadata as WorkoutMetadata}    onChange={setMeta} />}
+          {type === 'reading'     && <ReadingForm     value={metadata as ReadingMetadata}    onChange={setMeta} />}
+          {type === 'study'       && <StudyForm       value={metadata as StudyMetadata}      onChange={setMeta} />}
+          {type === 'shift'       && <ShiftForm       value={metadata as ShiftMetadata}      onChange={setMeta} />}
+          {type === 'meditation'  && <MeditationForm  value={metadata as MeditationMetadata} onChange={setMeta} />}
+          {type === 'prayer'      && <PrayerForm      value={metadata as PrayerMetadata}     onChange={setMeta} />}
+          {type === 'journaling'  && <JournalingForm  value={metadata as JournalingMetadata} onChange={setMeta} />}
+          {type === 'body_metric' && <BodyMetricForm  value={metadata as BodyMetricMetadata} onChange={setMeta} />}
         </div>
       )}
 
@@ -248,9 +294,14 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
           >
             {icon}
           </div>
-          <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-            {name || t.form_habit_name_placeholder}
-          </p>
+          <div>
+            <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+              {name || t.form_habit_name_placeholder}
+            </p>
+            <p className="text-[10px]" style={{ color: DIMENSION_COLORS[dimension] }}>
+              {DIMENSION_LABELS[dimension]}
+            </p>
+          </div>
         </div>
       </div>
 

@@ -26,7 +26,7 @@ There is no lint or test script configured.
 - `app/(auth)/` — unauthenticated pages (login, register). Layout centers content on screen.
 - `app/(app)/` — authenticated pages (dashboard, habits, calendar, analytics, planner, settings). Layout in `app/(app)/layout.tsx` checks Supabase auth server-side and redirects to `/login` if no session. Renders `<Sidebar>` + `<BottomNav>`.
 - `app/api/parse-shift/route.ts` — POST endpoint that parses work shift text. Uses OpenAI GPT-4o if `OPENAI_API_KEY` is set, otherwise falls back to a regex-based parser that handles French roster format (VandB-style) and generic inline formats.
-- `proxy.ts` — middleware-style auth logic (redirect unauthenticated users to `/login`, redirect authenticated users away from auth pages). Must be wired as Next.js middleware to take effect.
+- `middleware.ts` — Next.js middleware entry point; re-exports auth logic from `proxy.ts`. Redirects unauthenticated users to `/login` and authenticated users away from auth pages. Rate limiting for `/api/parse-shift` (10 req/min per IP) is handled inside that route.
 
 ### Data Layer (`lib/`)
 All Supabase queries in `lib/habits.ts`, `lib/calendar.ts`, and `lib/analytics.ts` use the **browser client** (`lib/supabase/client.ts`) and are called from Client Components.

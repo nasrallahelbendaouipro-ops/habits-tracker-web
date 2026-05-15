@@ -10,9 +10,9 @@ export default function BottomNav() {
 
   const NAV_ITEMS = [
     { href: '/dashboard', icon: '🏠', label: t.nav_home },
-    { href: '/habits',    icon: '✅', label: t.nav_habits },
+    { href: '/checkin',   icon: '✍️', label: 'Check-In' },
     { href: '/goals',     icon: '🎯', label: t.nav_goals },
-    { href: '/calendar',  icon: '📅', label: t.nav_calendar },
+    { href: '/analytics', icon: '📊', label: 'Analytics' },
     { href: '/settings',  icon: '👤', label: t.nav_profile },
   ];
 
