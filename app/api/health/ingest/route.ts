@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { token, date, ...metrics } = body;
+  const { token, date: rawDate, ...metrics } = body;
+  const date = typeof rawDate === 'string' ? rawDate.trim() : rawDate;
 
   if (!token || !date) {
     return NextResponse.json({ error: 'token and date are required' }, { status: 400 });
