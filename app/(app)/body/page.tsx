@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { fetchRecentCheckins } from '@/lib/checkin';
@@ -159,12 +159,16 @@ export default function BodyPage() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={metricData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <BarChart data={metricData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barCategoryGap="30%">
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#5E5A78' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 10, fill: '#5E5A78' }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
-              <Tooltip content={<ChartTooltip unit={metric.unit} />} />
-              <Line type="monotone" dataKey={activeMetric} stroke={metric.color} strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: metric.color }} />
-            </LineChart>
+              <YAxis tick={{ fontSize: 10, fill: '#5E5A78' }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+              <Tooltip content={<ChartTooltip unit={metric.unit} />} cursor={{ fill: 'var(--surface-elevated)' }} />
+              <Bar dataKey={activeMetric} radius={[4, 4, 0, 0]}>
+                {metricData.map((_, i) => (
+                  <Cell key={i} fill={i === metricData.length - 1 ? metric.color : metric.color + '99'} />
+                ))}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         )}
       </GlassCard>
