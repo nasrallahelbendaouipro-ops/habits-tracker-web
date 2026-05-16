@@ -21,20 +21,24 @@ export async function POST(req: NextRequest) {
   }
 
   const { token, date: rawDate, ...metrics } = body;
-  const date = typeof rawDate === 'string' ? rawDate.trim() : rawDate;
 
-  if (!token || !date) {
+  if (!token || !rawDate) {
     return NextResponse.json({ error: 'token and date are required' }, { status: 400 });
   }
 
-  // Validate date format
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json({
-      error: 'date must be YYYY-MM-DD',
-      received: JSON.stringify(rawDate),
-      length: typeof rawDate === 'string' ? rawDate.length : null,
-      charCodes: typeof rawDate === 'string' ? [...rawDate].map(c => c.charCodeAt(0)) : null,
-    }, { status: 400 });
+  // Normalise whatever iOS Shortcuts sends to YYYY-MM-DD.
+  // Accepts: "2026-05-16", ISO timestamps "2026-05-16T14:18:00+02:00", or any
+  // string parseable by Date.
+  let date: string;
+  const trimmed = String(rawDate).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    date = trimmed;
+  } else {
+    const parsed = new Date(trimmed);
+    if (isNaN(parsed.getTime())) {
+      return NextResponse.json({ error: 'Cannot parse date', received: trimmed }, { status: 400 });
+    }
+    date = parsed.toISOString().slice(0, 10);
   }
 
   const supabase = createAdminClient();
