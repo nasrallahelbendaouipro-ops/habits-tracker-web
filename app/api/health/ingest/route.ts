@@ -29,7 +29,12 @@ export async function POST(req: NextRequest) {
 
   // Validate date format
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json({ error: 'date must be YYYY-MM-DD' }, { status: 400 });
+    return NextResponse.json({
+      error: 'date must be YYYY-MM-DD',
+      received: JSON.stringify(rawDate),
+      length: typeof rawDate === 'string' ? rawDate.length : null,
+      charCodes: typeof rawDate === 'string' ? [...rawDate].map(c => c.charCodeAt(0)) : null,
+    }, { status: 400 });
   }
 
   const supabase = createAdminClient();
