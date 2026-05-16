@@ -66,16 +66,17 @@ export async function POST(req: NextRequest) {
 
   const existingBody = (existing?.body_metrics ?? {}) as Record<string, unknown>;
 
-  // iOS Shortcuts can send individual Health samples as an array instead of a
-  // single aggregated value — sum arrays so we always store a single number.
+  // iOS Shortcuts sends Health samples as a JSON array OR a space-separated
+  // string — sum all parts so we always store a single aggregated number.
   const norm = (v: unknown): number | undefined => {
     if (v == null) return undefined;
-    if (Array.isArray(v)) {
-      const sum = (v as unknown[]).reduce<number>((acc, x) => acc + Number(x), 0);
-      return isNaN(sum) ? undefined : sum;
-    }
-    const n = Number(v);
-    return isNaN(n) ? undefined : n;
+    const parts: unknown[] = Array.isArray(v)
+      ? v
+      : typeof v === 'string' && /\s/.test(v.trim())
+        ? v.trim().split(/\s+/)
+        : [v];
+    const sum = parts.reduce<number>((acc, x) => acc + Number(x), 0);
+    return isNaN(sum) ? undefined : sum;
   };
 
   // Build merged body_metrics — only set fields that were provided by the Shortcut
