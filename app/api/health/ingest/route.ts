@@ -3,13 +3,13 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export type HealthIngestPayload = {
   token: string;
-  date: string;           // YYYY-MM-DD
-  steps?: number;
-  sleep_hours?: number;
-  heart_rate_avg?: number;
-  hrv?: number;
-  active_calories?: number;
-  weight_kg?: number;
+  date: string;                        // YYYY-MM-DD (or ISO timestamp)
+  steps?: number | number[];           // iOS Shortcuts may send individual samples
+  sleep_hours?: number | number[];
+  heart_rate_avg?: number | number[];
+  hrv?: number | number[];
+  active_calories?: number | number[];
+  weight_kg?: number | number[];
 };
 
 export async function POST(req: NextRequest) {
@@ -66,16 +66,26 @@ export async function POST(req: NextRequest) {
 
   const existingBody = (existing?.body_metrics ?? {}) as Record<string, unknown>;
 
+  // iOS Shortcuts can send individual Health samples as an array instead of a
+  // single aggregated value — sum arrays so we always store a single number.
+  const norm = (v: unknown): number | undefined => {
+    if (v == null) return undefined;
+    if (Array.isArray(v)) {
+      const sum = (v as unknown[]).reduce<number>((acc, x) => acc + Number(x), 0);
+      return isNaN(sum) ? undefined : sum;
+    }
+    const n = Number(v);
+    return isNaN(n) ? undefined : n;
+  };
+
   // Build merged body_metrics — only set fields that were provided by the Shortcut
   const merged: Record<string, unknown> = { ...existingBody };
-  if (metrics.weight_kg    != null) merged.weight       = metrics.weight_kg;
-  if (metrics.sleep_hours  != null) merged.sleep_hours  = metrics.sleep_hours;
-
-  // Extra HealthKit fields stored alongside standard body_metrics
-  if (metrics.steps            != null) merged.steps            = metrics.steps;
-  if (metrics.heart_rate_avg   != null) merged.heart_rate_avg   = metrics.heart_rate_avg;
-  if (metrics.hrv              != null) merged.hrv              = metrics.hrv;
-  if (metrics.active_calories  != null) merged.active_calories  = metrics.active_calories;
+  const w  = norm(metrics.weight_kg);       if (w  != null) merged.weight          = w;
+  const sl = norm(metrics.sleep_hours);     if (sl != null) merged.sleep_hours     = sl;
+  const st = norm(metrics.steps);           if (st != null) merged.steps           = st;
+  const hr = norm(metrics.heart_rate_avg);  if (hr != null) merged.heart_rate_avg  = hr;
+  const hv = norm(metrics.hrv);             if (hv != null) merged.hrv             = hv;
+  const ac = norm(metrics.active_calories); if (ac != null) merged.active_calories = ac;
 
   const { error: upsertErr } = await supabase
     .from('daily_checkins')
