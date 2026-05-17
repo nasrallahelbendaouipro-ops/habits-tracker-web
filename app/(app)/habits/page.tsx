@@ -162,7 +162,7 @@ export default function HabitsPage() {
                           {h.completedToday && <span className="text-[10px] font-medium" style={{ color: 'var(--success)' }}>{t.habits_done_today}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setEditing(h)} className="w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all" style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}>✏️</button>
                         <button onClick={() => handleDelete(h.id)} disabled={deleting === h.id} className="w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all" style={{ background: 'rgba(255,107,107,0.12)', color: 'var(--error)' }}>
                           {deleting === h.id ? '…' : '🗑️'}
