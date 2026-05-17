@@ -117,5 +117,7 @@ export async function POST(req: NextRequest) {
     .eq('user_id', userId);
 
   const savedFields = Object.keys(reading).filter(k => k !== 'user_id');
-  return NextResponse.json({ ok: true, date, fields: savedFields });
+  const values: Record<string, unknown> = {};
+  for (const k of savedFields) values[k] = reading[k];
+  return NextResponse.json({ ok: true, date, fields: savedFields, values });
 }
