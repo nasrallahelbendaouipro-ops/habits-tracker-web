@@ -26,9 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'token and date are required' }, { status: 400 });
   }
 
-  // Normalise whatever iOS Shortcuts sends to YYYY-MM-DD.
-  // Accepts: "2026-05-16", ISO timestamps "2026-05-16T14:18:00+02:00", or any
-  // string parseable by Date.
+  // Normalise date to YYYY-MM-DD — accepts ISO timestamps too.
   let date: string;
   const trimmed = String(rawDate).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
@@ -56,18 +54,8 @@ export async function POST(req: NextRequest) {
 
   const userId = tokenRow.user_id;
 
-  // Fetch existing check-in for the day so we can merge (not overwrite) body_metrics
-  const { data: existing } = await supabase
-    .from('daily_checkins')
-    .select('body_metrics')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .maybeSingle();
-
-  const existingBody = (existing?.body_metrics ?? {}) as Record<string, unknown>;
-
-  // iOS Shortcuts sends Health samples as a JSON array OR a space-separated
-  // string — sum all parts so we always store a single aggregated number.
+  // iOS Shortcuts sends samples as JSON array OR space/newline-separated string —
+  // sum all parts to get a single aggregated number.
   const norm = (v: unknown): number | undefined => {
     if (v == null) return undefined;
     const parts: unknown[] = Array.isArray(v)
@@ -79,26 +67,48 @@ export async function POST(req: NextRequest) {
     return isNaN(sum) ? undefined : sum;
   };
 
-  // Build merged body_metrics — only set fields that were provided by the Shortcut
-  const merged: Record<string, unknown> = { ...existingBody };
-  const w  = norm(metrics.weight_kg);       if (w  != null) merged.weight          = w;
-  const sl = norm(metrics.sleep_hours);     if (sl != null) merged.sleep_hours     = sl;
-  const st = norm(metrics.steps);           if (st != null) merged.steps           = st;
-  const hr = norm(metrics.heart_rate_avg);  if (hr != null) merged.heart_rate_avg  = hr;
-  const hv = norm(metrics.hrv);             if (hv != null) merged.hrv             = hv;
-  const ac = norm(metrics.active_calories); if (ac != null) merged.active_calories = ac;
+  const st = norm(metrics.steps);
+  const sl = norm(metrics.sleep_hours);
+  const hr = norm(metrics.heart_rate_avg);
+  const hv = norm(metrics.hrv);
+  const ac = norm(metrics.active_calories);
+  const w  = norm(metrics.weight_kg);
 
-  const { error: upsertErr } = await supabase
-    .from('daily_checkins')
-    .upsert(
-      { user_id: userId, date, body_metrics: merged },
-      { onConflict: 'user_id,date' }
-    );
+  // Insert a timestamped reading into health_readings (powers intraday charts).
+  const reading: Record<string, unknown> = { user_id: userId };
+  if (st != null) reading.steps            = Math.round(st);
+  if (sl != null) reading.sleep_hours      = sl;
+  if (hr != null) reading.heart_rate_avg   = Math.round(hr);
+  if (hv != null) reading.hrv              = hv;
+  if (ac != null) reading.active_calories  = ac;
+  if (w  != null) reading.weight_kg        = w;
 
-  if (upsertErr) {
-    console.error('[health/ingest]', upsertErr);
+  const { error: insertErr } = await supabase.from('health_readings').insert(reading);
+  if (insertErr) {
+    console.error('[health/ingest] health_readings insert:', insertErr);
     return NextResponse.json({ error: 'Failed to save data' }, { status: 500 });
   }
+
+  // Also upsert daily_checkins for backward compat (manual check-in merging).
+  const { data: existing } = await supabase
+    .from('daily_checkins')
+    .select('body_metrics')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .maybeSingle();
+
+  const existingBody = (existing?.body_metrics ?? {}) as Record<string, unknown>;
+  const merged: Record<string, unknown> = { ...existingBody };
+  if (w  != null) merged.weight          = w;
+  if (sl != null) merged.sleep_hours     = sl;
+  if (st != null) merged.steps           = Math.round(st);
+  if (hr != null) merged.heart_rate_avg  = Math.round(hr);
+  if (hv != null) merged.hrv             = hv;
+  if (ac != null) merged.active_calories = ac;
+
+  await supabase
+    .from('daily_checkins')
+    .upsert({ user_id: userId, date, body_metrics: merged }, { onConflict: 'user_id,date' });
 
   // Update last_used on the token
   await supabase
@@ -106,5 +116,6 @@ export async function POST(req: NextRequest) {
     .update({ last_used: new Date().toISOString() })
     .eq('user_id', userId);
 
-  return NextResponse.json({ ok: true, date, fields: Object.keys(metrics).filter(k => metrics[k as keyof typeof metrics] != null) });
+  const savedFields = Object.keys(reading).filter(k => k !== 'user_id');
+  return NextResponse.json({ ok: true, date, fields: savedFields });
 }
