@@ -20,6 +20,7 @@ export default function Sidebar() {
     { href: '/goals',     icon: '🎯', label: t.nav_goals },
     { href: '/body',      icon: '💪', label: 'Body Metrics' },
     { href: '/mind',      icon: '🧠', label: 'Digital Mind' },
+    { href: '/soul',      icon: '✨', label: 'Soul Growth' },
     { href: '/analytics', icon: '📊', label: t.nav_analytics },
     { href: '/planner',   icon: '🤖', label: t.nav_planner },
     { href: '/calendar',  icon: '📅', label: t.nav_calendar },
