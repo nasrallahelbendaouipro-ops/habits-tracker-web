@@ -32,18 +32,18 @@ export default function HabitModal({ mode, habit, visible, onClose, onSubmit }: 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-4"
-      style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(8px)' }}
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full md:max-w-lg max-h-[78vh] flex flex-col rounded-2xl animate-slide-up"
+        className="w-full md:max-w-lg rounded-2xl animate-slide-up overflow-hidden"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
       >
-        {/* Header — never scrolls */}
+        {/* Header */}
         <div
-          className="flex items-center justify-between px-6 py-4 shrink-0"
-          style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', borderRadius: '1rem 1rem 0 0' }}
+          className="flex items-center justify-between px-6 py-4 sticky top-0"
+          style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
         >
           <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
             {mode === 'add' ? t.modal_new_habit : t.modal_edit_habit}
@@ -58,7 +58,7 @@ export default function HabitModal({ mode, habit, visible, onClose, onSubmit }: 
         </div>
 
         {/* Form — scrolls inside the modal */}
-        <div className="px-6 py-5 overflow-y-auto flex-1 scroll-hidden">
+        <div className="px-6 py-5 max-h-[72vh] overflow-y-auto scroll-hidden">
           <HabitForm
             initial={habit ? {
               name: habit.name, icon: habit.icon, color: habit.color,
