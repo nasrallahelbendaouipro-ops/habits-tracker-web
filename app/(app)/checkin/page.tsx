@@ -10,7 +10,51 @@ import GlassCard from '@/components/ui/GlassCard';
 
 const DIM_COLOR = { body: 'var(--body)', mind: 'var(--mind)', soul: 'var(--soul)' };
 
-// ─── Metric Input ──────────────────────────────────────────────────────────────
+// ─── Rating Picker (1–10 integer scales) ──────────────────────────────────────
+
+function RatingPicker({ label, value, onChange, color, hint }: {
+  label: string;
+  value: number | undefined;
+  onChange: (v: number | undefined) => void;
+  color: string;
+  hint?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+        {value != null && (
+          <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: color + '20', color }}>
+            {value}/10
+          </span>
+        )}
+      </div>
+      <div className="flex gap-1">
+        {Array.from({ length: 10 }, (_, i) => i + 1).map(n => {
+          const active = n === value;
+          return (
+            <button
+              key={n}
+              onClick={() => onChange(active ? undefined : n)}
+              className="flex-1 h-8 rounded-lg text-xs font-bold transition-all"
+              style={{
+                background: active ? color : 'var(--surface-elevated)',
+                color: active ? 'white' : 'var(--text-muted)',
+                border: `1px solid ${active ? color : 'var(--border)'}`,
+                transform: active ? 'scale(1.05)' : 'scale(1)',
+              }}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+      {hint && <p className="text-[10px]" style={{ color: 'var(--text-disabled)' }}>{hint}</p>}
+    </div>
+  );
+}
+
+// ─── Metric Input (continuous decimal values) ─────────────────────────────────
 
 function MetricInput({ label, value, onChange, unit, min, max, step = 0.1 }: {
   label: string; value: number | undefined; onChange: (v: number | undefined) => void;
@@ -28,8 +72,14 @@ function MetricInput({ label, value, onChange, unit, min, max, step = 0.1 }: {
           step={step}
           onChange={e => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
           placeholder="—"
-          className="w-20 px-2 py-1.5 rounded-lg text-sm text-right outline-none"
-          style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+          className="w-20 px-2 py-1.5 rounded-lg text-sm text-right outline-none transition-all"
+          style={{
+            background: 'var(--surface-elevated)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-primary)',
+          }}
+          onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
         />
         <span className="text-xs w-8 flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{unit}</span>
       </div>
@@ -57,7 +107,7 @@ function HabitRow({ habit, onToggle }: { habit: HabitWithStreak; onToggle: () =>
         style={{ background: habit.completedToday ? dimColor : 'transparent', border: `2px solid ${habit.completedToday ? dimColor : 'var(--border)'}` }}
       >
         {habit.completedToday && (
-          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none" className="animate-check-draw">
             <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
@@ -96,7 +146,6 @@ export default function CheckInPage() {
   const [saved, setSaved]     = useState(false);
   const [saving, setSaving]   = useState(false);
 
-  // Check-in metrics
   const [body, setBody] = useState<BodyMetrics>({});
   const [mind, setMind] = useState<MindMetrics>({});
   const [soul, setSoul] = useState<SoulMetrics>({});
@@ -151,7 +200,6 @@ export default function CheckInPage() {
   const mindDone  = mindHabits.filter(h => h.completedToday).length;
   const soulDone  = soulHabits.filter(h => h.completedToday).length;
 
-  // Compute overview score per dimension (0-10, based on habit completion)
   const dimScore = (done: number, total: number) => total === 0 ? 0 : Math.round((done / total) * 10);
 
   const now = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -184,11 +232,11 @@ export default function CheckInPage() {
             {bodyHabits.map(h => <HabitRow key={h.id} habit={h} onToggle={() => handleToggle(h)} />)}
           </div>
         )}
-        <div className="flex flex-col gap-3" style={{ borderTop: bodyHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: bodyHabits.length > 0 ? '12px' : 0 }}>
+        <div className="flex flex-col gap-4" style={{ borderTop: bodyHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: bodyHabits.length > 0 ? '16px' : 0 }}>
           <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--body)' }}>Body Metrics</p>
           <MetricInput label="Weight" value={body.weight} onChange={v => setBody(b => ({ ...b, weight: v }))} unit="kg" min={20} max={300} step={0.1} />
           <MetricInput label="Sleep" value={body.sleep_hours} onChange={v => setBody(b => ({ ...b, sleep_hours: v }))} unit="hrs" min={0} max={24} step={0.5} />
-          <MetricInput label="Mood" value={body.mood} onChange={v => setBody(b => ({ ...b, mood: v }))} unit="/10" min={1} max={10} step={1} />
+          <RatingPicker label="Mood" value={body.mood} onChange={v => setBody(b => ({ ...b, mood: v }))} color="var(--body)" hint="1 = very low  ·  10 = excellent" />
           <MetricInput label="Body Fat" value={body.body_fat} onChange={v => setBody(b => ({ ...b, body_fat: v }))} unit="%" min={1} max={60} step={0.1} />
         </div>
       </GlassCard>
@@ -205,12 +253,11 @@ export default function CheckInPage() {
             {mindHabits.map(h => <HabitRow key={h.id} habit={h} onToggle={() => handleToggle(h)} />)}
           </div>
         )}
-        <div className="flex flex-col gap-3" style={{ borderTop: mindHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: mindHabits.length > 0 ? '12px' : 0 }}>
+        <div className="flex flex-col gap-4" style={{ borderTop: mindHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: mindHabits.length > 0 ? '16px' : 0 }}>
           <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--mind)' }}>Digital Usage</p>
           <MetricInput label="Total screen time" value={mind.screen_time_min} onChange={v => setMind(m => ({ ...m, screen_time_min: v }))} unit="min" min={0} max={1440} step={5} />
           <MetricInput label="Social media" value={mind.social_media_min} onChange={v => setMind(m => ({ ...m, social_media_min: v }))} unit="min" min={0} max={600} step={5} />
           <MetricInput label="Deep work" value={mind.deep_work_min} onChange={v => setMind(m => ({ ...m, deep_work_min: v }))} unit="min" min={0} max={600} step={5} />
-          {/* Productivity ratio */}
           {(mind.screen_time_min ?? 0) > 0 && (
             <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'var(--surface)' }}>
               <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Productivity ratio</span>
@@ -240,16 +287,16 @@ export default function CheckInPage() {
             {soulHabits.map(h => <HabitRow key={h.id} habit={h} onToggle={() => handleToggle(h)} />)}
           </div>
         )}
-        <div className="flex flex-col gap-3" style={{ borderTop: soulHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: soulHabits.length > 0 ? '12px' : 0 }}>
+        <div className="flex flex-col gap-4" style={{ borderTop: soulHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: soulHabits.length > 0 ? '16px' : 0 }}>
           <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--soul)' }}>Inner Metrics</p>
-          <MetricInput label="Gratitude" value={soul.gratitude_score} onChange={v => setSoul(s => ({ ...s, gratitude_score: v }))} unit="/10" min={1} max={10} step={1} />
-          <MetricInput label="Meditation quality" value={soul.meditation_quality} onChange={v => setSoul(s => ({ ...s, meditation_quality: v }))} unit="/10" min={1} max={10} step={1} />
-          <MetricInput label="Stress level" value={soul.stress_level} onChange={v => setSoul(s => ({ ...s, stress_level: v }))} unit="/10" min={1} max={10} step={1} />
+          <RatingPicker label="Gratitude" value={soul.gratitude_score} onChange={v => setSoul(s => ({ ...s, gratitude_score: v }))} color="var(--soul)" hint="1 = not grateful  ·  10 = deeply grateful" />
+          <RatingPicker label="Meditation quality" value={soul.meditation_quality} onChange={v => setSoul(s => ({ ...s, meditation_quality: v }))} color="var(--soul)" />
+          <RatingPicker label="Stress level" value={soul.stress_level} onChange={v => setSoul(s => ({ ...s, stress_level: v }))} color="#f97316" hint="1 = very calm  ·  10 = very stressed" />
         </div>
       </GlassCard>
 
       {/* Notes */}
-      <GlassCard className="mb-5">
+      <GlassCard className="mb-24">
         <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
           Daily notes <span style={{ color: 'var(--text-disabled)' }}>(optional)</span>
         </label>
@@ -258,20 +305,36 @@ export default function CheckInPage() {
           onChange={e => setNotes(e.target.value)}
           placeholder="How was your day? Any thoughts or reflections…"
           rows={3}
-          className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none"
+          className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none transition-all"
           style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+          onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
+          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
         />
       </GlassCard>
 
-      {/* Save button */}
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all"
-        style={{ background: saved ? 'var(--success)' : saving ? 'var(--text-muted)' : 'var(--primary)', boxShadow: 'var(--shadow-glow)' }}
+      {/* Sticky save button */}
+      <div
+        className="fixed bottom-0 left-0 right-0 px-4 pb-safe z-40 md:sticky md:bottom-0"
+        style={{
+          paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
+          paddingTop: '12px',
+          background: 'linear-gradient(to top, var(--bg) 70%, transparent)',
+        }}
       >
-        {saved ? '✓ Check-in saved!' : saving ? 'Saving…' : 'Save Today\'s Check-In'}
-      </button>
+        <div className="max-w-2xl mx-auto">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all"
+            style={{
+              background: saved ? 'var(--success)' : saving ? 'var(--text-muted)' : 'var(--primary)',
+              boxShadow: saved ? 'none' : 'var(--shadow-glow)',
+            }}
+          >
+            {saved ? '✓ Check-in saved!' : saving ? 'Saving…' : "Save Today's Check-In"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

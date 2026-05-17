@@ -123,10 +123,12 @@ function HabitCard({
   habit,
   onToggle,
   onStartSession,
+  justCompleted,
 }: {
   habit: HabitWithStreak;
   onToggle: (h: HabitWithStreak) => void;
   onStartSession: (h: HabitWithStreak) => void;
+  justCompleted: boolean;
 }) {
   const isTimed = TIMED_TYPES.includes(habit.type);
   const dimColor = DIM_COLOR[habit.dimension] ?? 'var(--primary)';
@@ -179,12 +181,13 @@ function HabitCard({
         </button>
       ) : (
         <div
-          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all cursor-pointer"
+          key={`cb-${habit.completedToday}`}
+          className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer ${justCompleted ? 'animate-bounce-in' : 'transition-all'}`}
           style={{ background: habit.completedToday ? habit.color : 'transparent', border: `2px solid ${habit.completedToday ? habit.color : 'var(--border)'}` }}
           onClick={() => onToggle(habit)}
         >
           {habit.completedToday && (
-            <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+            <svg width="12" height="10" viewBox="0 0 12 10" fill="none" className={justCompleted ? 'animate-check-draw' : ''}>
               <path d="M1 5L4.5 8.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
@@ -222,6 +225,7 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [activeDim, setActiveDim]     = useState<HabitDimension | null>(null);
   const [activeSession, setActiveSession] = useState<HabitWithStreak | null>(null);
+  const [justCompleted, setJustCompleted] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -253,11 +257,16 @@ export default function DashboardPage() {
   };
 
   const handleToggle = async (habit: HabitWithStreak) => {
+    const completing = !habit.completedToday;
     setHabits(prev => prev.map(h =>
       h.id === habit.id
-        ? { ...h, completedToday: !h.completedToday, streak: h.completedToday ? h.streak - 1 : h.streak + 1 }
+        ? { ...h, completedToday: completing, streak: completing ? h.streak + 1 : h.streak - 1 }
         : h
     ));
+    if (completing) {
+      setJustCompleted(prev => new Set(prev).add(habit.id));
+      setTimeout(() => setJustCompleted(prev => { const n = new Set(prev); n.delete(habit.id); return n; }), 400);
+    }
     try {
       await toggleHabit(habit.id, userId!, habit.completedToday, selectedDate);
     } catch {
@@ -358,6 +367,20 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* All-done celebration */}
+        {!loading && completed === habits.length && habits.length > 0 && (
+          <div
+            className="animate-slide-up mb-3 px-4 py-3 rounded-xl flex items-center gap-3"
+            style={{ background: 'linear-gradient(135deg, var(--primary-muted), rgba(78,205,196,0.15))', border: '1px solid var(--primary)40' }}
+          >
+            <span className="text-2xl">🎉</span>
+            <div>
+              <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>All done for today!</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>You completed all {habits.length} habits. Great work.</p>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex flex-col gap-3">
             {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl animate-pulse" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />)}
@@ -366,8 +389,10 @@ export default function DashboardPage() {
           <EmptyState onAdd={() => setShowAdd(true)} noHabitsLabel={t.dashboard_no_habits} noHabitsDesc={t.dashboard_no_habits_desc} addHabitLabel={t.dashboard_add_habit} />
         ) : (
           <div className="flex flex-col gap-2">
-            {visibleHabits.map(habit => (
-              <HabitCard key={habit.id} habit={habit} onToggle={handleToggle} onStartSession={setActiveSession} />
+            {visibleHabits.map((habit, index) => (
+              <div key={habit.id} className="animate-item" style={{ '--i': index } as React.CSSProperties}>
+                <HabitCard habit={habit} onToggle={handleToggle} onStartSession={setActiveSession} justCompleted={justCompleted.has(habit.id)} />
+              </div>
             ))}
           </div>
         )}
