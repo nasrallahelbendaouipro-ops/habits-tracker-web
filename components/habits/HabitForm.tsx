@@ -115,34 +115,6 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
       {/* Type picker */}
       <TypePicker value={type} onChange={handleTypeChange} />
 
-      {/* Dimension override */}
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          Dimension
-        </label>
-        <div className="flex gap-2">
-          {(['body', 'mind', 'soul'] as HabitDimension[]).map(d => {
-            const active = dimension === d;
-            const c = DIMENSION_COLORS[d];
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDimension(d)}
-                className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
-                style={{
-                  background: active ? c + '20' : 'var(--surface-elevated)',
-                  border: `1px solid ${active ? c : 'var(--border)'}`,
-                  color: active ? c : 'var(--text-secondary)',
-                }}
-              >
-                {DIMENSION_LABELS[d]}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Name */}
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
