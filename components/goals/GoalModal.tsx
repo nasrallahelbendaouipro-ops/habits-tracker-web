@@ -121,12 +121,12 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 md:py-8"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full md:max-w-lg rounded-2xl animate-slide-up overflow-hidden max-h-[90vh] flex flex-col"
+        className="w-full md:max-w-lg rounded-2xl animate-slide-up overflow-hidden max-h-[82vh] flex flex-col"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
       >
         {/* Header */}
@@ -160,7 +160,7 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
                     onClick={() => setDimension(d)}
                     className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
                     style={{
-                      background: active ? c + '20' : 'var(--surface-elevated)',
+                      background: active ? `color-mix(in srgb, ${c} 15%, transparent)` : 'var(--surface-elevated)',
                       border: `1px solid ${active ? c : 'var(--border)'}`,
                       color: active ? c : 'var(--text-secondary)',
                     }}
@@ -258,7 +258,7 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
                   onClick={() => setIcon(ic)}
                   className="w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all"
                   style={{
-                    background: icon === ic ? color + '30' : 'var(--surface-elevated)',
+                    background: icon === ic ? `color-mix(in srgb, ${color} 20%, transparent)` : 'var(--surface-elevated)',
                     border: `2px solid ${icon === ic ? color : 'var(--border)'}`,
                   }}
                 >
@@ -336,8 +336,8 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
                       onClick={() => toggleHabit(h.id)}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
                       style={{
-                        background: selected ? h.color + '15' : 'var(--surface-elevated)',
-                        border: `1px solid ${selected ? h.color + '50' : 'var(--border)'}`,
+                        background: selected ? `color-mix(in srgb, ${h.color} 12%, transparent)` : 'var(--surface-elevated)',
+                        border: `1px solid ${selected ? h.color : 'var(--border)'}`,
                       }}
                     >
                       <div
