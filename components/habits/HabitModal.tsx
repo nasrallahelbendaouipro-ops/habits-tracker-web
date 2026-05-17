@@ -32,12 +32,12 @@ export default function HabitModal({ mode, habit, visible, onClose, onSubmit }: 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full md:max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl animate-slide-up"
+        className="w-full md:max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl animate-slide-up"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
       >
         {/* Header */}
