@@ -121,12 +121,12 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-4"
-      style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(8px)' }}
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full md:max-w-lg rounded-2xl animate-slide-up overflow-hidden max-h-[78vh] flex flex-col"
+        className="w-full md:max-w-lg rounded-2xl animate-slide-up overflow-hidden max-h-[82vh] flex flex-col"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
       >
         {/* Header */}
