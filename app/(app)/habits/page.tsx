@@ -101,7 +101,7 @@ export default function HabitsPage() {
           if (count === 0) return null;
           const c = DIM_COLOR[dim];
           return (
-            <span key={dim} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold" style={{ background: c + '20', color: c, border: `1px solid ${c}30` }}>
+            <span key={dim} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold" style={{ background: `color-mix(in srgb, ${c} 15%, transparent)`, color: c, border: `1px solid color-mix(in srgb, ${c} 20%, transparent)` }}>
               {DIMENSION_ICONS[dim]} {DIM_LABEL[dim]} · {count}
             </span>
           );
@@ -133,8 +133,8 @@ export default function HabitsPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-lg">{DIMENSION_ICONS[dim]}</span>
                   <h2 className="font-bold text-sm uppercase tracking-widest" style={{ color: c }}>{DIM_LABEL[dim]}</h2>
-                  <div className="flex-1 h-px" style={{ background: c + '30' }} />
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: c + '20', color: c }}>
+                  <div className="flex-1 h-px" style={{ background: `color-mix(in srgb, ${c} 20%, transparent)` }} />
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: `color-mix(in srgb, ${c} 15%, transparent)`, color: c }}>
                     {dimHabits.length}
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export default function HabitsPage() {
                       <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(`/habits/${h.id}`)}>
                         <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{h.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: c + '20', color: c }}>
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `color-mix(in srgb, ${c} 15%, transparent)`, color: c }}>
                             {h.type}
                           </span>
                           {h.streak > 0 && <span className="text-[10px] font-medium" style={{ color: 'var(--secondary)' }}>🔥 {h.streak}d</span>}
@@ -164,7 +164,7 @@ export default function HabitsPage() {
                       </div>
                       <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setEditing(h)} className="w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all" style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}>✏️</button>
-                        <button onClick={() => handleDelete(h.id)} disabled={deleting === h.id} className="w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all" style={{ background: 'rgba(255,107,107,0.12)', color: 'var(--error)' }}>
+                        <button onClick={() => handleDelete(h.id)} disabled={deleting === h.id} className="w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all" style={{ background: 'var(--error-muted)', color: 'var(--error)' }}>
                           {deleting === h.id ? '…' : '🗑️'}
                         </button>
                       </div>

@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { fetchGoals } from '@/lib/goals';
 import { fetchHealthChart, type Period, type MetricKey, type ChartPoint } from '@/lib/health-readings';
 import GlassCard from '@/components/ui/GlassCard';
+import { useChartTheme } from '@/lib/chart-theme';
 import type { GoalWithHabits } from '@/lib/types';
 
 const METRICS: {
@@ -19,11 +20,11 @@ const METRICS: {
   higherIsBetter?: boolean;
   decimals?: number;
 }[] = [
-  { key: 'steps',           label: 'Pas',       icon: '👣', unit: 'pas',  color: '#f59e0b', higherIsBetter: true  },
-  { key: 'active_calories', label: 'Calories',   icon: '🔥', unit: 'kcal', color: '#ef4444', higherIsBetter: true  },
-  { key: 'weight_kg',       label: 'Poids',      icon: '⚖️', unit: 'kg',   color: 'var(--body)',  decimals: 1      },
-  { key: 'sleep_hours',     label: 'Sommeil',    icon: '😴', unit: 'h',    color: '#a78bfa', decimals: 1           },
-  { key: 'heart_rate_avg',  label: 'Fréq. card.', icon: '❤️', unit: 'bpm', color: '#f43f5e', decimals: 0           },
+  { key: 'steps',           label: 'Pas',       icon: '👣', unit: 'pas',  color: 'var(--warning)',  higherIsBetter: true  },
+  { key: 'active_calories', label: 'Calories',   icon: '🔥', unit: 'kcal', color: 'var(--body)',    higherIsBetter: true  },
+  { key: 'weight_kg',       label: 'Poids',      icon: '⚖️', unit: 'kg',   color: 'var(--body)',    decimals: 1           },
+  { key: 'sleep_hours',     label: 'Sommeil',    icon: '😴', unit: 'h',    color: 'var(--soul)',    decimals: 1           },
+  { key: 'heart_rate_avg',  label: 'Fréq. card.', icon: '❤️', unit: 'bpm', color: 'var(--error)',  decimals: 0           },
 ];
 
 const PERIODS: { key: Period; label: string }[] = [
@@ -118,6 +119,7 @@ export default function BodyPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const chart  = useChartTheme();
   const metric = METRICS.find(m => m.key === activeMetric)!;
   const nonNull = chartData.filter(d => d.value != null) as { label: string; value: number }[];
 
@@ -145,7 +147,7 @@ export default function BodyPage() {
               onClick={() => setActiveMetric(m.key)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
               style={{
-                background: active ? m.color + '20' : 'var(--surface)',
+                background: active ? `color-mix(in srgb, ${m.color} 15%, transparent)` : 'var(--surface)',
                 border: `1px solid ${active ? m.color : 'var(--border)'}`,
                 color: active ? m.color : 'var(--text-secondary)',
               }}
@@ -218,19 +220,19 @@ export default function BodyPage() {
             >
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 9, fill: '#5E5A78' }}
+                tick={{ fontSize: 9, fill: chart.tickFill }}
                 axisLine={false}
                 tickLine={false}
                 interval="preserveStartEnd"
               />
               <YAxis
-                tick={{ fontSize: 9, fill: '#5E5A78' }}
+                tick={{ fontSize: 9, fill: chart.tickFill }}
                 axisLine={false}
                 tickLine={false}
                 domain={[0, 'auto']}
                 tickFormatter={v => v >= 1000 ? `${Math.round(v / 1000)}k` : String(v)}
               />
-              <Tooltip content={<ChartTooltip unit={metric.unit} />} cursor={{ fill: 'var(--surface-elevated)' }} />
+              <Tooltip content={<ChartTooltip unit={metric.unit} />} contentStyle={chart.tooltipStyle} cursor={{ fill: chart.cursorFill }} />
               <Bar dataKey="value" radius={[3, 3, 0, 0]}>
                 {chartData.map((_, i) => (
                   <Cell
