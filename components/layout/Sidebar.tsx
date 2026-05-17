@@ -65,20 +65,15 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
-              className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all')}
+              aria-current={active ? 'page' : undefined}
+              className={cn('sidebar-nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all')}
               style={{
                 background: active ? 'var(--primary-muted)' : 'transparent',
                 color: active ? 'var(--primary)' : 'var(--text-secondary)',
                 borderInlineStart: active ? '2px solid var(--primary)' : '2px solid transparent',
               }}
-              onMouseEnter={e => {
-                if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)';
-              }}
-              onMouseLeave={e => {
-                if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent';
-              }}
             >
-              <span className="text-base">{icon}</span>
+              <span className="text-base" aria-hidden="true">{icon}</span>
               {label}
             </Link>
           );
@@ -89,23 +84,19 @@ export default function Sidebar() {
       <div className="px-3 pb-4 flex flex-col gap-1" style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
         <button
           onClick={toggleTheme}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left"
+          className="sidebar-footer-btn flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left"
           style={{ color: 'var(--text-secondary)' }}
-          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)')}
-          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
         >
-          <span>{isDark ? '☀️' : '🌙'}</span>
+          <span aria-hidden="true">{isDark ? '☀️' : '🌙'}</span>
           {isDark ? t.nav_light_mode : t.nav_dark_mode}
         </button>
 
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left"
+          className="sidebar-signout-btn flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left"
           style={{ color: 'var(--error)' }}
-          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,107,107,0.08)')}
-          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
         >
-          <span>🚪</span>
+          <span aria-hidden="true">🚪</span>
           {t.nav_sign_out}
         </button>
       </div>

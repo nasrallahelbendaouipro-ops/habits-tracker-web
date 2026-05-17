@@ -9,6 +9,7 @@ import { fetchRecentCheckins } from '@/lib/checkin';
 import { fetchHabitsWithStatus } from '@/lib/habits';
 import { fetchGoals } from '@/lib/goals';
 import GlassCard from '@/components/ui/GlassCard';
+import { useChartTheme } from '@/lib/chart-theme';
 import type { GoalWithHabits, HabitWithStreak } from '@/lib/types';
 
 type MetricKey = 'gratitude_score' | 'meditation_quality' | 'stress_level';
@@ -16,7 +17,7 @@ type MetricKey = 'gratitude_score' | 'meditation_quality' | 'stress_level';
 const METRICS: { key: MetricKey; label: string; icon: string; unit: string; color: string; lowerIsBetter?: boolean }[] = [
   { key: 'gratitude_score',    label: 'Gratitude',  icon: '🙏', unit: '/10', color: 'var(--soul)'  },
   { key: 'meditation_quality', label: 'Meditation', icon: '🧘', unit: '/10', color: 'var(--soul)'  },
-  { key: 'stress_level',       label: 'Stress',     icon: '😤', unit: '/10', color: '#f97316', lowerIsBetter: true },
+  { key: 'stress_level',       label: 'Stress',     icon: '😤', unit: '/10', color: 'var(--warning)', lowerIsBetter: true },
 ];
 
 function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payload?: { value: number }[]; label?: string; unit: string }) {
@@ -77,7 +78,7 @@ function HabitStreakCard({ habit }: { habit: HabitWithStreak }) {
       {habit.completedToday && (
         <span
           className="text-[10px] font-bold px-2 py-1 rounded-lg flex-shrink-0"
-          style={{ background: 'var(--success)20', color: 'var(--success)' }}
+          style={{ background: 'var(--success-muted)', color: 'var(--success)' }}
         >
           Done ✓
         </span>
@@ -130,6 +131,7 @@ export default function SoulPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const chart      = useChartTheme();
   const metric     = METRICS.find(m => m.key === activeMetric)!;
   const metricData = chartData.filter(d => d[activeMetric] != null);
 
@@ -212,7 +214,7 @@ export default function SoulPage() {
               onClick={() => setActiveMetric(m.key)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
               style={{
-                background: active ? m.color + '20' : 'var(--surface)',
+                background: active ? `color-mix(in srgb, ${m.color} 15%, transparent)` : 'var(--surface)',
                 border: `1px solid ${active ? m.color : 'var(--border)'}`,
                 color: active ? m.color : 'var(--text-secondary)',
               }}
@@ -267,16 +269,16 @@ export default function SoulPage() {
         ) : (
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={metricData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#5E5A78' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: chart.tickFill }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
               <YAxis
-                tick={{ fontSize: 10, fill: '#5E5A78' }}
+                tick={{ fontSize: 10, fill: chart.tickFill }}
                 axisLine={false}
                 tickLine={false}
                 domain={[0, 10]}
                 ticks={[0, 2, 4, 6, 8, 10]}
               />
-              <Tooltip content={<ChartTooltip unit={metric.unit} />} />
-              <ReferenceLine y={5} stroke="var(--text-disabled)" strokeDasharray="4 4" />
+              <Tooltip content={<ChartTooltip unit={metric.unit} />} contentStyle={chart.tooltipStyle} />
+              <ReferenceLine y={5} stroke={chart.refLineStroke} strokeDasharray="4 4" />
               <Line
                 type="monotone"
                 dataKey={activeMetric}

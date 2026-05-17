@@ -44,6 +44,17 @@
   --body: #ef4444;
   --mind: #3b82f6;
   --soul: #a855f7;
+
+  /* Muted variants — use these instead of color + '20' concatenation */
+  --error-muted: rgba(255, 107, 107, 0.15);
+  --success-muted: rgba(78, 205, 196, 0.15);
+  --warning-muted: rgba(255, 217, 61, 0.15);
+  --teal-muted: rgba(78, 205, 196, 0.15);
+  --body-muted: rgba(239, 68, 68, 0.15);
+  --mind-muted: rgba(59, 130, 246, 0.15);
+  --soul-muted: rgba(168, 85, 247, 0.15);
+  --primary-muted-border: rgba(108, 99, 255, 0.3);
+  --secondary-muted-border: rgba(255, 107, 53, 0.3);
 }
 
 [data-theme="light"] {
@@ -70,6 +81,17 @@
   --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.1);
   --shadow-glow: 0 0 24px rgba(108, 99, 255, 0.12);
+
+  /* Muted variants — light theme adjustments */
+  --error-muted: rgba(255, 107, 107, 0.12);
+  --success-muted: rgba(78, 205, 196, 0.12);
+  --warning-muted: rgba(255, 217, 61, 0.12);
+  --teal-muted: rgba(78, 205, 196, 0.12);
+  --body-muted: rgba(239, 68, 68, 0.12);
+  --mind-muted: rgba(59, 130, 246, 0.12);
+  --soul-muted: rgba(168, 85, 247, 0.12);
+  --primary-muted-border: rgba(108, 99, 255, 0.25);
+  --secondary-muted-border: rgba(255, 107, 53, 0.25);
 }
 
 @theme inline {
@@ -312,4 +334,17 @@ body {
 .animate-check-draw path {
   stroke-dasharray: 20;
   animation: checkDraw 0.25s ease forwards;
+}
+
+/* ============================================
+   SIDEBAR NAV — CSS hover (replaces inline JS handlers)
+   ============================================ */
+.sidebar-nav-link:hover:not([aria-current="page"]) {
+  background: var(--surface-hover) !important;
+}
+.sidebar-footer-btn:hover {
+  background: var(--surface-hover) !important;
+}
+.sidebar-signout-btn:hover {
+  background: var(--error-muted) !important;
 }
