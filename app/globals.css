@@ -110,6 +110,10 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
+/* Hide scrollbar visually while keeping scroll functionality */
+.scroll-hidden { scrollbar-width: none; -ms-overflow-style: none; }
+.scroll-hidden::-webkit-scrollbar { display: none; }
+
 /* ============================================
    FOCUS RING
    ============================================ */
