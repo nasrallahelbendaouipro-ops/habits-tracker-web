@@ -34,7 +34,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="hidden md:flex flex-col h-full"
+      className="hidden md:flex flex-col h-full relative z-[60]"
       style={{
         width: 'var(--sidebar-width)',
         background: 'var(--surface)',
