@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
@@ -12,6 +13,7 @@ import { dateStr, TODAY } from '@/lib/utils';
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import GlassCard from '@/components/ui/GlassCard';
 import ProgressRing from '@/components/charts/ProgressRing';
+import { useChartTheme } from '@/lib/chart-theme';
 import type { HabitWithStreak, HabitLog, GoalWithHabits } from '@/lib/types';
 
 // ─── Heatmap (16 weeks) ────────────────────────────────────────────────────────
@@ -116,7 +118,13 @@ function HabitStatRow({ habit, rate }: { habit: HabitWithStreak; rate: number })
           <span className="text-xs font-bold ml-2 flex-shrink-0" style={{ color: habit.color }}>{rate}%</span>
         </div>
         <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate}%`, background: habit.color }} />
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: habit.color }}
+            initial={{ width: 0 }}
+            animate={{ width: `${rate}%` }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+          />
         </div>
       </div>
       {habit.streak > 0 && (
@@ -130,6 +138,7 @@ function HabitStatRow({ habit, rate }: { habit: HabitWithStreak; rate: number })
 
 export default function AnalyticsPage() {
   const { t } = useLocale();
+  const chart = useChartTheme();
   const [userId, setUserId]   = useState<string | null>(null);
   const [habits, setHabits]   = useState<HabitWithStreak[]>([]);
   const [logs, setLogs]       = useState<HabitLog[]>([]);
@@ -259,11 +268,17 @@ export default function AnalyticsPage() {
             { dim: 'mind', label: '🧠 Mind', color: 'var(--mind)', score: dimScores.mind },
             { dim: 'soul', label: '✨ Soul', color: 'var(--soul)', score: dimScores.soul },
           ] as const).map(({ label, color, score }) => (
-            <div key={label} className="flex flex-col items-center gap-2 p-3 rounded-xl" style={{ background: color + '10', border: `1px solid ${color}30` }}>
+            <div key={label} className="flex flex-col items-center gap-2 p-3 rounded-xl" style={{ background: `color-mix(in srgb, ${color} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 20%, transparent)` }}>
               <p className="text-xs font-bold" style={{ color }}>{label}</p>
               <p className="text-2xl font-bold leading-none" style={{ color }}>{score}</p>
               <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, background: color }} />
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: color }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${score}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
+                />
               </div>
             </div>
           ))}
@@ -274,7 +289,7 @@ export default function AnalyticsPage() {
       <GlassCard>
         <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>Dimension Insights</p>
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: weakest.color + '10', border: `1px solid ${weakest.color}30` }}>
+          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: `color-mix(in srgb, ${weakest.color} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${weakest.color} 20%, transparent)` }}>
             <span className="text-2xl">⚠️</span>
             <div className="flex-1">
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Needs attention: {weakest.label}</p>
@@ -282,7 +297,7 @@ export default function AnalyticsPage() {
             </div>
             <span className="text-lg font-bold" style={{ color: weakest.color }}>{weakest.score}</span>
           </div>
-          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: strongest.color + '10', border: `1px solid ${strongest.color}30` }}>
+          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: `color-mix(in srgb, ${strongest.color} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${strongest.color} 20%, transparent)` }}>
             <span className="text-2xl">🏆</span>
             <div className="flex-1">
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Strongest: {strongest.label}</p>
@@ -334,9 +349,9 @@ export default function AnalyticsPage() {
           <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>{t.analytics_weekly}</p>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={weekly} barSize={22} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#5E5A78' }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: '#5E5A78' }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(108,99,255,0.06)' }} />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: chart.tickFill }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: chart.tickFill }} axisLine={false} tickLine={false} ticks={[0, 25, 50, 75, 100]} />
+              <Tooltip content={<ChartTooltip />} contentStyle={chart.tooltipStyle} cursor={{ fill: chart.cursorFill }} />
               <Bar dataKey="pct" radius={[4, 4, 0, 0]}>
                 {weekly.map((entry, i) => (
                   <Cell key={i} fill={entry.pct === 100 ? '#4ECDC4' : entry.pct >= 70 ? '#6C63FF' : entry.pct >= 40 ? '#6C63FF99' : '#6C63FF44'} />
