@@ -5,6 +5,7 @@ import { useLocale } from '@/lib/i18n';
 import { HABIT_ICONS, HABIT_COLORS } from '@/lib/habits';
 import { createGoal, updateGoal, setGoalHabits } from '@/lib/goals';
 import type { Goal, GoalWithHabits, Habit, HabitDimension } from '@/lib/types';
+import ModalShell from '@/components/ui/ModalShell';
 
 const DIMENSION_COLORS: Record<HabitDimension, string> = {
   body: 'var(--body)',
@@ -66,18 +67,6 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
     setError('');
   }, [visible, goal]);
 
-  useEffect(() => {
-    if (!visible) return;
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [visible, onClose]);
-
-  useEffect(() => {
-    document.body.style.overflow = visible ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [visible]);
-
   if (!visible) return null;
 
   function toggleHabit(id: string) {
@@ -119,30 +108,25 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
 
   const dimColor = DIMENSION_COLORS[dimension];
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+  const saveButton = (
+    <button
+      onClick={handleSave}
+      disabled={saving}
+      className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all"
+      style={{ background: saving ? 'var(--text-muted)' : color, cursor: saving ? 'not-allowed' : 'pointer' }}
     >
-      <div
-        className="w-full md:max-w-lg rounded-2xl animate-slide-up overflow-hidden max-h-[90vh] flex flex-col"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-          <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-            {goal ? t.goals_edit : t.goals_new}
-          </h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-sm"
-            style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}
-          >✕</button>
-        </div>
+      {saving ? t.form_saving : t.goals_save}
+    </button>
+  );
 
-        {/* Body */}
-        <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
+  return (
+    <ModalShell
+      visible={visible}
+      onClose={onClose}
+      title={goal ? t.goals_edit : t.goals_new}
+      footer={saveButton}
+    >
+      <div className="flex flex-col gap-5">
 
           {/* Dimension picker */}
           <div>
@@ -360,20 +344,7 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
           )}
 
           {error && <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all"
-            style={{ background: saving ? 'var(--text-muted)' : color, cursor: saving ? 'not-allowed' : 'pointer' }}
-          >
-            {saving ? t.form_saving : t.goals_save}
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

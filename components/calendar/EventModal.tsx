@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
 import { useLocale } from '@/lib/i18n';
 import type { CalendarEvent, CalendarEventType } from '@/lib/types';
+import ModalShell from '@/components/ui/ModalShell';
 
 const EVENT_COLORS = ['#6C63FF', '#FF6B35', '#4ECDC4', '#45B7D1', '#FF6B6B', '#96CEB4', '#FFD93D', '#DDA0DD'];
 
@@ -75,18 +76,6 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  useEffect(() => {
-    if (!visible) return;
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [visible, onClose]);
-
-  useEffect(() => {
-    document.body.style.overflow = visible ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [visible]);
-
   if (!visible) return null;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -141,31 +130,39 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
   const blurBorder = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     (e.target.style.borderColor = 'var(--border)');
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="w-full md:max-w-lg rounded-2xl animate-slide-up overflow-hidden"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
-      >
-        <div
-          className="flex items-center justify-between px-6 py-4 sticky top-0"
-          style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
+  const footer = (
+    <div className="flex gap-2">
+      {mode === 'edit' && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
+          style={{ background: 'rgba(255,107,107,0.12)', color: 'var(--error)' }}
         >
-          <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-            {mode === 'create' ? t.event_new : t.event_edit}
-          </h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all"
-            style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}
-          >✕</button>
-        </div>
+          {deleting ? '…' : '🗑️'}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={e => { e.preventDefault(); handleSubmit(e as unknown as React.FormEvent); }}
+        disabled={loading}
+        className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all"
+        style={{ background: loading ? 'var(--text-muted)' : color, cursor: loading ? 'not-allowed' : 'pointer' }}
+      >
+        {loading ? t.form_saving : mode === 'create' ? t.event_add : t.modal_save_changes}
+      </button>
+    </div>
+  );
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
+  return (
+    <ModalShell
+      visible={visible}
+      onClose={onClose}
+      title={mode === 'create' ? t.event_new : t.event_edit}
+      footer={footer}
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Type */}
           <div className="flex gap-2 flex-wrap">
             {TYPE_OPTIONS.map(opt => (
@@ -271,30 +268,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
           </div>
 
           {error && <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>}
-
-          <div className="flex gap-2">
-            {mode === 'edit' && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
-                style={{ background: 'rgba(255,107,107,0.12)', color: 'var(--error)' }}
-              >
-                {deleting ? '…' : '🗑️'}
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all"
-              style={{ background: loading ? 'var(--text-muted)' : color, cursor: loading ? 'not-allowed' : 'pointer' }}
-            >
-              {loading ? t.form_saving : mode === 'create' ? t.event_add : t.modal_save_changes}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalShell>
   );
 }
