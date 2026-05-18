@@ -57,7 +57,7 @@ export default function TypePicker({
             <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: group.color }}>
               {group.label}
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className={`grid gap-2 ${group.types.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
               {group.types.map(type => {
                 const active = type.value === value;
                 return (

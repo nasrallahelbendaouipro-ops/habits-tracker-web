@@ -25,8 +25,9 @@ export default function ModalShell({ visible, onClose, title, footer, children }
   }, [visible, onClose]);
 
   useEffect(() => {
-    document.body.style.overflow = visible ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    // Set on <html> (not just body) so the scrollbar track disappears completely on Windows
+    document.documentElement.style.overflow = visible ? 'hidden' : '';
+    return () => { document.documentElement.style.overflow = ''; };
   }, [visible]);
 
   return (
