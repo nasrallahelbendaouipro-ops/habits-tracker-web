@@ -12,7 +12,6 @@ const DIMENSION_GROUPS: { dimension: HabitDimension; label: string; color: strin
     color: 'var(--body)',
     types: [
       { value: 'workout',     icon: '💪', label: 'Workout' },
-      { value: 'shift',       icon: '🕐', label: 'Shift' },
       { value: 'body_metric', icon: '⚖️', label: 'Metric' },
     ],
   },
