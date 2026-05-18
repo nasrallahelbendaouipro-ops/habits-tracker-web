@@ -34,7 +34,7 @@ export default function ModalShell({ visible, onClose, title, footer, children }
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:pt-[8vh]"
+          className="fixed inset-0 z-50 flex items-end sm:items-start justify-center p-4 sm:pt-[8vh]"
           style={{ backdropFilter: 'blur(4px)' }}
           onClick={e => { if (e.target === e.currentTarget) onClose(); }}
           initial={{ background: 'rgba(0,0,0,0)' }}
