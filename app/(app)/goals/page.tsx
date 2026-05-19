@@ -91,7 +91,7 @@ export default function GoalsPage() {
       ) : goals.length === 0 ? (
         <div
           className="rounded-2xl flex flex-col items-center justify-center py-20 text-center"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+          style={{ background: 'var(--surface)' }}
         >
           <div className="text-5xl mb-4">🎯</div>
           <h2 className="font-bold text-lg mb-2" style={{ color: 'var(--text-primary)' }}>{t.goals_empty}</h2>
