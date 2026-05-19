@@ -7,6 +7,8 @@ import type { ParsedShift } from '@/app/api/parse-shift/route';
 
 type ShiftEntry = ParsedShift & { selected: boolean; key: string };
 
+const TRAVEL_COLOR = '#4A90D9';
+
 type Props = {
   visible: boolean;
   userId: string;
@@ -100,7 +102,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
           type: 'shift',
           start_at: startISO,
           end_at: endISO,
-          color: '#FF6B35',
+          color: s.isTravel ? '#4A90D9' : '#FF6B35',
           source: 'ai-parsed',
         });
       }));
@@ -114,6 +116,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
   }
 
   const selectedCount = shifts.filter(s => s.selected).length;
+  const realShiftCount = shifts.filter(s => !s.isTravel).length;
 
   const inputStyle = {
     background: 'var(--surface-elevated)',
@@ -123,7 +126,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
 
   const headerSubtitle = step === 'input'
     ? (aiPowered ? t.parser_ai_powered : t.parser_paste_schedule)
-    : `${shifts.length} ${shifts.length !== 1 ? t.parser_shifts_noun : t.parser_shift_noun} ${t.parser_detected}${aiPowered ? ' · AI' : ''}`;
+    : `${realShiftCount} ${realShiftCount !== 1 ? t.parser_shifts_noun : t.parser_shift_noun} ${t.parser_detected}${aiPowered ? ' · AI' : ''}`;
 
   return (
     <div
@@ -201,13 +204,17 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
             </p>
 
             <div className="flex flex-col gap-2">
-              {shifts.map(s => (
+              {shifts.map(s => {
+                const accent = s.isTravel ? TRAVEL_COLOR : '#FF6B35';
+                return (
                 <div
                   key={s.key}
                   className="flex items-start gap-3 p-3 rounded-xl transition-all"
                   style={{
-                    background: s.selected ? 'rgba(255,107,53,0.08)' : 'var(--surface-elevated)',
-                    border: `1px solid ${s.selected ? '#FF6B3540' : 'var(--border)'}`,
+                    background: s.isTravel
+                      ? 'rgba(74,144,217,0.08)'
+                      : s.selected ? 'rgba(255,107,53,0.08)' : 'var(--surface-elevated)',
+                    border: `1px solid ${s.isTravel ? '#4A90D940' : s.selected ? '#FF6B3540' : 'var(--border)'}`,
                   }}
                 >
                   {/* Checkbox */}
@@ -215,8 +222,8 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
                     onClick={() => updateShift(s.key, { selected: !s.selected })}
                     className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
                     style={{
-                      background: s.selected ? '#FF6B35' : 'transparent',
-                      border: `2px solid ${s.selected ? '#FF6B35' : 'var(--border)'}`,
+                      background: s.selected ? accent : 'transparent',
+                      border: `2px solid ${s.selected ? accent : 'var(--border)'}`,
                     }}
                   >
                     {s.selected && (
@@ -234,25 +241,32 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
                       </span>
                       <span
                         className="text-xs font-medium px-2 py-0.5 rounded-full"
-                        style={{ background: '#FF6B3520', color: '#FF6B35' }}
+                        style={{ background: `${accent}20`, color: accent }}
                       >
                         {s.start} → {s.end}
                       </span>
                       <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {calcDuration(s.start, s.end)}
+                        {s.isTravel ? '🚶 30 min' : calcDuration(s.start, s.end)}
                       </span>
                     </div>
-                    {/* Editable title */}
-                    <input
-                      type="text"
-                      value={s.title}
-                      onChange={e => updateShift(s.key, { title: e.target.value })}
-                      className="mt-1.5 px-2 py-1 rounded-lg text-xs w-full outline-none"
-                      style={{ background: 'var(--border)', color: 'var(--text-secondary)', border: 'none' }}
-                    />
+                    {/* Title: read-only for travel, editable for shifts */}
+                    {s.isTravel ? (
+                      <span className="mt-1.5 px-2 py-1 rounded-lg text-xs block" style={{ color: TRAVEL_COLOR }}>
+                        🚶 Trajet
+                      </span>
+                    ) : (
+                      <input
+                        type="text"
+                        value={s.title}
+                        onChange={e => updateShift(s.key, { title: e.target.value })}
+                        className="mt-1.5 px-2 py-1 rounded-lg text-xs w-full outline-none"
+                        style={{ background: 'var(--border)', color: 'var(--text-secondary)', border: 'none' }}
+                      />
+                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {error && <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>}

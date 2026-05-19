@@ -114,6 +114,14 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* FAB above BottomNav on mobile, fixed at bottom on desktop */
+.fab-programme {
+  bottom: calc(var(--bottomnav-height) + 16px);
+}
+@media (min-width: 768px) {
+  .fab-programme { bottom: 24px; }
+}
+
 /* ============================================
    GLASSMORPHISM
    ============================================ */
