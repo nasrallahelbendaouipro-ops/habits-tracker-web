@@ -36,7 +36,8 @@ export const TIMED_TYPES: HabitType[] = ['workout', 'reading', 'study', 'meditat
 export async function fetchHabitsWithStatus(
   userId: string,
   forDate: string = TODAY,
-  dimension?: HabitDimension
+  dimension?: HabitDimension,
+  showAll = false
 ): Promise<HabitWithStreak[]> {
   const supabase = createClient();
   let habitQuery = supabase.from('habits').select('*').eq('user_id', userId).order('created_at');
@@ -61,6 +62,7 @@ export async function fetchHabitsWithStatus(
 
   return habits
     .filter(h => {
+      if (showAll) return true;
       if (h.frequency === 'daily' || !h.target_days?.length) return true;
       return h.target_days.includes(dow);
     })
