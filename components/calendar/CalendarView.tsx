@@ -13,7 +13,7 @@ import type { EventClickArg, EventDropArg, EventInput, DatesSetArg, EventContent
 import { createClient } from '@/lib/supabase/client';
 import { updateCalendarEvent } from '@/lib/calendar';
 import { useLocale } from '@/lib/i18n';
-import type { CalendarEvent } from '@/lib/types';
+import type { CalendarEvent, Habit } from '@/lib/types';
 import type { GoogleCalendarEvent } from '@/lib/google-calendar';
 import EventModal from './EventModal';
 
@@ -53,6 +53,13 @@ function EventPill({ info }: { info: EventContentArg }) {
       {!isAllDay && timeText && (
         <span style={{ fontSize: '0.62rem', opacity: 0.8, fontWeight: 500, color: '#fff', lineHeight: 1 }}>
           {timeText}
+          {!!(event.extendedProps.linkedHabitIds as string[] | undefined)?.length && (
+            <span style={{ marginLeft: 3 }}>
+              🔗{(event.extendedProps.linkedHabitIds as string[]).length > 1
+                ? ` ×${(event.extendedProps.linkedHabitIds as string[]).length}`
+                : ''}
+            </span>
+          )}
         </span>
       )}
       <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -69,6 +76,7 @@ export default function CalendarView({ userId }: { userId: string }) {
   const [modal, setModal] = useState<ModalState>(null);
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
+  const [habits, setHabits] = useState<Habit[]>([]);
 
   const fcLocale = locale === 'fr' ? frLocale : locale === 'ar' ? arLocale : undefined;
 
@@ -83,7 +91,7 @@ export default function CalendarView({ userId }: { userId: string }) {
       const rangeEnd   = info.endStr.slice(0, 10);
 
       const [habitsRes, logsRes, eventsRes, googleRes] = await Promise.all([
-        supabase.from('habits').select('id, name, icon, color, frequency, target_days').eq('user_id', userId),
+        supabase.from('habits').select('id, name, icon, color, type, frequency, target_days, metadata').eq('user_id', userId),
         supabase.from('habit_logs').select('habit_id, completed_at').eq('user_id', userId).gte('completed_at', rangeStart).lte('completed_at', rangeEnd),
         supabase.from('calendar_events').select('*').eq('user_id', userId).gte('start_at', info.startStr).lte('start_at', info.endStr),
         fetch(`/api/google-calendar/events?timeMin=${encodeURIComponent(info.startStr)}&timeMax=${encodeURIComponent(info.endStr)}`).then(r => r.json()).catch(() => ({ events: [] })),
@@ -92,6 +100,7 @@ export default function CalendarView({ userId }: { userId: string }) {
       const habitMap = new Map(
         (habitsRes.data ?? []).map(h => [h.id, h as { id: string; name: string; icon: string; color: string; frequency: string; target_days: number[] }])
       );
+      setHabits((habitsRes.data ?? []) as Habit[]);
 
       // Build a set of completed dates per habit for quick lookup
       const logMap = new Map<string, Set<string>>();
@@ -156,7 +165,11 @@ export default function CalendarView({ userId }: { userId: string }) {
         backgroundColor: ev.color,
         borderColor: ev.color,
         textColor: '#ffffff',
-        extendedProps: { eventType: 'calendar_event', rawEvent: ev },
+        extendedProps: {
+          eventType: 'calendar_event',
+          rawEvent: ev,
+          linkedHabitIds: (ev.linked_habit_ids ?? []) as string[],
+        },
         editable: true,
       }));
 
@@ -331,7 +344,7 @@ export default function CalendarView({ userId }: { userId: string }) {
         selectable={true}
         dayMaxEvents={3}
         nowIndicator={true}
-        height="auto"
+        height="calc(100vh - 250px)"
         eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
         slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
         slotMinTime="06:00:00"
@@ -343,6 +356,7 @@ export default function CalendarView({ userId }: { userId: string }) {
           visible={true}
           mode={modal.mode}
           userId={userId}
+          habits={habits}
           initialStart={modal.mode === 'create' ? modal.start : undefined}
           initialEnd={modal.mode === 'create' ? modal.end : undefined}
           event={modal.mode === 'edit' ? modal.event : undefined}
