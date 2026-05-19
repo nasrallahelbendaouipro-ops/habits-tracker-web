@@ -6,18 +6,18 @@ import {
 } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { fetchRecentCheckins } from '@/lib/checkin';
+import { fetchHabitsWithStatus } from '@/lib/habits';
 import { fetchGoals } from '@/lib/goals';
 import GlassCard from '@/components/ui/GlassCard';
 import { useChartTheme } from '@/lib/chart-theme';
-import type { GoalWithHabits } from '@/lib/types';
+import type { GoalWithHabits, HabitWithStreak } from '@/lib/types';
 
-type MetricKey = 'screen_time_min' | 'social_media_min' | 'deep_work_min' | 'productivity_ratio';
+type MetricKey = 'gratitude_score' | 'meditation_quality' | 'stress_level';
 
 const METRICS: { key: MetricKey; label: string; icon: string; unit: string; color: string; lowerIsBetter?: boolean }[] = [
-  { key: 'screen_time_min',  label: 'Screen Time',  icon: '📱', unit: 'min', color: 'var(--mind)',       lowerIsBetter: true  },
-  { key: 'social_media_min', label: 'Social Media', icon: '💬', unit: 'min', color: 'var(--secondary)',   lowerIsBetter: true  },
-  { key: 'deep_work_min',    label: 'Deep Work',    icon: '🧠', unit: 'min', color: 'var(--mind)'                              },
-  { key: 'productivity_ratio', label: 'Productivity', icon: '⚡', unit: '%',  color: 'var(--success)'                          },
+  { key: 'gratitude_score',    label: 'Gratitude',  icon: '🙏', unit: '/10', color: 'var(--soul)'  },
+  { key: 'meditation_quality', label: 'Meditation', icon: '🧘', unit: '/10', color: 'var(--soul)'  },
+  { key: 'stress_level',       label: 'Stress',     icon: '😤', unit: '/10', color: 'var(--warning)', lowerIsBetter: true },
 ];
 
 function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payload?: { value: number }[]; label?: string; unit: string }) {
@@ -25,7 +25,7 @@ function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payl
   return (
     <div className="px-3 py-2 rounded-xl text-xs font-semibold" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
       <p style={{ color: 'var(--text-muted)' }}>{label}</p>
-      <p>{payload[0].value} {unit}</p>
+      <p>{payload[0].value}{unit}</p>
     </div>
   );
 }
@@ -57,11 +57,42 @@ function GoalKpiCard({ goal }: { goal: GoalWithHabits }) {
   );
 }
 
-export default function MindPage() {
+function HabitStreakCard({ habit }: { habit: HabitWithStreak }) {
+  return (
+    <div
+      className="flex items-center gap-3 p-3 rounded-2xl"
+      style={{ background: 'var(--surface)', border: `1px solid ${habit.completedToday ? habit.color + '50' : 'var(--border)'}` }}
+    >
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+        style={{ background: habit.color + '20', border: `1px solid ${habit.color}40` }}
+      >
+        {habit.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{habit.name}</p>
+        <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+          {habit.streak > 0 ? `🔥 ${habit.streak} day streak` : 'No active streak'}
+        </p>
+      </div>
+      {habit.completedToday && (
+        <span
+          className="text-[10px] font-bold px-2 py-1 rounded-lg flex-shrink-0"
+          style={{ background: 'var(--success-muted)', color: 'var(--success)' }}
+        >
+          Done ✓
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function SoulPage() {
   const [userId, setUserId]             = useState<string | null>(null);
   const [chartData, setChartData]       = useState<Record<string, unknown>[]>([]);
+  const [habits, setHabits]             = useState<HabitWithStreak[]>([]);
   const [goals, setGoals]               = useState<GoalWithHabits[]>([]);
-  const [activeMetric, setActiveMetric] = useState<MetricKey>('screen_time_min');
+  const [activeMetric, setActiveMetric] = useState<MetricKey>('gratitude_score');
   const [loading, setLoading]           = useState(true);
 
   useEffect(() => {
@@ -72,29 +103,27 @@ export default function MindPage() {
     if (!userId) return;
     setLoading(true);
     try {
-      const [checkins, goalsData] = await Promise.all([
+      const [checkins, habitsData, goalsData] = await Promise.all([
         fetchRecentCheckins(userId, 60),
+        fetchHabitsWithStatus(userId, undefined, 'soul'),
         fetchGoals(userId),
       ]);
 
       const data = checkins
-        .filter(c => c.mind_metrics && Object.keys(c.mind_metrics).length > 0)
+        .filter(c => c.soul_metrics && Object.keys(c.soul_metrics).length > 0)
         .map(c => {
-          const m = c.mind_metrics;
-          const screen = m.screen_time_min ?? 0;
-          const deep   = m.deep_work_min   ?? 0;
-          const ratio  = screen > 0 ? Math.round((deep / screen) * 100) : null;
+          const s = c.soul_metrics;
           return {
             date: new Date(c.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            screen_time_min:  m.screen_time_min  ?? null,
-            social_media_min: m.social_media_min ?? null,
-            deep_work_min:    m.deep_work_min    ?? null,
-            productivity_ratio: ratio,
+            gratitude_score:    s.gratitude_score    ?? null,
+            meditation_quality: s.meditation_quality ?? null,
+            stress_level:       s.stress_level       ?? null,
           };
         });
 
       setChartData(data);
-      setGoals(goalsData.filter(g => g.dimension === 'mind' && g.starting_point != null));
+      setHabits(habitsData);
+      setGoals(goalsData.filter(g => g.dimension === 'soul' && g.starting_point != null));
     } finally {
       setLoading(false);
     }
@@ -110,24 +139,30 @@ export default function MindPage() {
   const prev   = metricData.length > 1 ? (metricData[metricData.length - 2][activeMetric] as number) : null;
   const delta  = latest != null && prev != null ? latest - prev : null;
 
-  // For "lower is better" metrics, invert the color logic
   const deltaColor = delta == null
     ? 'var(--text-muted)'
     : metric.lowerIsBetter
       ? (delta < 0 ? 'var(--success)' : delta > 0 ? 'var(--error)' : 'var(--text-muted)')
       : (delta > 0 ? 'var(--success)' : delta < 0 ? 'var(--error)' : 'var(--text-muted)');
 
-  // Summary stats over available data
-  const avgScreenTime  = chartData.length > 0 ? Math.round(chartData.reduce((s, d) => s + ((d.screen_time_min as number) ?? 0), 0) / chartData.length) : null;
-  const avgDeepWork    = chartData.length > 0 ? Math.round(chartData.reduce((s, d) => s + ((d.deep_work_min as number) ?? 0), 0) / chartData.length) : null;
-  const avgProductivity = chartData.filter(d => d.productivity_ratio != null).length > 0
-    ? Math.round(chartData.filter(d => d.productivity_ratio != null).reduce((s, d) => s + (d.productivity_ratio as number), 0) / chartData.filter(d => d.productivity_ratio != null).length)
-    : null;
+  const avgOf = (key: MetricKey) => {
+    const vals = chartData.filter(d => d[key] != null).map(d => d[key] as number);
+    return vals.length > 0 ? (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1) : null;
+  };
+  const avgGratitude  = avgOf('gratitude_score');
+  const avgMeditation = avgOf('meditation_quality');
+  const avgStress     = avgOf('stress_level');
+
+  const stressColor = avgStress == null
+    ? 'var(--text-primary)'
+    : parseFloat(avgStress) <= 4 ? 'var(--success)'
+    : parseFloat(avgStress) <= 7 ? 'var(--warning)'
+    : 'var(--error)';
 
   return (
     <div className="animate-fade-in max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>🧠 Digital Behavior</h1>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>✨ Soul Growth</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Last 60 days · logged via daily check-in</p>
       </div>
 
@@ -135,19 +170,37 @@ export default function MindPage() {
       {!loading && chartData.length > 0 && (
         <div className="grid grid-cols-3 gap-3 mb-5">
           <GlassCard style={{ padding: 12, textAlign: 'center' }}>
-            <p className="text-2xl font-bold" style={{ color: 'var(--mind)' }}>{avgScreenTime ?? '—'}</p>
-            <p className="text-[10px] font-semibold uppercase tracking-wide mt-1" style={{ color: 'var(--text-muted)' }}>Avg screen/day (min)</p>
+            <p className="text-2xl font-bold" style={{ color: 'var(--soul)' }}>{avgGratitude ?? '—'}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide mt-1" style={{ color: 'var(--text-muted)' }}>Avg gratitude /10</p>
           </GlassCard>
           <GlassCard style={{ padding: 12, textAlign: 'center' }}>
-            <p className="text-2xl font-bold" style={{ color: 'var(--mind)' }}>{avgDeepWork ?? '—'}</p>
-            <p className="text-[10px] font-semibold uppercase tracking-wide mt-1" style={{ color: 'var(--text-muted)' }}>Avg deep work (min)</p>
+            <p className="text-2xl font-bold" style={{ color: 'var(--soul)' }}>{avgMeditation ?? '—'}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide mt-1" style={{ color: 'var(--text-muted)' }}>Avg meditation /10</p>
           </GlassCard>
           <GlassCard style={{ padding: 12, textAlign: 'center' }}>
-            <p className="text-2xl font-bold" style={{ color: avgProductivity != null && avgProductivity >= 50 ? 'var(--success)' : avgProductivity != null && avgProductivity >= 30 ? 'var(--warning)' : 'var(--error)' }}>
-              {avgProductivity != null ? `${avgProductivity}%` : '—'}
-            </p>
-            <p className="text-[10px] font-semibold uppercase tracking-wide mt-1" style={{ color: 'var(--text-muted)' }}>Avg productivity</p>
+            <p className="text-2xl font-bold" style={{ color: stressColor }}>{avgStress ?? '—'}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide mt-1" style={{ color: 'var(--text-muted)' }}>Avg stress /10</p>
           </GlassCard>
+        </div>
+      )}
+
+      {/* Soul habit streaks */}
+      {!loading && (
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Soul Habits</p>
+          {habits.length === 0 ? (
+            <GlassCard>
+              <div className="py-4 text-center">
+                <p className="text-2xl mb-2">🧘</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>No soul habits yet</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Add meditation, prayer, or journaling habits to track your practice</p>
+              </div>
+            </GlassCard>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {habits.map(h => <HabitStreakCard key={h.id} habit={h} />)}
+            </div>
+          )}
         </div>
       )}
 
@@ -190,7 +243,7 @@ export default function MindPage() {
               <div className="text-right">
                 <p className="text-[10px] uppercase tracking-widest font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>vs previous</p>
                 <p className="text-2xl font-bold" style={{ color: deltaColor }}>
-                  {delta > 0 ? '+' : ''}{metric.key === 'productivity_ratio' ? delta.toFixed(0) : delta} {metric.unit}
+                  {delta > 0 ? '+' : ''}{delta.toFixed(1)} {metric.unit}
                 </p>
               </div>
             )}
@@ -221,13 +274,11 @@ export default function MindPage() {
                 tick={{ fontSize: 10, fill: chart.tickFill }}
                 axisLine={false}
                 tickLine={false}
-                domain={activeMetric === 'productivity_ratio' ? [0, 100] : ['auto', 'auto']}
-                tickFormatter={activeMetric === 'productivity_ratio' ? (v: number) => `${v}%` : undefined}
+                domain={[0, 10]}
+                ticks={[0, 2, 4, 6, 8, 10]}
               />
               <Tooltip content={<ChartTooltip unit={metric.unit} />} contentStyle={chart.tooltipStyle} />
-              {activeMetric === 'productivity_ratio' && (
-                <ReferenceLine y={50} stroke={chart.refLineStroke} strokeDasharray="4 4" />
-              )}
+              <ReferenceLine y={5} stroke={chart.refLineStroke} strokeDasharray="4 4" />
               <Line
                 type="monotone"
                 dataKey={activeMetric}
@@ -242,45 +293,10 @@ export default function MindPage() {
         )}
       </GlassCard>
 
-      {/* Productivity breakdown (when screen + deep work data exists) */}
-      {!loading && chartData.length > 0 && activeMetric !== 'productivity_ratio' && (() => {
-        const last = chartData[chartData.length - 1];
-        const screen = last?.screen_time_min as number | null;
-        const deep   = last?.deep_work_min   as number | null;
-        const social = last?.social_media_min as number | null;
-        if (!screen || screen === 0) return null;
-        const deepPct   = deep   ? Math.round((deep / screen) * 100)   : 0;
-        const socialPct = social ? Math.round((social / screen) * 100) : 0;
-        const otherPct  = Math.max(0, 100 - deepPct - socialPct);
-        return (
-          <GlassCard className="mb-5">
-            <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
-              Latest Session Breakdown
-            </p>
-            <div className="space-y-3">
-              {[
-                { label: 'Deep Work', pct: deepPct, color: 'var(--mind)', icon: '🧠' },
-                { label: 'Social Media', pct: socialPct, color: 'var(--secondary)', icon: '💬' },
-                { label: 'Other', pct: otherPct, color: 'var(--border)', icon: '📱' },
-              ].map(({ label, pct, color, icon }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <span className="text-sm w-5">{icon}</span>
-                  <span className="text-xs w-24 flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-elevated)' }}>
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
-                  </div>
-                  <span className="text-xs font-semibold w-9 text-right" style={{ color }}>{pct}%</span>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
-        );
-      })()}
-
       {/* Goal KPI progress */}
       {goals.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Mind Goals — KPI Progress</p>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>Soul Goals — KPI Progress</p>
           <div className="flex flex-col gap-3">
             {goals.map(g => <GoalKpiCard key={g.id} goal={g} />)}
           </div>

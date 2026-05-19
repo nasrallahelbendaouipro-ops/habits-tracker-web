@@ -3,8 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export type HealthIngestPayload = {
   token: string;
-  date: string;
-  steps?: number | number[];
+  date: string;                        // YYYY-MM-DD (or ISO timestamp)
+  steps?: number | number[];           // iOS Shortcuts may send individual samples
   sleep_hours?: number | number[];
   heart_rate_avg?: number | number[];
   hrv?: number | number[];
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'token and date are required' }, { status: 400 });
   }
 
-  // Normalise date — accepts YYYY-MM-DD or full ISO timestamp from iOS Shortcuts
+  // Normalise date to YYYY-MM-DD — accepts ISO timestamps too.
   let date: string;
   const trimmed = String(rawDate).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
 
   const userId = tokenRow.user_id;
 
-  // iOS Shortcuts may send arrays or space-separated strings — sum all parts
+  // iOS Shortcuts sends samples as JSON array OR space/newline-separated string —
+  // sum all parts to get a single aggregated number.
   const norm = (v: unknown): number | undefined => {
     if (v == null) return undefined;
     const parts: unknown[] = Array.isArray(v)
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
   const ac = norm(metrics.active_calories);
   const w  = norm(metrics.weight_kg);
 
-  // Insert timestamped reading into health_readings (powers period charts)
+  // Insert a timestamped reading into health_readings (powers intraday charts).
   const reading: Record<string, unknown> = { user_id: userId };
   if (st != null) reading.steps            = Math.round(st);
   if (sl != null) reading.sleep_hours      = sl;
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to save data' }, { status: 500 });
   }
 
-  // Also upsert daily_checkins for manual check-in merging
+  // Also upsert daily_checkins for backward compat (manual check-in merging).
   const { data: existing } = await supabase
     .from('daily_checkins')
     .select('body_metrics')
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
     .from('daily_checkins')
     .upsert({ user_id: userId, date, body_metrics: merged }, { onConflict: 'user_id,date' });
 
+  // Update last_used on the token
   await supabase
     .from('health_sync_tokens')
     .update({ last_used: new Date().toISOString() })

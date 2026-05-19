@@ -26,13 +26,17 @@ async function fetchReadings(userId: string, since: Date): Promise<HealthReading
   return (data ?? []) as HealthReading[];
 }
 
-// Cumulative metrics (steps, calories): sum incremental deltas within each bucket.
+// For cumulative metrics (steps, calories): sum incremental deltas within each bucket.
+// Strategy: use consecutive-reading deltas so that a fresh daily total from iOS
+// doesn't double-count previous hours.
 function deltaSeries(
   readings: HealthReading[],
   key: 'steps' | 'active_calories',
   bucketFn: (d: Date) => string,
   labels: string[],
 ): ChartPoint[] {
+  // Build deltas: difference from one reading to the next within the same calendar day.
+  // When a new day starts, the first reading of the day IS the delta for that reading.
   const deltas: { bucket: string; delta: number }[] = [];
   let prevValue: number | null = null;
   let prevDay = '';
@@ -43,6 +47,7 @@ function deltaSeries(
     const val = r[key] as number | null;
     if (val == null) continue;
 
+    // New calendar day → reset baseline
     if (day !== prevDay) { prevValue = null; prevDay = day; }
 
     const delta = prevValue == null ? val : Math.max(0, val - prevValue);
@@ -50,13 +55,14 @@ function deltaSeries(
     deltas.push({ bucket: bucketFn(d), delta });
   }
 
+  // Sum deltas per bucket
   const map: Record<string, number> = {};
   for (const { bucket, delta } of deltas) map[bucket] = (map[bucket] ?? 0) + delta;
 
   return labels.map(l => ({ label: l, value: map[l] ?? null }));
 }
 
-// Point-in-time metrics (weight, sleep, hr): last value in each bucket.
+// For point-in-time metrics (weight, sleep, mood): last value in each bucket.
 function pointSeries(
   readings: HealthReading[],
   key: 'weight_kg' | 'sleep_hours' | 'heart_rate_avg' | 'hrv',
@@ -72,19 +78,22 @@ function pointSeries(
   return labels.map(l => ({ label: l, value: map[l] ?? null }));
 }
 
+// ─── Period helpers ───────────────────────────────────────────────────────────
+
 function hourLabel(d: Date) {
   return `${String(d.getHours()).padStart(2, '0')}:00`;
 }
 function dayLabel(d: Date) {
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
 }
 function weekLabel(d: Date) {
+  // ISO week start (Monday)
   const monday = new Date(d);
   monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return monday.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
 }
 function monthLabel(d: Date) {
-  return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  return d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
 }
 
 function hoursLabels(): string[] {
@@ -115,6 +124,8 @@ function monthsLabels(n: number): string[] {
     return monthLabel(d);
   });
 }
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export type MetricKey = 'steps' | 'active_calories' | 'weight_kg' | 'sleep_hours' | 'heart_rate_avg';
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLocale } from '@/lib/i18n';
 import HabitForm from './HabitForm';
 import type { Habit, HabitFormValues } from '@/lib/types';
@@ -28,48 +29,61 @@ export default function HabitModal({ mode, habit, visible, onClose, onSubmit }: 
     return () => { document.body.style.overflow = ''; };
   }, [visible]);
 
-  if (!visible) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="w-full md:max-w-lg rounded-2xl animate-slide-up overflow-hidden"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-6 py-4 sticky top-0"
-          style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
+          style={{ backdropFilter: 'blur(4px)' }}
+          onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+          initial={{ background: 'rgba(0,0,0,0)' }}
+          animate={{ background: 'rgba(0,0,0,0.6)' }}
+          exit={{ background: 'rgba(0,0,0,0)' }}
+          transition={{ duration: 0.2 }}
         >
-          <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-            {mode === 'add' ? t.modal_new_habit : t.modal_edit_habit}
-          </h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all"
-            style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}
+          <motion.div
+            className="w-full md:max-w-lg rounded-2xl overflow-hidden"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
+            initial={{ opacity: 0, y: 32, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           >
-            ✕
-          </button>
-        </div>
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-6 py-4 sticky top-0 rounded-t-2xl"
+              style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
+            >
+              <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
+                {mode === 'add' ? t.modal_new_habit : t.modal_edit_habit}
+              </h2>
+              <motion.button
+                onClick={onClose}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-sm"
+                style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                aria-label="Close modal"
+              >
+                ✕
+              </motion.button>
+            </div>
 
-        {/* Form — scrolls inside the modal */}
-        <div className="px-6 py-5 max-h-[72vh] overflow-y-auto scroll-hidden">
-          <HabitForm
-            initial={habit ? {
-              name: habit.name, icon: habit.icon, color: habit.color,
-              type: habit.type, metadata: habit.metadata,
-              frequency: habit.frequency, target_days: habit.target_days,
-            } : undefined}
-            onSubmit={onSubmit}
-            submitLabel={mode === 'add' ? t.modal_add_habit_btn : t.modal_save_changes}
-          />
-        </div>
-      </div>
-    </div>
+            {/* Form — scrolls inside the modal */}
+            <div className="px-6 py-5 max-h-[72vh] overflow-y-auto scroll-hidden">
+              <HabitForm
+                initial={habit ? {
+                  name: habit.name, icon: habit.icon, color: habit.color,
+                  type: habit.type, metadata: habit.metadata,
+                  frequency: habit.frequency, target_days: habit.target_days,
+                } : undefined}
+                onSubmit={onSubmit}
+                submitLabel={mode === 'add' ? t.modal_add_habit_btn : t.modal_save_changes}
+              />
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
