@@ -42,7 +42,7 @@ export default function HabitsPage() {
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
-    try { setHabits(await fetchHabitsWithStatus(userId)); }
+    try { setHabits(await fetchHabitsWithStatus(userId, undefined, undefined, true)); }
     finally { setLoading(false); }
   }, [userId]);
 
@@ -51,19 +51,19 @@ export default function HabitsPage() {
   async function handleAdd(values: HabitFormValues) {
     await createHabit({ ...values, user_id: userId! });
     setShowAdd(false);
-    load();
+    await load();
   }
 
   async function handleEdit(values: HabitFormValues) {
     if (!editing) return;
     await updateHabit(editing.id, values);
     setEditing(null);
-    load();
+    await load();
   }
 
   async function handleDelete(id: string) {
     setDeleting(id);
-    try { await deleteHabit(id); load(); }
+    try { await deleteHabit(id); await load(); }
     finally { setDeleting(null); }
   }
 
