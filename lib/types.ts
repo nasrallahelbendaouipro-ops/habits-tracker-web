@@ -115,6 +115,7 @@ export type CalendarEvent = {
   notes?: string;
   source: CalendarEventSource;
   google_event_id?: string;
+  linked_habit_ids: string[];
   created_at: string;
 };
 
