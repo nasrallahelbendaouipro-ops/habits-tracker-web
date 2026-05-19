@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -104,7 +105,7 @@ function DimensionTabs({ active, onChange }: { active: HabitDimension | null; on
             onClick={() => onChange(tab.value)}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
             style={{
-              background: isActive ? c + '20' : 'var(--surface)',
+              background: isActive ? `color-mix(in srgb, ${c} 15%, transparent)` : 'var(--surface)',
               color: isActive ? c : 'var(--text-secondary)',
               border: `1px solid ${isActive ? c : 'var(--border)'}`,
             }}
@@ -175,7 +176,7 @@ function HabitCard({
         <button
           onClick={() => onStartSession(habit)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex-shrink-0"
-          style={{ background: dimColor + '20', color: dimColor, border: `1px solid ${dimColor}40` }}
+          style={{ background: `color-mix(in srgb, ${dimColor} 15%, transparent)`, color: dimColor, border: `1px solid color-mix(in srgb, ${dimColor} 25%, transparent)` }}
         >
           ▶ Start
         </button>
@@ -371,7 +372,7 @@ export default function DashboardPage() {
         {!loading && completed === habits.length && habits.length > 0 && (
           <div
             className="animate-slide-up mb-3 px-4 py-3 rounded-xl flex items-center gap-3"
-            style={{ background: 'linear-gradient(135deg, var(--primary-muted), rgba(78,205,196,0.15))', border: '1px solid var(--primary)40' }}
+            style={{ background: 'linear-gradient(135deg, var(--primary-muted), var(--teal-muted))', border: '1px solid var(--primary-muted-border)' }}
           >
             <span className="text-2xl">🎉</span>
             <div>
@@ -388,13 +389,22 @@ export default function DashboardPage() {
         ) : visibleHabits.length === 0 ? (
           <EmptyState onAdd={() => setShowAdd(true)} noHabitsLabel={t.dashboard_no_habits} noHabitsDesc={t.dashboard_no_habits_desc} addHabitLabel={t.dashboard_add_habit} />
         ) : (
-          <div className="flex flex-col gap-2">
-            {visibleHabits.map((habit, index) => (
-              <div key={habit.id} className="animate-item" style={{ '--i': index } as React.CSSProperties}>
-                <HabitCard habit={habit} onToggle={handleToggle} onStartSession={setActiveSession} justCompleted={justCompleted.has(habit.id)} />
-              </div>
-            ))}
-          </div>
+          <AnimatePresence mode="popLayout">
+            <div className="flex flex-col gap-2">
+              {visibleHabits.map((habit, index) => (
+                <motion.div
+                  key={habit.id}
+                  layout
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20, scale: 0.97 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 28, delay: index * 0.04 }}
+                >
+                  <HabitCard habit={habit} onToggle={handleToggle} onStartSession={setActiveSession} justCompleted={justCompleted.has(habit.id)} />
+                </motion.div>
+              ))}
+            </div>
+          </AnimatePresence>
         )}
       </div>
 
