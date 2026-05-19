@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
 import { useLocale } from '@/lib/i18n';
-import type { CalendarEvent, CalendarEventType } from '@/lib/types';
+import type { CalendarEvent, CalendarEventType, Habit } from '@/lib/types';
 
 const EVENT_COLORS = ['#6C63FF', '#FF6B35', '#4ECDC4', '#45B7D1', '#FF6B6B', '#96CEB4', '#FFD93D', '#DDA0DD'];
 
@@ -14,6 +14,7 @@ type Props = {
   initialEnd?: string;
   event?: CalendarEvent;
   userId: string;
+  habits: Habit[];
   onClose: () => void;
   onSaved: () => void;
 };
@@ -34,7 +35,31 @@ function defaultEnd(start: string): string {
   return toLocalInput(d.toISOString());
 }
 
-export default function EventModal({ visible, mode, initialStart, initialEnd, event, userId, onClose, onSaved }: Props) {
+function renderMetaPreview(habit: Habit): string {
+  const m = habit.metadata as Record<string, unknown>;
+  switch (habit.type) {
+    case 'workout':
+      return `${m.sets} séries × ${m.reps} reps · ${m.duration_min} min | repos ${m.rest_time}s`;
+    case 'reading':
+      return `📖 ${m.book_name} — ${m.pages_target} pages`;
+    case 'study':
+      return `${m.subject} — ${m.time_target_min} min · difficulté ${m.difficulty}/5`;
+    case 'shift':
+      return `${m.workplace} · ${m.start_time}–${m.end_time} | pause ${m.break_min} min`;
+    case 'meditation':
+      return `${m.duration_min} min${m.technique ? ' — ' + m.technique : ''}`;
+    case 'prayer':
+      return `${m.name ?? 'Prière'} — ${m.duration_min} min`;
+    case 'journaling':
+      return (m.prompt as string) ?? 'Journal libre';
+    case 'body_metric':
+      return `${m.metric} (${m.unit})`;
+    default:
+      return '';
+  }
+}
+
+export default function EventModal({ visible, mode, initialStart, initialEnd, event, userId, habits, onClose, onSaved }: Props) {
   const { t } = useLocale();
   const [title, setTitle]   = useState('');
   const [type, setType]     = useState<CalendarEventType>('event');
@@ -42,6 +67,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
   const [end, setEnd]       = useState(initialEnd ?? '');
   const [color, setColor]   = useState('#6C63FF');
   const [notes, setNotes]   = useState('');
+  const [linkedHabitIds, setLinkedHabitIds] = useState<string[]>([]);
   const [loading, setLoading]   = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError]   = useState('');
@@ -62,11 +88,13 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
       setEnd(toLocalInput(event.end_at));
       setColor(event.color);
       setNotes(event.notes ?? '');
+      setLinkedHabitIds(event.linked_habit_ids ?? []);
     } else {
       setTitle('');
       setType('event');
       setColor('#6C63FF');
       setNotes('');
+      setLinkedHabitIds([]);
       const s = initialStart ?? toLocalInput(new Date().toISOString());
       setStart(s);
       setEnd(initialEnd ?? defaultEnd(s));
@@ -89,6 +117,23 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
 
   if (!visible) return null;
 
+  function addHabit(id: string) {
+    if (!id || linkedHabitIds.includes(id)) return;
+    const habit = habits.find(h => h.id === id);
+    if (!habit) return;
+    setLinkedHabitIds(prev => {
+      if (prev.length === 0 && !title.trim()) {
+        setTitle(habit.name);
+        setColor(habit.color);
+      }
+      return [...prev, id];
+    });
+  }
+
+  function removeHabit(id: string) {
+    setLinkedHabitIds(prev => prev.filter(x => x !== id));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) { setError(t.event_err_title); return; }
@@ -101,13 +146,15 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
         await createCalendarEvent({
           user_id: userId, title: title.trim(), type,
           start_at: fromLocalInput(start), end_at: fromLocalInput(end),
-          color, notes: notes.trim() || undefined, source: 'manual',
+          color, notes: notes.trim() || undefined,
+          source: 'manual', linked_habit_ids: linkedHabitIds,
         });
       } else if (event) {
         await updateCalendarEvent(event.id, {
           title: title.trim(), type,
           start_at: fromLocalInput(start), end_at: fromLocalInput(end),
           color, notes: notes.trim() || undefined,
+          linked_habit_ids: linkedHabitIds,
         });
       }
       onSaved();
@@ -136,9 +183,9 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
   };
-  const focusBorder = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const focusBorder = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     (e.target.style.borderColor = 'var(--primary)');
-  const blurBorder = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const blurBorder = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     (e.target.style.borderColor = 'var(--border)');
 
   return (
@@ -252,6 +299,84 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
               ))}
             </div>
           </div>
+
+          {/* Link to habits */}
+          {habits.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                {t.event_link_habits}
+              </label>
+
+              <select
+                value=""
+                onChange={e => { addHabit(e.target.value); e.currentTarget.value = ''; }}
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                style={{ ...inputStyle, cursor: 'pointer' }}
+                onFocus={focusBorder}
+                onBlur={blurBorder}
+              >
+                <option value="">{t.event_link_habits_placeholder}</option>
+                {habits
+                  .filter(h => !linkedHabitIds.includes(h.id))
+                  .map(h => (
+                    <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
+                  ))}
+              </select>
+
+              {/* Selected habit chips */}
+              {linkedHabitIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {linkedHabitIds.map(id => {
+                    const habit = habits.find(h => h.id === id);
+                    if (!habit) return null;
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold"
+                        style={{
+                          background: habit.color + '22',
+                          border: `1px solid ${habit.color}55`,
+                          color: habit.color,
+                        }}
+                      >
+                        {habit.icon} {habit.name}
+                        <button
+                          type="button"
+                          onClick={() => removeHabit(id)}
+                          className="ml-0.5 leading-none"
+                          style={{ opacity: 0.6 }}
+                          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+                          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.opacity = '0.6')}
+                        >✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Metadata preview cards */}
+              {linkedHabitIds.map(id => {
+                const habit = habits.find(h => h.id === id);
+                if (!habit) return null;
+                const preview = renderMetaPreview(habit);
+                if (!preview) return null;
+                return (
+                  <div
+                    key={id}
+                    className="mt-1.5 px-3 py-2 rounded-xl text-xs"
+                    style={{
+                      background: habit.color + '12',
+                      border: `1px solid ${habit.color}30`,
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    <span style={{ color: habit.color, fontWeight: 600 }}>{habit.icon} {habit.name}</span>
+                    <span className="ml-2">{preview}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Notes */}
           <div>
