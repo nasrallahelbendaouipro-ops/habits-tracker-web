@@ -5,6 +5,7 @@ export type ParsedShift = {
   start: string;  // HH:MM (24h)
   end: string;    // HH:MM (24h)
   title: string;
+  isTravel?: boolean;
 };
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
@@ -54,6 +55,39 @@ function parseTime(raw: string): string | null {
     if (h <= 23) return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
   }
   return null;
+}
+
+// ─── Travel helpers ────────────────────────────────────────────────────────────
+
+function subtractMinutes(time: string, mins: number): { time: string; dayOffset: number } {
+  const [h, m] = time.split(':').map(Number);
+  let total = h * 60 + m - mins;
+  let dayOffset = 0;
+  if (total < 0) { total += 24 * 60; dayOffset = -1; }
+  return {
+    time: `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`,
+    dayOffset,
+  };
+}
+
+function addDaysToISO(iso: string, days: number): string {
+  const [y, mo, d] = iso.split('-').map(Number);
+  const dt = new Date(y, mo - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return localIsoDate(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+}
+
+function emitWithTravel(results: ParsedShift[], date: string, start: string, end: string, title: string): void {
+  const { time: travelStart, dayOffset } = subtractMinutes(start, 30);
+  const travelDate = dayOffset !== 0 ? addDaysToISO(date, dayOffset) : date;
+  results.push({ date: travelDate, start: travelStart, end: start, title: 'Trajet', isTravel: true });
+  results.push({ date, start, end, title });
+}
+
+function expandWithTravel(raw: ParsedShift[]): ParsedShift[] {
+  const out: ParsedShift[] = [];
+  for (const s of raw) emitWithTravel(out, s.date, s.start, s.end, s.title);
+  return out;
 }
 
 // ─── French roster parser ──────────────────────────────────────────────────────
@@ -155,7 +189,7 @@ function parseFrenchRoster(text: string): ParsedShift[] {
       const start = parseTime(timeMatch[1]);
       const end   = parseTime(timeMatch[2]);
       if (start && end) {
-        shifts.push({ date, start, end, title: eventName ?? workplace ?? 'Shift' });
+        emitWithTravel(shifts, date, start, end, eventName ?? workplace ?? 'Shift');
       }
     }
     return shifts;
@@ -185,7 +219,7 @@ function parseFrenchRoster(text: string): ParsedShift[] {
       const start = parseTime(timeMatch[1]);
       const end   = parseTime(timeMatch[2]);
       if (start && end) {
-        shifts.push({ date: currentDate, start, end, title: eventName ?? workplace ?? 'Shift' });
+        emitWithTravel(shifts, currentDate, start, end, eventName ?? workplace ?? 'Shift');
       }
       eventName = null;
       continue;
@@ -249,7 +283,7 @@ function parseGeneric(text: string): ParsedShift[] {
       for (const dm of dayMatches) {
         const dayNum = DAY_MAP[dm[1].toLowerCase()];
         if (dayNum !== undefined)
-          shifts.push({ date: nextOccurrenceISO(dayNum), start: startTime, end: endTime, title: 'Shift' });
+          emitWithTravel(shifts, nextOccurrenceISO(dayNum), startTime, endTime, 'Shift');
       }
       continue;
     }
@@ -262,7 +296,7 @@ function parseGeneric(text: string): ParsedShift[] {
         ? (parseInt(dateMatch[3]) < 100 ? 2000 + parseInt(dateMatch[3]) : parseInt(dateMatch[3]))
         : new Date().getFullYear();
       if (month >= 1 && month <= 12 && day >= 1 && day <= 31)
-        shifts.push({ date: localIsoDate(year, month, day), start: startTime, end: endTime, title: 'Shift' });
+        emitWithTravel(shifts, localIsoDate(year, month, day), startTime, endTime, 'Shift');
     }
   }
 
@@ -327,7 +361,7 @@ export async function POST(req: NextRequest) {
       });
       const json = await res.json();
       const parsed = JSON.parse(json.choices[0].message.content);
-      shifts = parsed.shifts ?? [];
+      shifts = expandWithTravel(parsed.shifts ?? []);
     } else {
       shifts = parseStub(text);
     }
