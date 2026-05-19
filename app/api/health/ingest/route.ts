@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // Look up user by token
   const { data: tokenRow, error: tokenErr } = await supabase
     .from('health_sync_tokens')
     .select('user_id')

@@ -20,19 +20,19 @@ const METRICS: {
   higherIsBetter?: boolean;
   decimals?: number;
 }[] = [
-  { key: 'steps',           label: 'Pas',       icon: '👣', unit: 'pas',  color: 'var(--warning)',  higherIsBetter: true  },
-  { key: 'active_calories', label: 'Calories',   icon: '🔥', unit: 'kcal', color: 'var(--body)',    higherIsBetter: true  },
-  { key: 'weight_kg',       label: 'Poids',      icon: '⚖️', unit: 'kg',   color: 'var(--body)',    decimals: 1           },
-  { key: 'sleep_hours',     label: 'Sommeil',    icon: '😴', unit: 'h',    color: 'var(--soul)',    decimals: 1           },
-  { key: 'heart_rate_avg',  label: 'Fréq. card.', icon: '❤️', unit: 'bpm', color: 'var(--error)',  decimals: 0           },
+  { key: 'steps',           label: 'Pas',         icon: '👣', unit: 'pas',  color: 'var(--warning)', higherIsBetter: true },
+  { key: 'active_calories', label: 'Calories',    icon: '🔥', unit: 'kcal', color: 'var(--body)',    higherIsBetter: true },
+  { key: 'weight_kg',       label: 'Poids',       icon: '⚖️', unit: 'kg',   color: 'var(--body)',    decimals: 1          },
+  { key: 'sleep_hours',     label: 'Sommeil',     icon: '😴', unit: 'h',    color: 'var(--soul)',    decimals: 1          },
+  { key: 'heart_rate_avg',  label: 'Fréq. card.', icon: '❤️', unit: 'bpm',  color: 'var(--error)',   decimals: 0          },
 ];
 
 const PERIODS: { key: Period; label: string }[] = [
-  { key: 'day',      label: 'J'  },
-  { key: 'week',     label: 'S'  },
-  { key: 'month',    label: 'M'  },
-  { key: '6months',  label: '6M' },
-  { key: 'year',     label: 'A'  },
+  { key: 'day',     label: 'J'  },
+  { key: 'week',    label: 'S'  },
+  { key: 'month',   label: 'M'  },
+  { key: '6months', label: '6M' },
+  { key: 'year',    label: 'A'  },
 ];
 
 function periodRange(period: Period): string {
@@ -48,7 +48,7 @@ function periodRange(period: Period): string {
 }
 
 function statLabel(period: Period) {
-  return period === 'day' ? 'TOTAL AUJOURD\'HUI' : 'MOYENNE';
+  return period === 'day' ? "TOTAL AUJOURD'HUI" : 'MOYENNE';
 }
 
 function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payload?: { value: number }[]; label?: string; unit: string }) {
@@ -68,7 +68,7 @@ function GoalKpiCard({ goal }: { goal: GoalWithHabits }) {
   )));
   const remaining = Math.abs(goal.target_point - goal.current_value);
   return (
-    <div className="p-4 rounded-2xl" style={{ background: 'var(--surface)', border: `1px solid ${goal.color}30`, borderLeft: `3px solid ${goal.color}` }}>
+    <div className="p-4 rounded-2xl" style={{ background: 'var(--surface)', border: `1px solid color-mix(in srgb, ${goal.color} 20%, transparent)`, borderLeft: `3px solid ${goal.color}` }}>
       <div className="flex items-center gap-2 mb-3">
         <span className="text-lg">{goal.icon}</span>
         <div className="flex-1">
@@ -89,12 +89,12 @@ function GoalKpiCard({ goal }: { goal: GoalWithHabits }) {
 }
 
 export default function BodyPage() {
-  const [userId, setUserId]         = useState<string | null>(null);
-  const [goals, setGoals]           = useState<GoalWithHabits[]>([]);
+  const [userId, setUserId]             = useState<string | null>(null);
+  const [goals, setGoals]               = useState<GoalWithHabits[]>([]);
   const [activeMetric, setActiveMetric] = useState<MetricKey>('steps');
   const [activePeriod, setActivePeriod] = useState<Period>('week');
-  const [chartData, setChartData]   = useState<ChartPoint[]>([]);
-  const [loading, setLoading]       = useState(true);
+  const [chartData, setChartData]       = useState<ChartPoint[]>([]);
+  const [loading, setLoading]           = useState(true);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -119,17 +119,17 @@ export default function BodyPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const chart  = useChartTheme();
-  const metric = METRICS.find(m => m.key === activeMetric)!;
+  const chart   = useChartTheme();
+  const metric  = METRICS.find(m => m.key === activeMetric)!;
   const nonNull = chartData.filter(d => d.value != null) as { label: string; value: number }[];
 
-  const total  = nonNull.reduce((s, d) => s + d.value, 0);
-  const avg    = nonNull.length ? total / nonNull.length : null;
-  const stat   = activePeriod === 'day' ? (total || null) : avg;
+  const total    = nonNull.reduce((s, d) => s + d.value, 0);
+  const avg      = nonNull.length ? total / nonNull.length : null;
+  const stat     = activePeriod === 'day' ? (total || null) : avg;
   const decimals = metric.decimals ?? 0;
 
   // Highlight the most recent non-null bar
-  const lastIdx = chartData.map(d => d.value).lastIndexOf(nonNull[nonNull.length - 1]?.value ?? -1);
+  const lastIdx  = chartData.map(d => d.value).lastIndexOf(nonNull[nonNull.length - 1]?.value ?? -1);
 
   return (
     <div className="animate-fade-in max-w-2xl">
