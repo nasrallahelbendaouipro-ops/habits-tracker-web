@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { HABIT_ICONS, HABIT_COLORS, DIMENSION_DEFAULTS } from '@/lib/habits';
 import { useLocale } from '@/lib/i18n';
 import type { HabitFormValues, HabitType, HabitMetadata, HabitDimension } from '@/lib/types';
@@ -104,11 +105,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
     }
   }
 
-  const inputBase = {
-    background: 'var(--surface-elevated)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-primary)',
-  };
+  const nameError = error === t.form_err_name;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -126,11 +123,14 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
           onChange={e => { setName(e.target.value); setError(''); }}
           placeholder={t.form_name_placeholder}
           maxLength={40}
-          className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-          style={inputBase}
-          onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+          className={`form-input${nameError ? ' input-error' : ''}`}
         />
+        {nameError && (
+          <p className="field-error">
+            <AlertCircle size={12} aria-hidden="true" />
+            {error}
+          </p>
+        )}
       </div>
 
       {/* Icon picker */}
@@ -277,16 +277,20 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         </div>
       </div>
 
-      {error && (
-        <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>
+      {error && !nameError && (
+        <p className="field-error">
+          <AlertCircle size={12} aria-hidden="true" />
+          {error}
+        </p>
       )}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all"
+        className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
         style={{ background: loading ? 'var(--text-muted)' : color, cursor: loading ? 'not-allowed' : 'pointer' }}
       >
+        {loading && <Loader2 size={15} className="animate-spin" />}
         {loading ? t.form_saving : submitLabel}
       </button>
     </form>
