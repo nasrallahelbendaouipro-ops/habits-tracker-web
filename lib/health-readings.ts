@@ -26,6 +26,13 @@ async function fetchReadings(userId: string, since: Date): Promise<HealthReading
   return (data ?? []) as HealthReading[];
 }
 
+// Local date string (YYYY-MM-DD) using the browser's timezone — NOT UTC.
+// iOS step counter resets at local midnight, so we must track day boundaries
+// in local time to avoid double-counting steps near UTC midnight.
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // For cumulative metrics (steps, calories): sum incremental deltas within each bucket.
 // Strategy: use consecutive-reading deltas so that a fresh daily total from iOS
 // doesn't double-count previous hours.
@@ -43,7 +50,7 @@ function deltaSeries(
 
   for (const r of readings) {
     const d = new Date(r.synced_at);
-    const day = d.toISOString().slice(0, 10);
+    const day = localDateStr(d); // local date — matches when iOS resets its step counter
     const val = r[key] as number | null;
     if (val == null) continue;
 
@@ -83,45 +90,45 @@ function pointSeries(
 function hourLabel(d: Date) {
   return `${String(d.getHours()).padStart(2, '0')}:00`;
 }
-function dayLabel(d: Date) {
-  return d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
+function dayLabel(d: Date, tag: string) {
+  return d.toLocaleDateString(tag, { month: 'short', day: 'numeric' });
 }
-function weekLabel(d: Date) {
+function weekLabel(d: Date, tag: string) {
   // ISO week start (Monday)
   const monday = new Date(d);
   monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return monday.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
+  return monday.toLocaleDateString(tag, { month: 'short', day: 'numeric' });
 }
-function monthLabel(d: Date) {
-  return d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+function monthLabel(d: Date, tag: string) {
+  return d.toLocaleDateString(tag, { month: 'short', year: '2-digit' });
 }
 
 function hoursLabels(): string[] {
   return Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 }
-function daysLabels(n: number): string[] {
+function daysLabels(n: number, tag: string): string[] {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (n - 1 - i));
-    return dayLabel(d);
+    return dayLabel(d, tag);
   });
 }
-function weeksLabels(n: number): string[] {
+function weeksLabels(n: number, tag: string): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i * 7);
-    const l = weekLabel(d);
+    const l = weekLabel(d, tag);
     if (!seen.has(l)) { seen.add(l); result.push(l); }
   }
   return result;
 }
-function monthsLabels(n: number): string[] {
+function monthsLabels(n: number, tag: string): string[] {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date();
     d.setMonth(d.getMonth() - (n - 1 - i));
-    return monthLabel(d);
+    return monthLabel(d, tag);
   });
 }
 
@@ -135,6 +142,7 @@ export async function fetchHealthChart(
   userId: string,
   metric: MetricKey,
   period: Period,
+  localeTag = 'fr-FR',
 ): Promise<ChartPoint[]> {
   const now = new Date();
   let since: Date;
@@ -149,23 +157,23 @@ export async function fetchHealthChart(
       break;
     case 'week':
       since = new Date(now); since.setDate(now.getDate() - 6); since.setHours(0, 0, 0, 0);
-      labels = daysLabels(7);
-      bucketFn = dayLabel;
+      labels = daysLabels(7, localeTag);
+      bucketFn = (d) => dayLabel(d, localeTag);
       break;
     case 'month':
       since = new Date(now); since.setDate(now.getDate() - 29); since.setHours(0, 0, 0, 0);
-      labels = daysLabels(30);
-      bucketFn = dayLabel;
+      labels = daysLabels(30, localeTag);
+      bucketFn = (d) => dayLabel(d, localeTag);
       break;
     case '6months':
       since = new Date(now); since.setMonth(now.getMonth() - 6); since.setHours(0, 0, 0, 0);
-      labels = weeksLabels(26);
-      bucketFn = weekLabel;
+      labels = weeksLabels(26, localeTag);
+      bucketFn = (d) => weekLabel(d, localeTag);
       break;
     case 'year':
       since = new Date(now); since.setFullYear(now.getFullYear() - 1); since.setHours(0, 0, 0, 0);
-      labels = monthsLabels(12);
-      bucketFn = monthLabel;
+      labels = monthsLabels(12, localeTag);
+      bucketFn = (d) => monthLabel(d, localeTag);
       break;
   }
 

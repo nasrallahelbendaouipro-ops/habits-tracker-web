@@ -225,6 +225,10 @@ const EN = {
   sched_label: 'Schedule',
   sched_everyday: 'Every day',
   sched_specific: 'Specific days',
+  dim_all: 'All',
+  dim_body: 'Body',
+  dim_mind: 'Mind',
+  dim_soul: 'Soul',
 };
 
 type Translations = typeof EN;
@@ -417,6 +421,10 @@ const FR: Translations = {
   sched_label: 'Jours',
   sched_everyday: 'Tous les jours',
   sched_specific: 'Jours spécifiques',
+  dim_all: 'Tout',
+  dim_body: 'Corps',
+  dim_mind: 'Mental',
+  dim_soul: 'Âme',
 };
 
 const AR: Translations = {
@@ -607,6 +615,10 @@ const AR: Translations = {
   sched_label: 'الأيام',
   sched_everyday: 'كل يوم',
   sched_specific: 'أيام محددة',
+  dim_all: 'الكل',
+  dim_body: 'الجسد',
+  dim_mind: 'العقل',
+  dim_soul: 'الروح',
 };
 
 const TRANSLATIONS: Record<Locale, Translations> = { en: EN, fr: FR, ar: AR };
