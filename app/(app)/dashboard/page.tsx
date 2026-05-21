@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, Flame, ClipboardList, Sun, Moon, Activity, Brain, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { fetchHabitsWithStatus, toggleHabit, createHabit, TIMED_TYPES, DIMENSION_ICONS } from '@/lib/habits';
@@ -88,11 +88,12 @@ function ProgressBar({ completed, total, label }: { completed: number; total: nu
 const DIM_COLOR: Record<HabitDimension, string> = { body: 'var(--body)', mind: 'var(--mind)', soul: 'var(--soul)' };
 
 function DimensionTabs({ active, onChange }: { active: HabitDimension | null; onChange: (d: HabitDimension | null) => void }) {
-  const tabs: { label: string; value: HabitDimension | null }[] = [
-    { label: 'All', value: null },
-    { label: `${DIMENSION_ICONS.body} Body`, value: 'body' },
-    { label: `${DIMENSION_ICONS.mind} Mind`, value: 'mind' },
-    { label: `${DIMENSION_ICONS.soul} Soul`, value: 'soul' },
+  const { t } = useLocale();
+  const tabs: { label: string; Icon: React.ComponentType<{ size?: number }> | null; value: HabitDimension | null }[] = [
+    { label: t.dim_all,  Icon: null,      value: null },
+    { label: t.dim_body, Icon: Activity,  value: 'body' },
+    { label: t.dim_mind, Icon: Brain,     value: 'mind' },
+    { label: t.dim_soul, Icon: Sparkles,  value: 'soul' },
   ];
   return (
     <div className="flex gap-1.5 mb-4 overflow-x-auto">
@@ -103,13 +104,14 @@ function DimensionTabs({ active, onChange }: { active: HabitDimension | null; on
           <button
             key={String(tab.value)}
             onClick={() => onChange(tab.value)}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold flex-shrink-0 transition-all flex items-center gap-1"
             style={{
               background: isActive ? `color-mix(in srgb, ${c} 15%, transparent)` : 'var(--surface)',
               color: isActive ? c : 'var(--text-secondary)',
               border: `1px solid ${isActive ? c : 'var(--border)'}`,
             }}
           >
+            {tab.Icon && <tab.Icon size={13} />}
             {tab.label}
           </button>
         );
@@ -306,7 +308,7 @@ export default function DashboardPage() {
             </button>
           </div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {isToday ? `${getGreeting(locale)} 👋` : habitsLabel}
+            {isToday ? getGreeting(locale) : habitsLabel}
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -315,8 +317,8 @@ export default function DashboardPage() {
               {t.today}
             </button>
           )}
-          <button onClick={toggleTheme} className="w-9 h-9 rounded-xl flex items-center justify-center text-base transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-            {isDark ? '☀️' : '🌙'}
+          <button onClick={toggleTheme} className="w-9 h-9 rounded-xl flex items-center justify-center transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           <button onClick={() => setShowAdd(true)} className="px-4 py-2 rounded-xl font-semibold text-sm text-white transition-all" style={{ background: 'var(--primary)', boxShadow: 'var(--shadow-glow)' }}>
             {t.dashboard_add}
@@ -340,12 +342,12 @@ export default function DashboardPage() {
       {habits.length > 0 && (
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: t.dashboard_completed, value: `${completed}/${habits.length}`, icon: '✅' },
-            { label: t.dashboard_best_streak, value: `${Math.max(...habits.map(h => h.streak), 0)}d`, icon: '🔥' },
-            { label: t.dashboard_total, value: habits.length, icon: '📋' },
-          ].map(({ label, value, icon }) => (
+            { label: t.dashboard_completed, value: `${completed}/${habits.length}`, Icon: CheckCircle2 },
+            { label: t.dashboard_best_streak, value: `${Math.max(...habits.map(h => h.streak), 0)}d`, Icon: Flame },
+            { label: t.dashboard_total, value: habits.length, Icon: ClipboardList },
+          ].map(({ label, value, Icon }) => (
             <GlassCard key={label} style={{ padding: '14px', textAlign: 'center' }}>
-              <div className="text-xl mb-1">{icon}</div>
+              <div className="flex justify-center mb-1" style={{ color: 'var(--primary)' }}><Icon size={20} /></div>
               <p className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>{value}</p>
               <p className="text-[10px] uppercase tracking-wide font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
             </GlassCard>

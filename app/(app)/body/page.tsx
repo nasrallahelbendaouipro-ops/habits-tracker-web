@@ -4,27 +4,30 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
+import { Footprints, Flame, Scale, BedDouble, Heart, Activity, BarChart2 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchGoals } from '@/lib/goals';
 import { fetchHealthChart, type Period, type MetricKey, type ChartPoint } from '@/lib/health-readings';
 import GlassCard from '@/components/ui/GlassCard';
 import { useChartTheme } from '@/lib/chart-theme';
+import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import type { GoalWithHabits } from '@/lib/types';
 
 const METRICS: {
   key: MetricKey;
   label: string;
-  icon: string;
+  Icon: LucideIcon;
   unit: string;
   color: string;
   higherIsBetter?: boolean;
   decimals?: number;
 }[] = [
-  { key: 'steps',           label: 'Pas',         icon: '👣', unit: 'pas',  color: 'var(--warning)', higherIsBetter: true },
-  { key: 'active_calories', label: 'Calories',    icon: '🔥', unit: 'kcal', color: 'var(--body)',    higherIsBetter: true },
-  { key: 'weight_kg',       label: 'Poids',       icon: '⚖️', unit: 'kg',   color: 'var(--body)',    decimals: 1          },
-  { key: 'sleep_hours',     label: 'Sommeil',     icon: '😴', unit: 'h',    color: 'var(--soul)',    decimals: 1          },
-  { key: 'heart_rate_avg',  label: 'Fréq. card.', icon: '❤️', unit: 'bpm',  color: 'var(--error)',   decimals: 0          },
+  { key: 'steps',           label: 'Pas',         Icon: Footprints, unit: 'pas',  color: 'var(--warning)', higherIsBetter: true },
+  { key: 'active_calories', label: 'Calories',    Icon: Flame,      unit: 'kcal', color: 'var(--body)',    higherIsBetter: true },
+  { key: 'weight_kg',       label: 'Poids',       Icon: Scale,      unit: 'kg',   color: 'var(--body)',    decimals: 1          },
+  { key: 'sleep_hours',     label: 'Sommeil',     Icon: BedDouble,  unit: 'h',    color: 'var(--soul)',    decimals: 1          },
+  { key: 'heart_rate_avg',  label: 'Fréq. card.', Icon: Heart,      unit: 'bpm',  color: 'var(--error)',   decimals: 0          },
 ];
 
 const PERIODS: { key: Period; label: string }[] = [
@@ -89,6 +92,7 @@ function GoalKpiCard({ goal }: { goal: GoalWithHabits }) {
 }
 
 export default function BodyPage() {
+  const { locale } = useLocale();
   const [userId, setUserId]             = useState<string | null>(null);
   const [goals, setGoals]               = useState<GoalWithHabits[]>([]);
   const [activeMetric, setActiveMetric] = useState<MetricKey>('steps');
@@ -107,7 +111,7 @@ export default function BodyPage() {
     setLoading(true);
     try {
       const [points, goalsData] = await Promise.all([
-        fetchHealthChart(userId, activeMetric, activePeriod),
+        fetchHealthChart(userId, activeMetric, activePeriod, LOCALE_DATE_TAG[locale]),
         fetchGoals(userId),
       ]);
       setChartData(points);
@@ -115,7 +119,7 @@ export default function BodyPage() {
     } finally {
       setLoading(false);
     }
-  }, [userId, activeMetric, activePeriod]);
+  }, [userId, activeMetric, activePeriod, locale]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -134,7 +138,9 @@ export default function BodyPage() {
   return (
     <div className="animate-fade-in max-w-2xl">
       <div className="mb-5">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>💪 Body Metrics</h1>
+        <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Activity size={22} style={{ color: 'var(--primary)' }} /> Body Metrics
+        </h1>
       </div>
 
       {/* Metric tabs */}
@@ -152,7 +158,7 @@ export default function BodyPage() {
                 color: active ? m.color : 'var(--text-secondary)',
               }}
             >
-              {m.icon} {m.label}
+              <m.Icon size={14} /> {m.label}
             </button>
           );
         })}
@@ -204,7 +210,7 @@ export default function BodyPage() {
         ) : nonNull.length === 0 ? (
           <div className="h-48 flex items-center justify-center text-center">
             <div>
-              <p className="text-3xl mb-2">📊</p>
+              <div className="flex justify-center mb-2" style={{ color: 'var(--text-muted)' }}><BarChart2 size={32} /></div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Aucune donnée</p>
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                 Lance le raccourci iPhone pour synchroniser
