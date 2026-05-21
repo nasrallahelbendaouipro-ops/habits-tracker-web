@@ -26,46 +26,22 @@ async function fetchReadings(userId: string, since: Date): Promise<HealthReading
   return (data ?? []) as HealthReading[];
 }
 
-// Local date string (YYYY-MM-DD) using the browser's timezone — NOT UTC.
-// iOS step counter resets at local midnight, so we must track day boundaries
-// in local time to avoid double-counting steps near UTC midnight.
-function localDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-// For cumulative metrics (steps, calories): sum incremental deltas within each bucket.
-// Strategy: use consecutive-reading deltas so that a fresh daily total from iOS
-// doesn't double-count previous hours.
-function deltaSeries(
+// For incremental metrics (steps, calories): each reading stores ONLY that period's
+// value (the shortcut queries "last 1 hour", so each reading = that hour's steps).
+// We simply sum readings that fall within each bucket.
+function sumSeries(
   readings: HealthReading[],
   key: 'steps' | 'active_calories',
   bucketFn: (d: Date) => string,
   labels: string[],
 ): ChartPoint[] {
-  // Build deltas: difference from one reading to the next within the same calendar day.
-  // When a new day starts, the first reading of the day IS the delta for that reading.
-  const deltas: { bucket: string; delta: number }[] = [];
-  let prevValue: number | null = null;
-  let prevDay = '';
-
+  const map: Record<string, number> = {};
   for (const r of readings) {
-    const d = new Date(r.synced_at);
-    const day = localDateStr(d); // local date — matches when iOS resets its step counter
     const val = r[key] as number | null;
     if (val == null) continue;
-
-    // New calendar day → reset baseline
-    if (day !== prevDay) { prevValue = null; prevDay = day; }
-
-    const delta = prevValue == null ? val : Math.max(0, val - prevValue);
-    prevValue = val;
-    deltas.push({ bucket: bucketFn(d), delta });
+    const bucket = bucketFn(new Date(r.synced_at));
+    map[bucket] = (map[bucket] ?? 0) + val;
   }
-
-  // Sum deltas per bucket
-  const map: Record<string, number> = {};
-  for (const { bucket, delta } of deltas) map[bucket] = (map[bucket] ?? 0) + delta;
-
   return labels.map(l => ({ label: l, value: map[l] ?? null }));
 }
 
@@ -180,7 +156,7 @@ export async function fetchHealthChart(
   const readings = await fetchReadings(userId, since);
 
   if (CUMULATIVE.includes(metric)) {
-    return deltaSeries(readings, metric as 'steps' | 'active_calories', bucketFn, labels);
+    return sumSeries(readings, metric as 'steps' | 'active_calories', bucketFn, labels);
   }
   return pointSeries(readings, metric as 'weight_kg' | 'sleep_hours' | 'heart_rate_avg' | 'hrv', bucketFn, labels);
 }
