@@ -26,39 +26,22 @@ async function fetchReadings(userId: string, since: Date): Promise<HealthReading
   return (data ?? []) as HealthReading[];
 }
 
-// For cumulative metrics (steps, calories): sum incremental deltas within each bucket.
-// Strategy: use consecutive-reading deltas so that a fresh daily total from iOS
-// doesn't double-count previous hours.
-function deltaSeries(
+// For incremental metrics (steps, calories): each reading stores ONLY that period's
+// value (the shortcut queries "last 1 hour", so each reading = that hour's steps).
+// We simply sum readings that fall within each bucket.
+function sumSeries(
   readings: HealthReading[],
   key: 'steps' | 'active_calories',
   bucketFn: (d: Date) => string,
   labels: string[],
 ): ChartPoint[] {
-  // Build deltas: difference from one reading to the next within the same calendar day.
-  // When a new day starts, the first reading of the day IS the delta for that reading.
-  const deltas: { bucket: string; delta: number }[] = [];
-  let prevValue: number | null = null;
-  let prevDay = '';
-
+  const map: Record<string, number> = {};
   for (const r of readings) {
-    const d = new Date(r.synced_at);
-    const day = d.toISOString().slice(0, 10);
     const val = r[key] as number | null;
     if (val == null) continue;
-
-    // New calendar day → reset baseline
-    if (day !== prevDay) { prevValue = null; prevDay = day; }
-
-    const delta = prevValue == null ? val : Math.max(0, val - prevValue);
-    prevValue = val;
-    deltas.push({ bucket: bucketFn(d), delta });
+    const bucket = bucketFn(new Date(r.synced_at));
+    map[bucket] = (map[bucket] ?? 0) + val;
   }
-
-  // Sum deltas per bucket
-  const map: Record<string, number> = {};
-  for (const { bucket, delta } of deltas) map[bucket] = (map[bucket] ?? 0) + delta;
-
   return labels.map(l => ({ label: l, value: map[l] ?? null }));
 }
 
@@ -83,45 +66,45 @@ function pointSeries(
 function hourLabel(d: Date) {
   return `${String(d.getHours()).padStart(2, '0')}:00`;
 }
-function dayLabel(d: Date) {
-  return d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
+function dayLabel(d: Date, tag: string) {
+  return d.toLocaleDateString(tag, { month: 'short', day: 'numeric' });
 }
-function weekLabel(d: Date) {
+function weekLabel(d: Date, tag: string) {
   // ISO week start (Monday)
   const monday = new Date(d);
   monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return monday.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
+  return monday.toLocaleDateString(tag, { month: 'short', day: 'numeric', year: '2-digit' });
 }
-function monthLabel(d: Date) {
-  return d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+function monthLabel(d: Date, tag: string) {
+  return d.toLocaleDateString(tag, { month: 'short', year: '2-digit' });
 }
 
 function hoursLabels(): string[] {
   return Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 }
-function daysLabels(n: number): string[] {
+function daysLabels(n: number, tag: string): string[] {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (n - 1 - i));
-    return dayLabel(d);
+    return dayLabel(d, tag);
   });
 }
-function weeksLabels(n: number): string[] {
+function weeksLabels(n: number, tag: string): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i * 7);
-    const l = weekLabel(d);
+    const l = weekLabel(d, tag);
     if (!seen.has(l)) { seen.add(l); result.push(l); }
   }
   return result;
 }
-function monthsLabels(n: number): string[] {
+function monthsLabels(n: number, tag: string): string[] {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date();
     d.setMonth(d.getMonth() - (n - 1 - i));
-    return monthLabel(d);
+    return monthLabel(d, tag);
   });
 }
 
@@ -135,6 +118,7 @@ export async function fetchHealthChart(
   userId: string,
   metric: MetricKey,
   period: Period,
+  localeTag = 'fr-FR',
 ): Promise<ChartPoint[]> {
   const now = new Date();
   let since: Date;
@@ -149,30 +133,30 @@ export async function fetchHealthChart(
       break;
     case 'week':
       since = new Date(now); since.setDate(now.getDate() - 6); since.setHours(0, 0, 0, 0);
-      labels = daysLabels(7);
-      bucketFn = dayLabel;
+      labels = daysLabels(7, localeTag);
+      bucketFn = (d) => dayLabel(d, localeTag);
       break;
     case 'month':
       since = new Date(now); since.setDate(now.getDate() - 29); since.setHours(0, 0, 0, 0);
-      labels = daysLabels(30);
-      bucketFn = dayLabel;
+      labels = daysLabels(30, localeTag);
+      bucketFn = (d) => dayLabel(d, localeTag);
       break;
     case '6months':
       since = new Date(now); since.setMonth(now.getMonth() - 6); since.setHours(0, 0, 0, 0);
-      labels = weeksLabels(26);
-      bucketFn = weekLabel;
+      labels = weeksLabels(26, localeTag);
+      bucketFn = (d) => weekLabel(d, localeTag);
       break;
     case 'year':
       since = new Date(now); since.setFullYear(now.getFullYear() - 1); since.setHours(0, 0, 0, 0);
-      labels = monthsLabels(12);
-      bucketFn = monthLabel;
+      labels = monthsLabels(12, localeTag);
+      bucketFn = (d) => monthLabel(d, localeTag);
       break;
   }
 
   const readings = await fetchReadings(userId, since);
 
   if (CUMULATIVE.includes(metric)) {
-    return deltaSeries(readings, metric as 'steps' | 'active_calories', bucketFn, labels);
+    return sumSeries(readings, metric as 'steps' | 'active_calories', bucketFn, labels);
   }
   return pointSeries(readings, metric as 'weight_kg' | 'sleep_hours' | 'heart_rate_avg' | 'hrv', bucketFn, labels);
 }

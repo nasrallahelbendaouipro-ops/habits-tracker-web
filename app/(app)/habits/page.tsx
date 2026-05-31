@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { fetchHabitsWithStatus, createHabit, updateHabit, deleteHabit, DIMENSION_ICONS } from '@/lib/habits';
+import { fetchHabitsWithStatus, createHabit, updateHabit, deleteHabit } from '@/lib/habits';
 import { useLocale } from '@/lib/i18n';
+import { Pencil, Trash2, Flame, Leaf, Activity, Brain, Sparkles } from 'lucide-react';
 import HabitModal from '@/components/habits/HabitModal';
 import GlassCard from '@/components/ui/GlassCard';
 import type { HabitWithStreak, HabitFormValues, HabitDimension } from '@/lib/types';
@@ -17,15 +18,16 @@ const DIM_COLOR: Record<HabitDimension, string> = {
   soul: 'var(--soul)',
 };
 
-const DIM_LABEL: Record<HabitDimension, string> = {
-  body: 'Body',
-  mind: 'Mind',
-  soul: 'Soul',
+const DIM_ICON: Record<HabitDimension, React.ComponentType<{ size?: number }>> = {
+  body: Activity,
+  mind: Brain,
+  soul: Sparkles,
 };
 
 export default function HabitsPage() {
   const router = useRouter();
   const { t } = useLocale();
+  const DIM_LABEL: Record<HabitDimension, string> = { body: t.dim_body, mind: t.dim_mind, soul: t.dim_soul };
   const [userId, setUserId]       = useState<string | null>(null);
   const [habits, setHabits]       = useState<HabitWithStreak[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -102,7 +104,7 @@ export default function HabitsPage() {
           const c = DIM_COLOR[dim];
           return (
             <span key={dim} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold" style={{ background: `color-mix(in srgb, ${c} 15%, transparent)`, color: c, border: `1px solid color-mix(in srgb, ${c} 20%, transparent)` }}>
-              {DIMENSION_ICONS[dim]} {DIM_LABEL[dim]} · {count}
+              {React.createElement(DIM_ICON[dim], { size: 12 })} {DIM_LABEL[dim]} · {count}
             </span>
           );
         })}
@@ -114,7 +116,7 @@ export default function HabitsPage() {
         </div>
       ) : habits.length === 0 ? (
         <GlassCard className="text-center py-16">
-          <div className="text-5xl mb-4">🌱</div>
+          <div className="flex justify-center mb-4" style={{ color: 'var(--primary)' }}><Leaf size={40} /></div>
           <p className="font-semibold text-lg mb-1" style={{ color: 'var(--text-primary)' }}>{t.habits_empty}</p>
           <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>{t.habits_empty_desc}</p>
           <button onClick={() => setShowAdd(true)} className="px-5 py-2.5 rounded-xl font-semibold text-sm text-white" style={{ background: 'var(--primary)' }}>
@@ -131,7 +133,7 @@ export default function HabitsPage() {
               <div key={dim}>
                 {/* Section header */}
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg">{DIMENSION_ICONS[dim]}</span>
+                  {React.createElement(DIM_ICON[dim], { size: 16 })}
                   <h2 className="font-bold text-sm uppercase tracking-widest" style={{ color: c }}>{DIM_LABEL[dim]}</h2>
                   <div className="flex-1 h-px" style={{ background: `color-mix(in srgb, ${c} 20%, transparent)` }} />
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: `color-mix(in srgb, ${c} 15%, transparent)`, color: c }}>
@@ -158,14 +160,14 @@ export default function HabitsPage() {
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `color-mix(in srgb, ${c} 15%, transparent)`, color: c }}>
                             {h.type}
                           </span>
-                          {h.streak > 0 && <span className="text-[10px] font-medium" style={{ color: 'var(--secondary)' }}>🔥 {h.streak}d</span>}
+                          {h.streak > 0 && <span className="text-[10px] font-medium flex items-center gap-0.5" style={{ color: 'var(--secondary)' }}><Flame size={12} /> {h.streak}d</span>}
                           {h.completedToday && <span className="text-[10px] font-medium" style={{ color: 'var(--success)' }}>{t.habits_done_today}</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setEditing(h)} className="w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all" style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}>✏️</button>
-                        <button onClick={() => handleDelete(h.id)} disabled={deleting === h.id} className="w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all" style={{ background: 'var(--error-muted)', color: 'var(--error)' }}>
-                          {deleting === h.id ? '…' : '🗑️'}
+                        <button onClick={() => setEditing(h)} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}><Pencil size={14} /></button>
+                        <button onClick={() => handleDelete(h.id)} disabled={deleting === h.id} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ background: 'var(--error-muted)', color: 'var(--error)' }}>
+                          {deleting === h.id ? '…' : <Trash2 size={14} />}
                         </button>
                       </div>
                     </div>

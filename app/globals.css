@@ -20,8 +20,8 @@
 
   --text-primary: #F0EEFF;
   --text-secondary: #A09BC0;
-  --text-tertiary: #7A749A;
-  --text-muted: #5E5A78;
+  --text-tertiary: #8A85A8;
+  --text-muted: #7A749A;
   --text-disabled: #3D3A55;
 
   --glass-bg: rgba(28, 26, 46, 0.7);
@@ -82,14 +82,19 @@
   --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.1);
   --shadow-glow: 0 0 24px rgba(108, 99, 255, 0.12);
 
+  /* Dimension colors — darkened for 4.5:1 contrast on light bg */
+  --body: #dc2626;
+  --mind: #1d4ed8;
+  --soul: #7c3aed;
+
   /* Muted variants — light theme adjustments */
   --error-muted: rgba(255, 107, 107, 0.12);
   --success-muted: rgba(78, 205, 196, 0.12);
   --warning-muted: rgba(255, 217, 61, 0.12);
   --teal-muted: rgba(78, 205, 196, 0.12);
-  --body-muted: rgba(239, 68, 68, 0.12);
-  --mind-muted: rgba(59, 130, 246, 0.12);
-  --soul-muted: rgba(168, 85, 247, 0.12);
+  --body-muted: rgba(220, 38, 38, 0.12);
+  --mind-muted: rgba(29, 78, 216, 0.12);
+  --soul-muted: rgba(124, 58, 237, 0.12);
   --primary-muted-border: rgba(108, 99, 255, 0.25);
   --secondary-muted-border: rgba(255, 107, 53, 0.25);
 }
@@ -351,4 +356,34 @@ body {
 }
 .sidebar-signout-btn:hover {
   background: var(--error-muted) !important;
+}
+
+/* ============================================
+   FORM UTILITIES
+   ============================================ */
+.form-input {
+  width: 100%;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.form-input:focus-visible {
+  border-color: var(--primary);
+}
+.form-input.input-error {
+  border-color: var(--error);
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--error);
+  font-size: 0.75rem;
+  margin-top: 6px;
 }
