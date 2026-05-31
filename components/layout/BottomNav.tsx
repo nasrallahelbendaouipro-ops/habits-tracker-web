@@ -1,16 +1,21 @@
 'use client';
 
+import type { ComponentType } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, PenLine, Target, BarChart2, User } from 'lucide-react';
 import { useLocale } from '@/lib/i18n';
 
-const NAV_ITEMS = [
-  { href: '/dashboard', Icon: Home,     labelKey: 'nav_home' as const },
-  { href: '/checkin',   Icon: PenLine,  labelKey: null,       staticLabel: 'Check-In' },
-  { href: '/goals',     Icon: Target,   labelKey: 'nav_goals' as const },
-  { href: '/analytics', Icon: BarChart2, labelKey: null,      staticLabel: 'Analytics' },
-  { href: '/settings',  Icon: User,     labelKey: 'nav_profile' as const },
+type NavItem =
+  | { href: string; Icon: ComponentType<{ size?: number }>; labelKey: 'nav_home' | 'nav_goals' | 'nav_profile'; staticLabel?: never }
+  | { href: string; Icon: ComponentType<{ size?: number }>; labelKey: null; staticLabel: string };
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/dashboard', Icon: Home,      labelKey: 'nav_home' },
+  { href: '/checkin',   Icon: PenLine,   labelKey: null,       staticLabel: 'Check-In' },
+  { href: '/goals',     Icon: Target,    labelKey: 'nav_goals' },
+  { href: '/analytics', Icon: BarChart2, labelKey: null,       staticLabel: 'Analytics' },
+  { href: '/settings',  Icon: User,      labelKey: 'nav_profile' },
 ];
 
 export default function BottomNav() {

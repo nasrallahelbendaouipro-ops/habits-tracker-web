@@ -95,6 +95,7 @@ export default function RegisterPage() {
               onChange={e => setPassword(e.target.value)}
               placeholder="6+ characters"
               required
+              minLength={6}
               autoComplete="new-password"
               className="form-input pr-10"
             />

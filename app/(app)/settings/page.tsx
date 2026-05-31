@@ -10,7 +10,6 @@ import { getHealthConnectAuthUrl } from '@/lib/integrations/health-connect';
 import type { User } from '@supabase/supabase-js';
 import GlassCard from '@/components/ui/GlassCard';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
 
 function AppleHealthSection() {
   const [token, setToken]       = useState<string | null>(null);
@@ -56,7 +55,9 @@ function AppleHealthSection() {
     setTimeout(() => setCopied(null), 2000);
   }
 
-  const ingestUrl = `${APP_URL}/api/health/ingest`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ??
+    (typeof window !== 'undefined' ? window.location.origin : null);
+  const ingestUrl = appUrl ? `${appUrl}/api/health/ingest` : null;
 
   const STEPS = [
     { n: 1, text: 'Open the Shortcuts app on your iPhone.' },
@@ -114,12 +115,13 @@ function AppleHealthSection() {
       <div className="mb-4">
         <p className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>Ingest URL</p>
         <div className="flex items-center gap-2">
-          <div className="flex-1 px-3 py-2 rounded-xl font-mono text-xs overflow-hidden text-ellipsis whitespace-nowrap" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-            {ingestUrl}
+          <div className="flex-1 px-3 py-2 rounded-xl font-mono text-xs overflow-hidden text-ellipsis whitespace-nowrap" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: ingestUrl ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
+            {ingestUrl ?? 'Set NEXT_PUBLIC_APP_URL in your .env'}
           </div>
           <button
-            onClick={() => copy(ingestUrl, 'url')}
-            className="px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
+            onClick={() => ingestUrl && copy(ingestUrl, 'url')}
+            disabled={!ingestUrl}
+            className="px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all disabled:opacity-40"
             style={{ background: copied === 'url' ? 'var(--success)20' : 'var(--primary-muted)', color: copied === 'url' ? 'var(--success)' : 'var(--primary)', border: `1px solid ${copied === 'url' ? 'var(--success)' : 'var(--primary-muted)'}` }}
           >
             {copied === 'url' ? '✓ Copied' : 'Copy'}

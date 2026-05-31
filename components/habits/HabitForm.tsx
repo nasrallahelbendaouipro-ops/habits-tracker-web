@@ -67,6 +67,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
   const [metadata, setMeta]       = useState<HabitMetadata>(initial?.metadata ?? {});
   const [targetDays, setTargetDays] = useState<number[]>(initial?.target_days ?? []);
   const [error, setError]         = useState('');
+  const [errorField, setErrorField] = useState<'name' | null>(null);
   const [loading, setLoading]     = useState(false);
 
   const isSpecific = targetDays.length > 0;
@@ -88,8 +89,9 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { setError(t.form_err_name); return; }
+    if (!name.trim()) { setError(t.form_err_name); setErrorField('name'); return; }
     setError('');
+    setErrorField(null);
     setLoading(true);
     try {
       await onSubmit({
@@ -100,12 +102,13 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : t.form_err_generic);
+      setErrorField(null);
     } finally {
       setLoading(false);
     }
   }
 
-  const nameError = error === t.form_err_name;
+  const nameError = errorField === 'name';
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -120,7 +123,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         <input
           type="text"
           value={name}
-          onChange={e => { setName(e.target.value); setError(''); }}
+          onChange={e => { setName(e.target.value); setError(''); setErrorField(null); }}
           placeholder={t.form_name_placeholder}
           maxLength={40}
           className={`form-input${nameError ? ' input-error' : ''}`}
