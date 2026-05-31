@@ -2,6 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import {
+  LayoutDashboard, PenLine, CheckSquare, Target, Activity,
+  Brain, Sparkles, BarChart2, Bot, CalendarDays, Settings,
+  Sun, Moon, LogOut,
+} from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useLocale } from '@/lib/i18n';
 import { createClient } from '@/lib/supabase/client';
@@ -14,17 +19,17 @@ export default function Sidebar() {
   const { t } = useLocale();
 
   const NAV_ITEMS = [
-    { href: '/dashboard', icon: '🏠', label: t.nav_dashboard },
-    { href: '/checkin',   icon: '✍️', label: 'Check-In' },
-    { href: '/habits',    icon: '✅', label: t.nav_habits },
-    { href: '/goals',     icon: '🎯', label: t.nav_goals },
-    { href: '/body',      icon: '💪', label: 'Body Metrics' },
-    { href: '/mind',      icon: '🧠', label: 'Digital Mind' },
-    { href: '/soul',      icon: '✨', label: 'Soul Growth' },
-    { href: '/analytics', icon: '📊', label: t.nav_analytics },
-    { href: '/planner',   icon: '🤖', label: t.nav_planner },
-    { href: '/calendar',  icon: '📅', label: t.nav_calendar },
-    { href: '/settings',  icon: '⚙️', label: t.nav_settings },
+    { href: '/dashboard', Icon: LayoutDashboard, label: t.nav_dashboard },
+    { href: '/checkin',   Icon: PenLine,          label: 'Check-In' },
+    { href: '/habits',    Icon: CheckSquare,       label: t.nav_habits },
+    { href: '/goals',     Icon: Target,            label: t.nav_goals },
+    { href: '/body',      Icon: Activity,          label: 'Body Metrics' },
+    { href: '/mind',      Icon: Brain,             label: 'Digital Mind' },
+    { href: '/soul',      Icon: Sparkles,          label: 'Soul Growth' },
+    { href: '/analytics', Icon: BarChart2,         label: t.nav_analytics },
+    { href: '/planner',   Icon: Bot,               label: t.nav_planner },
+    { href: '/calendar',  Icon: CalendarDays,      label: t.nav_calendar },
+    { href: '/settings',  Icon: Settings,          label: t.nav_settings },
   ];
 
   async function handleSignOut() {
@@ -59,7 +64,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
-        {NAV_ITEMS.map(({ href, icon, label }) => {
+        {NAV_ITEMS.map(({ href, Icon, label }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
             <Link
@@ -73,7 +78,7 @@ export default function Sidebar() {
                 borderInlineStart: active ? '2px solid var(--primary)' : '2px solid transparent',
               }}
             >
-              <span className="text-base" aria-hidden="true">{icon}</span>
+              <Icon size={17} aria-hidden="true" />
               {label}
             </Link>
           );
@@ -87,7 +92,7 @@ export default function Sidebar() {
           className="sidebar-footer-btn flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left"
           style={{ color: 'var(--text-secondary)' }}
         >
-          <span aria-hidden="true">{isDark ? '☀️' : '🌙'}</span>
+          {isDark ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
           {isDark ? t.nav_light_mode : t.nav_dark_mode}
         </button>
 
@@ -96,7 +101,7 @@ export default function Sidebar() {
           className="sidebar-signout-btn flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left"
           style={{ color: 'var(--error)' }}
         >
-          <span aria-hidden="true">🚪</span>
+          <LogOut size={17} aria-hidden="true" />
           {t.nav_sign_out}
         </button>
       </div>

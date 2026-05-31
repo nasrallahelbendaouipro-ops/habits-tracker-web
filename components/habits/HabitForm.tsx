@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { HABIT_ICONS, HABIT_COLORS, DIMENSION_DEFAULTS } from '@/lib/habits';
 import { useLocale } from '@/lib/i18n';
 import type { HabitFormValues, HabitType, HabitMetadata, HabitDimension } from '@/lib/types';
@@ -66,6 +67,7 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
   const [metadata, setMeta]       = useState<HabitMetadata>(initial?.metadata ?? {});
   const [targetDays, setTargetDays] = useState<number[]>(initial?.target_days ?? []);
   const [error, setError]         = useState('');
+  const [errorField, setErrorField] = useState<'name' | null>(null);
   const [loading, setLoading]     = useState(false);
 
   const isSpecific = targetDays.length > 0;
@@ -87,8 +89,9 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { setError(t.form_err_name); return; }
+    if (!name.trim()) { setError(t.form_err_name); setErrorField('name'); return; }
     setError('');
+    setErrorField(null);
     setLoading(true);
     try {
       await onSubmit({
@@ -99,16 +102,13 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : t.form_err_generic);
+      setErrorField(null);
     } finally {
       setLoading(false);
     }
   }
 
-  const inputBase = {
-    background: 'var(--surface-elevated)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-primary)',
-  };
+  const nameError = errorField === 'name';
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -123,14 +123,17 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         <input
           type="text"
           value={name}
-          onChange={e => { setName(e.target.value); setError(''); }}
+          onChange={e => { setName(e.target.value); setError(''); setErrorField(null); }}
           placeholder={t.form_name_placeholder}
           maxLength={40}
-          className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-          style={inputBase}
-          onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+          className={`form-input${nameError ? ' input-error' : ''}`}
         />
+        {nameError && (
+          <p className="field-error">
+            <AlertCircle size={12} aria-hidden="true" />
+            {error}
+          </p>
+        )}
       </div>
 
       {/* Icon picker */}
@@ -277,16 +280,20 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         </div>
       </div>
 
-      {error && (
-        <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>
+      {error && !nameError && (
+        <p className="field-error">
+          <AlertCircle size={12} aria-hidden="true" />
+          {error}
+        </p>
       )}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all"
+        className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
         style={{ background: loading ? 'var(--text-muted)' : color, cursor: loading ? 'not-allowed' : 'pointer' }}
       >
+        {loading && <Loader2 size={15} className="animate-spin" />}
         {loading ? t.form_saving : submitLabel}
       </button>
     </form>
