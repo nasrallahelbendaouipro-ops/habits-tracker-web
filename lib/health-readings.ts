@@ -73,7 +73,7 @@ function weekLabel(d: Date, tag: string) {
   // ISO week start (Monday)
   const monday = new Date(d);
   monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return monday.toLocaleDateString(tag, { month: 'short', day: 'numeric' });
+  return monday.toLocaleDateString(tag, { month: 'short', day: 'numeric', year: '2-digit' });
 }
 function monthLabel(d: Date, tag: string) {
   return d.toLocaleDateString(tag, { month: 'short', year: '2-digit' });

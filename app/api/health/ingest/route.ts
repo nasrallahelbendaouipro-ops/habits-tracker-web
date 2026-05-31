@@ -73,18 +73,19 @@ export async function POST(req: NextRequest) {
   const ac = norm(metrics.active_calories);
   const w  = norm(metrics.weight_kg);
 
-  // Insert a timestamped reading into health_readings (powers intraday charts).
-  const reading: Record<string, unknown> = { user_id: userId };
-  if (st != null) reading.steps            = Math.round(st);
-  if (sl != null) reading.sleep_hours      = sl;
-  if (hr != null) reading.heart_rate_avg   = Math.round(hr);
-  if (hv != null) reading.hrv              = hv;
-  if (ac != null) reading.active_calories  = ac;
-  if (w  != null) reading.weight_kg        = w;
-
-  const { error: insertErr } = await supabase.from('health_readings').insert(reading);
-  if (insertErr) {
-    console.error('[health/ingest] health_readings insert:', insertErr);
+  // Atomically compute deltas and insert into health_readings via DB RPC.
+  // The function uses a per-user advisory lock to prevent concurrent-request double-counting.
+  const { data: rpcResult, error: rpcErr } = await supabase.rpc('upsert_health_reading', {
+    p_user_id:        userId,
+    p_steps_total:    st != null ? Math.round(st) : null,
+    p_calories_total: ac != null ? Math.round(ac) : null,
+    p_sleep_hours:    sl ?? null,
+    p_heart_rate:     hr != null ? Math.round(hr) : null,
+    p_hrv:            hv ?? null,
+    p_weight_kg:      w  ?? null,
+  });
+  if (rpcErr) {
+    console.error('[health/ingest] upsert_health_reading rpc:', rpcErr);
     return NextResponse.json({ error: 'Failed to save data' }, { status: 500 });
   }
 
@@ -105,18 +106,27 @@ export async function POST(req: NextRequest) {
   if (hv != null) merged.hrv             = hv;
   if (ac != null) merged.active_calories = ac;
 
-  await supabase
+  const { error: upsertErr } = await supabase
     .from('daily_checkins')
     .upsert({ user_id: userId, date, body_metrics: merged }, { onConflict: 'user_id,date' });
+  if (upsertErr) {
+    console.error('[health/ingest] daily_checkins upsert:', upsertErr);
+  }
 
-  // Update last_used on the token
+  // Update last_used on the token that was actually used
   await supabase
     .from('health_sync_tokens')
     .update({ last_used: new Date().toISOString() })
-    .eq('user_id', userId);
+    .eq('token', token);
 
-  const savedFields = Object.keys(reading).filter(k => k !== 'user_id');
+  const rpc = (rpcResult as Record<string, unknown> | null) ?? {};
+  const savedFields: string[] = [];
   const values: Record<string, unknown> = {};
-  for (const k of savedFields) values[k] = reading[k];
+  if (st != null) { savedFields.push('steps');           values.steps           = rpc.steps; }
+  if (ac != null) { savedFields.push('active_calories'); values.active_calories = rpc.active_calories; }
+  if (sl != null) { savedFields.push('sleep_hours');     values.sleep_hours     = sl; }
+  if (hr != null) { savedFields.push('heart_rate_avg');  values.heart_rate_avg  = Math.round(hr); }
+  if (hv != null) { savedFields.push('hrv');             values.hrv             = hv; }
+  if (w  != null) { savedFields.push('weight_kg');       values.weight_kg       = w; }
   return NextResponse.json({ ok: true, date, fields: savedFields, values });
 }

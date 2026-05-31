@@ -133,7 +133,7 @@ export default function BodyPage() {
   const decimals = metric.decimals ?? 0;
 
   // Highlight the most recent non-null bar
-  const lastIdx  = chartData.map(d => d.value).lastIndexOf(nonNull[nonNull.length - 1]?.value ?? -1);
+  const lastIdx  = chartData.reduce<number>((best, d, i) => d.value != null ? i : best, -1);
 
   return (
     <div className="animate-fade-in max-w-2xl">
