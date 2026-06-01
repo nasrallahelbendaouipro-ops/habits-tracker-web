@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/lib/theme';
 import { useLocale, LOCALE_LABELS, type Locale } from '@/lib/i18n';
-import { CalendarDays, HeartPulse, Activity, Watch, LogOut } from 'lucide-react';
+import { CalendarDays, HeartPulse, Activity, Watch, LogOut, Bell, BellOff } from 'lucide-react';
 import { getHealthConnectAuthUrl } from '@/lib/integrations/health-connect';
 import type { User } from '@supabase/supabase-js';
 import GlassCard from '@/components/ui/GlassCard';
+import { requestPermission } from '@/lib/push';
 
 
 function AppleHealthSection() {
@@ -173,6 +174,101 @@ function AppleHealthSection() {
   );
 }
 
+function NotificationsSection() {
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [anchorTime, setAnchorTime] = useState('08:00');
+  const [supported, setSupported] = useState(false);
+  const [iosHint, setIosHint] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setSupported(true);
+      setPermission(Notification.permission);
+      setAnchorTime(localStorage.getItem('anchor_time') ?? '08:00');
+    }
+  }, []);
+
+  if (!supported) return null;
+
+  async function handleToggle() {
+    const result = await requestPermission();
+    setPermission(result);
+    if (result === 'granted') {
+      localStorage.setItem('notifications_enabled', 'true');
+      setIosHint(false);
+    } else if (result === 'default') {
+      // iOS ≥ 16.4 not on home screen: permission stays 'default' after request
+      setIosHint(true);
+    }
+  }
+
+  function handleTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setAnchorTime(e.target.value);
+    localStorage.setItem('anchor_time', e.target.value);
+  }
+
+  return (
+    <GlassCard className="mb-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Bell size={14} style={{ color: 'var(--text-muted)' }} />
+        <p className="text-xs uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>
+          Notifications
+        </p>
+      </div>
+
+      {permission === 'denied' ? (
+        <div className="flex items-start gap-2">
+          <BellOff size={15} style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }} />
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Notifications blocked. Enable in your browser Settings under Site Permissions.
+          </p>
+        </div>
+      ) : permission === 'granted' ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Daily check-in reminder</span>
+            <span
+              className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
+              style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}
+            >
+              ON
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Remind me at</span>
+            <input
+              type="time"
+              value={anchorTime}
+              onChange={handleTimeChange}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-mono"
+              style={{
+                background: 'var(--surface-elevated)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-primary)',
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <button
+            onClick={handleToggle}
+            className="text-sm px-4 py-2 rounded-xl font-medium transition-all w-full text-center"
+            style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid var(--primary-muted)' }}
+          >
+            Enable notifications
+          </button>
+          {iosHint && (
+            <p className="text-xs leading-relaxed mt-1" style={{ color: 'var(--text-muted)' }}>
+              Add LifeOS to your Home Screen first (Safari → Share → Add to Home Screen), then try again.
+            </p>
+          )}
+        </div>
+      )}
+    </GlassCard>
+  );
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
@@ -235,6 +331,9 @@ export default function SettingsPage() {
           </div>
         </button>
       </GlassCard>
+
+      {/* Notifications */}
+      <NotificationsSection />
 
       {/* Language */}
       <GlassCard className="mb-4">
