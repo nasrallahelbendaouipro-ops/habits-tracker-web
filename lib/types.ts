@@ -116,6 +116,7 @@ export type CalendarEvent = {
   source: CalendarEventSource;
   google_event_id?: string;
   linked_habit_ids: string[];
+  linked_routine_ids: string[];
   created_at: string;
 };
 
