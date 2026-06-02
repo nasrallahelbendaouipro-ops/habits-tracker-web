@@ -103,6 +103,7 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
           color: '#FF6B35',
           source: 'ai-parsed',
           linked_habit_ids: [],
+          linked_routine_ids: [],
         });
       }));
       onSaved();
