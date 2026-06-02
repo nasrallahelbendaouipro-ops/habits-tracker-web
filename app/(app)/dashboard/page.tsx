@@ -232,7 +232,6 @@ export default function DashboardPage() {
   const [logs, setLogs]               = useState<HabitLog[]>([]);
   const [goals, setGoals]             = useState<GoalWithHabits[]>([]);
   const [todaysRoutines, setTodaysRoutines] = useState<RoutineWithSession[]>([]);
-  const [logs, setLogs]               = useState<HabitLog[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showAdd, setShowAdd]         = useState(false);
   const [showDayProgram, setShowDayProgram] = useState(false);
