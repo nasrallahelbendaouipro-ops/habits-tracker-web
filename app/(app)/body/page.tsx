@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  LineChart, Line, CartesianGrid,
 } from 'recharts';
 import { Footprints, Flame, Scale, BedDouble, Heart, Activity, BarChart2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -12,7 +13,7 @@ import { fetchHealthChart, type Period, type MetricKey, type ChartPoint } from '
 import GlassCard from '@/components/ui/GlassCard';
 import { useChartTheme } from '@/lib/chart-theme';
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
-import type { GoalWithHabits } from '@/lib/types';
+import type { GoalWithHabits, HabitLog } from '@/lib/types';
 
 const METRICS: {
   key: MetricKey;
@@ -91,6 +92,32 @@ function GoalKpiCard({ goal }: { goal: GoalWithHabits }) {
   );
 }
 
+type WorkoutWeek = { label: string; sessions: number; totalMin: number };
+
+function buildWorkoutWeeks(workoutHabitIds: string[], logs: HabitLog[]): WorkoutWeek[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const workoutLogs = logs.filter(l => workoutHabitIds.includes(l.habit_id));
+  const weeks: WorkoutWeek[] = [];
+  for (let w = 7; w >= 0; w--) {
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay() - w * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const label = weekStart.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
+    const weekLogs = workoutLogs.filter(l => {
+      const d = new Date(l.completed_at + 'T00:00:00');
+      return d >= weekStart && d <= weekEnd;
+    });
+    const totalMin = weekLogs.reduce((sum, l) => {
+      const sec = (l.log_data as { duration_sec?: number })?.duration_sec ?? 0;
+      return sum + Math.round(sec / 60);
+    }, 0);
+    weeks.push({ label, sessions: weekLogs.length, totalMin });
+  }
+  return weeks;
+}
+
 export default function BodyPage() {
   const { locale } = useLocale();
   const [userId, setUserId]             = useState<string | null>(null);
@@ -98,6 +125,7 @@ export default function BodyPage() {
   const [activeMetric, setActiveMetric] = useState<MetricKey>('steps');
   const [activePeriod, setActivePeriod] = useState<Period>('week');
   const [chartData, setChartData]       = useState<ChartPoint[]>([]);
+  const [workoutWeeks, setWorkoutWeeks] = useState<WorkoutWeek[]>([]);
   const [loading, setLoading]           = useState(true);
 
   useEffect(() => {
@@ -110,12 +138,21 @@ export default function BodyPage() {
     if (!userId) return;
     setLoading(true);
     try {
-      const [points, goalsData] = await Promise.all([
+      const supabase = createClient();
+      const since = new Date();
+      since.setDate(since.getDate() - 56);
+
+      const [points, goalsData, { data: workoutHabits }, { data: workoutLogs }] = await Promise.all([
         fetchHealthChart(userId, activeMetric, activePeriod, LOCALE_DATE_TAG[locale]),
         fetchGoals(userId),
+        supabase.from('habits').select('id').eq('user_id', userId).eq('type', 'workout'),
+        supabase.from('habit_logs').select('habit_id,completed_at,log_data').eq('user_id', userId).gte('completed_at', since.toISOString().split('T')[0]),
       ]);
+
       setChartData(points);
       setGoals(goalsData.filter(g => g.dimension === 'body' && g.starting_point != null));
+      const ids = (workoutHabits ?? []).map((h: { id: string }) => h.id);
+      setWorkoutWeeks(buildWorkoutWeeks(ids, (workoutLogs ?? []) as HabitLog[]));
     } finally {
       setLoading(false);
     }
@@ -251,6 +288,58 @@ export default function BodyPage() {
           </ResponsiveContainer>
         )}
       </GlassCard>
+
+      {/* Workout Progression */}
+      {workoutWeeks.some(w => w.sessions > 0) && (
+        <GlassCard className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
+            💪 Séances de workout — 8 semaines
+          </p>
+          <div className="flex items-end gap-4 mb-4">
+            <div>
+              <p className="text-3xl font-bold" style={{ color: 'var(--body)' }}>
+                {workoutWeeks[workoutWeeks.length - 1].sessions}
+              </p>
+              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>cette semaine</p>
+            </div>
+            {workoutWeeks[workoutWeeks.length - 1].totalMin > 0 && (
+              <div>
+                <p className="text-3xl font-bold" style={{ color: 'var(--body)' }}>
+                  {workoutWeeks[workoutWeeks.length - 1].totalMin}
+                  <span className="text-base font-normal ml-1" style={{ color: 'var(--text-muted)' }}>min</span>
+                </p>
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>durée totale</p>
+              </div>
+            )}
+          </div>
+          <ResponsiveContainer width="100%" height={140}>
+            <LineChart data={workoutWeeks} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 9, fill: chart.tickFill }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: chart.tickFill }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  return (
+                    <div className="px-3 py-2 rounded-xl text-xs font-semibold" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+                      <p style={{ color: 'var(--text-muted)' }}>{label}</p>
+                      <p>{payload[0].value} séance{(payload[0].value as number) > 1 ? 's' : ''}</p>
+                    </div>
+                  );
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="sessions"
+                stroke="var(--body)"
+                strokeWidth={2.5}
+                dot={{ fill: 'var(--body)', r: 3, strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </GlassCard>
+      )}
 
       {/* Body goals */}
       {goals.length > 0 && (

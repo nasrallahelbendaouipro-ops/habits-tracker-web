@@ -4,16 +4,18 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, CheckCircle2, Flame, ClipboardList, Sun, Moon, Activity, Brain, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { fetchHabitsWithStatus, toggleHabit, createHabit, TIMED_TYPES, DIMENSION_ICONS } from '@/lib/habits';
+import { fetchHabitsWithStatus, fetchWeeklyLogs, toggleHabit, createHabit, TIMED_TYPES, DIMENSION_ICONS } from '@/lib/habits';
 import { fetchGoals } from '@/lib/goals';
 import { getTodaysRoutines } from '@/lib/routines';
+import { calcDisciplineScore } from '@/lib/analytics';
 import { TODAY, toISODate } from '@/lib/utils';
 import RoutineCard from '@/components/routines/RoutineCard';
 import type { RoutineWithSession } from '@/lib/types';
 import { useLocale, getGreeting, formatHabitsLabel, LOCALE_DATE_TAG } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
-import type { HabitWithStreak, HabitFormValues, GoalWithHabits, HabitDimension } from '@/lib/types';
+import type { HabitWithStreak, HabitLog, HabitFormValues, GoalWithHabits, HabitDimension } from '@/lib/types';
 import GlassCard from '@/components/ui/GlassCard';
 import HabitModal from '@/components/habits/HabitModal';
 import SessionTimer from '@/components/ui/SessionTimer';
@@ -221,12 +223,15 @@ function EmptyState({ onAdd, noHabitsLabel, noHabitsDesc, addHabitLabel }: { onA
 // ─── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { toggleTheme, isDark } = useTheme();
   const { t, locale } = useLocale();
   const [userId, setUserId]           = useState<string | null>(null);
   const [habits, setHabits]           = useState<HabitWithStreak[]>([]);
+  const [logs, setLogs]               = useState<HabitLog[]>([]);
   const [goals, setGoals]             = useState<GoalWithHabits[]>([]);
   const [todaysRoutines, setTodaysRoutines] = useState<RoutineWithSession[]>([]);
+  const [logs, setLogs]               = useState<HabitLog[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showAdd, setShowAdd]         = useState(false);
   const [selectedDate, setSelectedDate] = useState(TODAY);
@@ -244,14 +249,20 @@ export default function DashboardPage() {
     if (!userId) return;
     setLoading(true);
     try {
-      const [habitsData, goalsData, routinesData] = await Promise.all([
+      const [habitsData, goalsData, routinesData, logsData] = await Promise.all([
         fetchHabitsWithStatus(userId, selectedDate),
         fetchGoals(userId),
         getTodaysRoutines(),
+        fetchWeeklyLogs(userId),
       ]);
       setHabits(habitsData);
       setGoals(goalsData);
       setTodaysRoutines(routinesData);
+      setLogs(logsData);
+      if (habitsData.length === 0 && !localStorage.getItem('onboarding_complete')) {
+        router.push('/onboarding');
+        return;
+      }
     } finally {
       setLoading(false);
     }
@@ -293,6 +304,7 @@ export default function DashboardPage() {
 
   const visibleHabits = activeDim ? habits.filter(h => h.dimension === activeDim) : habits;
   const completed = habits.filter(h => h.completedToday).length;
+  const disciplineScore = calcDisciplineScore(habits, logs, 28);
   const selectedDateObj = new Date(selectedDate + 'T00:00:00');
   const isToday = selectedDate === TODAY;
   const habitsLabel = formatHabitsLabel(locale, selectedDateObj, isToday);
@@ -336,6 +348,43 @@ export default function DashboardPage() {
       <GlassCard className="mb-4">
         <WeekRow selectedDate={selectedDate} onSelect={setSelectedDate} />
       </GlassCard>
+
+      {/* Discipline Score */}
+      {habits.length > 0 && (
+        <Link href="/analytics">
+          <GlassCard className="mb-4 cursor-pointer" style={{ transition: 'opacity 0.15s' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: 'var(--text-muted)' }}>
+                  Discipline Score
+                </p>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-black tabular-nums" style={{ color: disciplineScore >= 75 ? 'var(--teal)' : disciplineScore >= 50 ? 'var(--primary)' : 'var(--secondary)' }}>
+                    {disciplineScore}
+                  </span>
+                  <span className="text-sm font-medium mb-1" style={{ color: 'var(--text-muted)' }}>/100</span>
+                </div>
+              </div>
+              <div className="relative w-16 h-16">
+                <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="var(--border)" strokeWidth="6" />
+                  <circle
+                    cx="32" cy="32" r="26" fill="none"
+                    stroke={disciplineScore >= 75 ? 'var(--teal)' : disciplineScore >= 50 ? 'var(--primary)' : 'var(--secondary)'}
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(disciplineScore / 100) * 163.4} 163.4`}
+                    style={{ transition: 'stroke-dasharray 0.6s ease' }}
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
+                  28d
+                </span>
+              </div>
+            </div>
+          </GlassCard>
+        </Link>
+      )}
 
       {/* Today's Routines */}
       {isToday && todaysRoutines.length > 0 && (
