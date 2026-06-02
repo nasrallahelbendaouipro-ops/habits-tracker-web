@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, PenLine, CheckSquare, Target, Activity,
+  LayoutDashboard, PenLine, CheckSquare, ClipboardList, Target, Activity,
   Brain, Sparkles, BarChart2, Bot, CalendarDays, Settings,
   Sun, Moon, LogOut,
 } from 'lucide-react';
@@ -22,6 +22,7 @@ export default function Sidebar() {
     { href: '/dashboard', Icon: LayoutDashboard, label: t.nav_dashboard },
     { href: '/checkin',   Icon: PenLine,          label: 'Check-In' },
     { href: '/habits',    Icon: CheckSquare,       label: t.nav_habits },
+    { href: '/routines',  Icon: ClipboardList,     label: 'Routines' },
     { href: '/goals',     Icon: Target,            label: t.nav_goals },
     { href: '/body',      Icon: Activity,          label: 'Body Metrics' },
     { href: '/mind',      Icon: Brain,             label: 'Digital Mind' },
