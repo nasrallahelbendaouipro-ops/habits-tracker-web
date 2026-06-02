@@ -14,7 +14,7 @@ import { createClient } from '@/lib/supabase/client';
 import { updateCalendarEvent } from '@/lib/calendar';
 import { getRoutines } from '@/lib/routines';
 import { useLocale } from '@/lib/i18n';
-import type { CalendarEvent, Routine } from '@/lib/types';
+import type { CalendarEvent, Habit, Routine } from '@/lib/types';
 import type { GoogleCalendarEvent } from '@/lib/google-calendar';
 import EventModal from './EventModal';
 
@@ -78,9 +78,19 @@ export default function CalendarView({ userId }: { userId: string }) {
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const [routines, setRoutines] = useState<Routine[]>([]);
+  const [habits, setHabits]     = useState<Habit[]>([]);
 
   useEffect(() => {
     getRoutines().then(setRoutines).catch(() => {});
+    createClient().auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      createClient()
+        .from('habits')
+        .select('id, name, icon, color, type, dimension, frequency, target_days, metadata, user_id, created_at')
+        .eq('user_id', data.user.id)
+        .order('name')
+        .then(({ data: rows }) => { if (rows) setHabits(rows as Habit[]); });
+    });
   }, []);
 
   const fcLocale = locale === 'fr' ? frLocale : locale === 'ar' ? arLocale : undefined;
@@ -360,6 +370,7 @@ export default function CalendarView({ userId }: { userId: string }) {
           visible={true}
           mode={modal.mode}
           userId={userId}
+          habits={habits}
           routines={routines}
           initialStart={modal.mode === 'create' ? modal.start : undefined}
           initialEnd={modal.mode === 'create' ? modal.end : undefined}
