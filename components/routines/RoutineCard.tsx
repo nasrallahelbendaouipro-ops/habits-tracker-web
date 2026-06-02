@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import type { RoutineWithSession } from '@/lib/types';
-import { countBilateralSlots } from '@/lib/routines';
+import { computeSetProgress } from '@/lib/routines';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function RoutineCard({ routine, compact = false }: { routine: RoutineWithSession; compact?: boolean }) {
-  const total = countBilateralSlots(routine.tasks);
-  const done = routine.todaySession?.completed_task_ids.length ?? 0;
+  const { totalSets, doneSets } = computeSetProgress(routine, routine.todaySession ?? null);
+  const total = totalSets;
+  const done = doneSets;
   const isComplete = !!routine.todaySession?.completed_at;
   const accentColor = routine.color ?? 'var(--primary)';
   const scheduledDays = routine.schedule_days.map(d => DAY_LABELS[d]).join(' · ');
