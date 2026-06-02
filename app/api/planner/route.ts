@@ -137,8 +137,11 @@ export async function POST(req: NextRequest) {
   try {
     const input = await req.json() as PlannerInput;
 
-    if (process.env.OPENAI_API_KEY) {
-      const prompt = `You are a personal development coach. Based on the user's data, provide a personalized weekly plan.
+    const hasEnoughData = input.habits.length >= 2 && input.habits.some(h => h.completionRate > 0);
+
+    if (process.env.OPENAI_API_KEY && hasEnoughData) {
+      try {
+        const prompt = `You are a personal development coach. Based on the user's data, provide a personalized weekly plan.
 
 User data:
 - Habits: ${JSON.stringify(input.habits)}
@@ -162,23 +165,27 @@ Respond with JSON matching this schema:
 
 Provide 3-5 recommendations. Be specific, motivating, and practical. Focus on what will have the highest impact this week.`;
 
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: 'You are a personal development coach. Respond only with valid JSON.' },
-            { role: 'user', content: prompt },
-          ],
-          max_tokens: 1200,
-        }),
-      });
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: 'You are a personal development coach. Respond only with valid JSON.' },
+              { role: 'user', content: prompt },
+            ],
+            max_tokens: 1200,
+          }),
+        });
 
-      const json = await res.json();
-      const parsed = JSON.parse(json.choices[0].message.content);
-      return NextResponse.json({ ...parsed, aiPowered: true } as PlannerOutput);
+        if (!res.ok) throw new Error(`OpenAI ${res.status}`);
+        const json = await res.json();
+        const parsed = JSON.parse(json.choices[0].message.content);
+        return NextResponse.json({ ...parsed, aiPowered: true } as PlannerOutput);
+      } catch (aiErr) {
+        console.warn('[planner] OpenAI failed, falling back to rule-based:', aiErr);
+      }
     }
 
     return NextResponse.json(ruleBasedPlan(input));

@@ -12,7 +12,6 @@ const DIMENSION_GROUPS: { dimension: HabitDimension; label: string; color: strin
     color: 'var(--body)',
     types: [
       { value: 'workout',     icon: '💪', label: 'Workout' },
-      { value: 'shift',       icon: '🕐', label: 'Shift' },
       { value: 'body_metric', icon: '⚖️', label: 'Metric' },
       { value: 'simple',      icon: '🎯', label: 'Simple' },
     ],
@@ -54,14 +53,11 @@ export default function TypePicker({
       </label>
       <div className="flex flex-col gap-3">
         {DIMENSION_GROUPS.map(group => (
-          <div key={group.dimension} className="flex items-center gap-2">
-            <span
-              className="text-[10px] font-bold uppercase tracking-widest flex-shrink-0 w-10 text-right"
-              style={{ color: group.color }}
-            >
-              {group.label.split(' ')[0]}
-            </span>
-            <div className="flex gap-1.5 flex-wrap">
+          <div key={group.dimension}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: group.color }}>
+              {group.label}
+            </p>
+            <div className={`grid gap-2 ${group.types.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
               {group.types.map(type => {
                 const active = type.value === value;
                 return (
