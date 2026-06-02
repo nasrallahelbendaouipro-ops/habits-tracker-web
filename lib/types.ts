@@ -196,12 +196,22 @@ export type Routine = {
   created_at: string;
 };
 
+export type ExerciseProgress = {
+  completed_sets: number;
+  current_left_done: boolean;
+  current_right_done: boolean;
+};
+
 export type RoutineSession = {
   id: string;
   user_id: string;
   routine_id: string;
   date: string;
   completed_task_ids: string[];
+  exercise_progress: Record<string, ExerciseProgress>;
+  started_at: string | null;
+  paused_at: string | null;
+  pause_duration_seconds: number;
   completed_at?: string;
 };
 
