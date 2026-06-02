@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -71,7 +70,6 @@ function EventPill({ info }: { info: EventContentArg }) {
 }
 
 export default function CalendarView({ userId }: { userId: string }) {
-  const router = useRouter();
   const { locale, t } = useLocale();
   const calendarRef = useRef<FullCalendar>(null);
   const [modal, setModal] = useState<ModalState>(null);
@@ -105,87 +103,124 @@ export default function CalendarView({ userId }: { userId: string }) {
       const rangeStart = info.startStr.slice(0, 10);
       const rangeEnd   = info.endStr.slice(0, 10);
 
-      const [habitsRes, logsRes, eventsRes, googleRes] = await Promise.all([
-        supabase.from('habits').select('id, name, icon, color, type, frequency, target_days, metadata').eq('user_id', userId),
-        supabase.from('habit_logs').select('habit_id, completed_at').eq('user_id', userId).gte('completed_at', rangeStart).lte('completed_at', rangeEnd),
-        supabase.from('calendar_events').select('*').eq('user_id', userId).gte('start_at', info.startStr).lte('start_at', info.endStr),
-        fetch(`/api/google-calendar/events?timeMin=${encodeURIComponent(info.startStr)}&timeMax=${encodeURIComponent(info.endStr)}`).then(r => r.json()).catch(() => ({ events: [] })),
+      // Fetch habits (for recurrence look-up), in-range events, pre-range events
+      // (pre-range needed so a recurring event created before this week still shows),
+      // and Google Calendar events.
+      const [habitsRes, eventsRes, pastEventsRes, googleRes] = await Promise.all([
+        supabase.from('habits')
+          .select('id, frequency, target_days')
+          .eq('user_id', userId),
+        supabase.from('calendar_events').select('*').eq('user_id', userId)
+          .gte('start_at', info.startStr).lte('start_at', info.endStr),
+        // events that started before the range but may recur into it
+        supabase.from('calendar_events').select('*').eq('user_id', userId)
+          .lt('start_at', info.startStr),
+        fetch(`/api/google-calendar/events?timeMin=${encodeURIComponent(info.startStr)}&timeMax=${encodeURIComponent(info.endStr)}`)
+          .then(r => r.json()).catch(() => ({ events: [] })),
       ]);
 
       const habitMap = new Map(
-        (habitsRes.data ?? []).map(h => [h.id, h as { id: string; name: string; icon: string; color: string; frequency: string; target_days: number[] }])
+        (habitsRes.data ?? []).map(h => [
+          h.id,
+          h as { id: string; frequency: string; target_days: number[] },
+        ])
       );
 
-      // Build a set of completed dates per habit for quick lookup
-      const logMap = new Map<string, Set<string>>();
-      for (const log of logsRes.data ?? []) {
-        if (!logMap.has(log.habit_id)) logMap.set(log.habit_id, new Set());
-        logMap.get(log.habit_id)!.add(log.completed_at);
-      }
+      // Pre-range events are only relevant if they have linked habits (recurrence)
+      const pastRecurring = (pastEventsRes.data ?? []).filter(
+        ev => (ev.linked_habit_ids as string[] | null)?.length
+      );
 
-      const habitEvents: EventInput[] = (logsRes.data ?? []).map(log => {
-        const h = habitMap.get(log.habit_id);
-        return {
-          id: `habit-${log.habit_id}-${log.completed_at}`,
-          title: `${h?.icon ?? '✅'} ${h?.name ?? 'Habit'}`,
-          date: log.completed_at,
-          allDay: true,
-          backgroundColor: (h?.color ?? '#6C63FF') + 'CC',
-          borderColor: h?.color ?? '#6C63FF',
-          textColor: '#ffffff',
-          extendedProps: { eventType: 'habit', habitId: log.habit_id },
-          editable: false,
-        };
-      });
+      // All events to process: in-range (editable) + past recurring (read-only anchors)
+      const allSourceEvents = [
+        ...(eventsRes.data ?? []).map(ev => ({ ev, inRange: true })),
+        ...pastRecurring.map(ev => ({ ev, inRange: false })),
+      ];
 
-      // Ghost events: scheduled but not yet done (today + future only)
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const ghostEvents: EventInput[] = [];
-      for (const [habitId, habit] of habitMap) {
+      const calEvents: EventInput[] = [];
+
+      for (const { ev, inRange } of allSourceEvents) {
+        // Original event — only add if it falls in the view range
+        if (inRange) {
+          calEvents.push({
+            id: `cal-${ev.id}`,
+            title: ev.title,
+            start: ev.start_at,
+            end: ev.end_at,
+            backgroundColor: ev.color,
+            borderColor: ev.color,
+            textColor: '#ffffff',
+            extendedProps: {
+              eventType: 'calendar_event',
+              rawEvent: ev,
+              linkedRoutineIds: (ev.linked_routine_ids ?? []) as string[],
+            },
+            editable: true,
+          });
+        }
+
+        // ── Recurrence expansion ──────────────────────────────────────
+        const linkedHabitIds = (ev.linked_habit_ids ?? []) as string[];
+        if (!linkedHabitIds.length) continue;
+
+        const linkedHabits = linkedHabitIds
+          .map(id => habitMap.get(id))
+          .filter((h): h is { id: string; frequency: string; target_days: number[] } => !!h);
+
+        if (!linkedHabits.length) continue;
+
+        const isDaily = linkedHabits.some(h => h.frequency === 'daily');
+        const weeklyDays = new Set(
+          linkedHabits
+            .filter(h => h.frequency === 'weekly')
+            .flatMap(h => h.target_days ?? [])
+        );
+
+        if (!isDaily && weeklyDays.size === 0) continue;
+
+        const startMs = new Date(ev.start_at).getTime();
+        const duration = new Date(ev.end_at).getTime() - startMs;
+        const originalDateStr = ev.start_at.slice(0, 10);
+
         const cursor = new Date(rangeStart + 'T00:00:00');
-        const endDate = new Date(rangeEnd + 'T00:00:00');
-        while (cursor <= endDate) {
+        const rangeEndDate = new Date(rangeEnd + 'T00:00:00');
+
+        while (cursor <= rangeEndDate) {
           const ds = cursor.toISOString().slice(0, 10);
-          if (ds >= todayStr) {
+
+          if (ds !== originalDateStr) {
+            // target_days uses 1=Mon…7=Sun (same convention as ghost events)
             const dow = cursor.getDay() === 0 ? 7 : cursor.getDay();
-            const scheduled =
-              habit.frequency === 'daily' || !habit.target_days?.length ||
-              habit.target_days.includes(dow);
-            const done = logMap.get(habitId)?.has(ds);
-            if (scheduled && !done) {
-              ghostEvents.push({
-                id: `sched-${habitId}-${ds}`,
-                title: `${habit.icon} ${habit.name}`,
-                date: ds,
-                allDay: true,
-                backgroundColor: (habit.color ?? '#6C63FF') + '33',
-                borderColor: habit.color ?? '#6C63FF',
+            const shouldShow = isDaily || weeklyDays.has(dow);
+
+            if (shouldShow) {
+              const offsetMs =
+                cursor.getTime() - new Date(originalDateStr + 'T00:00:00').getTime();
+              const newStart = new Date(startMs + offsetMs);
+              const newEnd   = new Date(newStart.getTime() + duration);
+
+              calEvents.push({
+                id: `cal-${ev.id}-recur-${ds}`,
+                title: ev.title,
+                start: newStart.toISOString(),
+                end: newEnd.toISOString(),
+                // slightly transparent to distinguish from the "anchor" event
+                backgroundColor: ev.color + 'CC',
+                borderColor: ev.color,
                 textColor: '#ffffff',
-                extendedProps: { eventType: 'habit_scheduled', habitId },
-                editable: false,
-                classNames: ['fc-habit-ghost'],
+                extendedProps: {
+                  eventType: 'calendar_event',
+                  rawEvent: ev,          // same raw event → edit modal opens original
+                  linkedRoutineIds: (ev.linked_routine_ids ?? []) as string[],
+                  isRecurrence: true,
+                },
+                editable: false,         // recurrences can't be dragged individually
               });
             }
           }
           cursor.setDate(cursor.getDate() + 1);
         }
       }
-
-      const calEvents: EventInput[] = (eventsRes.data ?? []).map(ev => ({
-        id: `cal-${ev.id}`,
-        title: ev.title,
-        start: ev.start_at,
-        end: ev.end_at,
-        backgroundColor: ev.color,
-        borderColor: ev.color,
-        textColor: '#ffffff',
-        extendedProps: {
-          eventType: 'calendar_event',
-          rawEvent: ev,
-          linkedRoutineIds: (ev.linked_routine_ids ?? []) as string[],
-        },
-        editable: true,
-      }));
 
       const googleEvents: EventInput[] = ((googleRes.events ?? []) as GoogleCalendarEvent[]).map(ev => ({
         id: `gcal-${ev.id}`,
@@ -200,7 +235,7 @@ export default function CalendarView({ userId }: { userId: string }) {
         extendedProps: { eventType: 'google_event' },
       }));
 
-      successCallback([...habitEvents, ...ghostEvents, ...calEvents, ...googleEvents]);
+      successCallback([...calEvents, ...googleEvents]);
     } catch (err) {
       failureCallback(err instanceof Error ? err : new Error('Failed to load events'));
     }
@@ -221,10 +256,8 @@ export default function CalendarView({ userId }: { userId: string }) {
   }
 
   function handleEventClick(arg: EventClickArg) {
-    const { eventType, habitId, rawEvent } = arg.event.extendedProps;
-    if (eventType === 'habit' || eventType === 'habit_scheduled') {
-      router.push(`/habits/${habitId}`);
-    } else if (eventType === 'calendar_event' && rawEvent) {
+    const { eventType, rawEvent } = arg.event.extendedProps;
+    if (eventType === 'calendar_event' && rawEvent) {
       setModal({ mode: 'edit', event: rawEvent as CalendarEvent });
     }
   }
