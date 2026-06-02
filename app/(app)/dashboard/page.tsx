@@ -7,7 +7,10 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { fetchHabitsWithStatus, toggleHabit, createHabit, TIMED_TYPES, DIMENSION_ICONS } from '@/lib/habits';
 import { fetchGoals } from '@/lib/goals';
+import { getTodaysRoutines } from '@/lib/routines';
 import { TODAY, toISODate } from '@/lib/utils';
+import RoutineCard from '@/components/routines/RoutineCard';
+import type { RoutineWithSession } from '@/lib/types';
 import { useLocale, getGreeting, formatHabitsLabel, LOCALE_DATE_TAG } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
 import type { HabitWithStreak, HabitFormValues, GoalWithHabits, HabitDimension } from '@/lib/types';
@@ -223,6 +226,7 @@ export default function DashboardPage() {
   const [userId, setUserId]           = useState<string | null>(null);
   const [habits, setHabits]           = useState<HabitWithStreak[]>([]);
   const [goals, setGoals]             = useState<GoalWithHabits[]>([]);
+  const [todaysRoutines, setTodaysRoutines] = useState<RoutineWithSession[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showAdd, setShowAdd]         = useState(false);
   const [selectedDate, setSelectedDate] = useState(TODAY);
@@ -240,12 +244,14 @@ export default function DashboardPage() {
     if (!userId) return;
     setLoading(true);
     try {
-      const [habitsData, goalsData] = await Promise.all([
+      const [habitsData, goalsData, routinesData] = await Promise.all([
         fetchHabitsWithStatus(userId, selectedDate),
         fetchGoals(userId),
+        getTodaysRoutines(),
       ]);
       setHabits(habitsData);
       setGoals(goalsData);
+      setTodaysRoutines(routinesData);
     } finally {
       setLoading(false);
     }
@@ -330,6 +336,25 @@ export default function DashboardPage() {
       <GlassCard className="mb-4">
         <WeekRow selectedDate={selectedDate} onSelect={setSelectedDate} />
       </GlassCard>
+
+      {/* Today's Routines */}
+      {isToday && todaysRoutines.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+              Today&apos;s Routines
+            </h2>
+            <Link href="/routines" className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
+              All routines
+            </Link>
+          </div>
+          <div className="flex flex-col gap-2">
+            {todaysRoutines.map(r => (
+              <RoutineCard key={r.id} routine={r} compact />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Progress */}
       {habits.length > 0 && (
