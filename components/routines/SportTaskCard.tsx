@@ -6,17 +6,24 @@ interface Props {
   task: RoutineTask;
   progress: ExerciseProgress;
   accentColor: string;
-  onSetDone?: (taskId: string) => void;
+  onSetCount?: (taskId: string, n: number) => void;
   onBilateralSide?: (taskId: string, side: 'left' | 'right') => void;
   readOnly?: boolean;
 }
 
 const EMPTY: ExerciseProgress = { completed_sets: 0, current_left_done: false, current_right_done: false };
 
-export default function SportTaskCard({ task, progress = EMPTY, accentColor, onSetDone, onBilateralSide, readOnly = false }: Props) {
+export default function SportTaskCard({ task, progress = EMPTY, accentColor, onSetCount, onBilateralSide, readOnly = false }: Props) {
   const totalSets = task.sets ?? 1;
   const { completed_sets, current_left_done, current_right_done } = progress;
   const allDone = completed_sets >= totalSets;
+
+  function handleSetTap(n: number) {
+    if (readOnly) return;
+    // Tap same number = undo; tap different = jump there
+    const next = n === completed_sets ? n - 1 : n;
+    onSetCount?.(task.id, Math.max(0, next));
+  }
 
   return (
     <div
@@ -46,68 +53,60 @@ export default function SportTaskCard({ task, progress = EMPTY, accentColor, onS
           {task.type === 'time' && task.duration_min != null && (
             <Pill label={`${task.duration_min} min`} color={accentColor} />
           )}
-          <Pill label={`${completed_sets}/${totalSets} sets`} dim={!allDone} color={allDone ? accentColor : undefined} />
         </div>
       </div>
 
-      {/* Set dots */}
-      <SetDots total={totalSets} done={completed_sets} color={accentColor} />
-
-      {/* Action buttons */}
-      {!readOnly && !allDone && (
-        <div className="flex gap-2 mt-3">
-          {task.type === 'bilateral' ? (
-            <>
-              <SideButton
-                label="← L"
-                done={current_left_done}
-                color={accentColor}
-                onClick={() => onBilateralSide?.(task.id, 'left')}
-              />
-              <SideButton
-                label="R →"
-                done={current_right_done}
-                color={accentColor}
-                onClick={() => onBilateralSide?.(task.id, 'right')}
-              />
-            </>
-          ) : (
+      {/* Numbered set buttons */}
+      <div className="flex gap-1.5 flex-wrap">
+        {Array.from({ length: Math.min(totalSets, 10) }, (_, i) => i + 1).map(n => {
+          const done = n <= completed_sets;
+          return (
             <button
-              onClick={() => onSetDone?.(task.id)}
-              className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
-              style={{ background: accentColor + '18', color: accentColor, border: `1px solid ${accentColor}35` }}
+              key={n}
+              onClick={() => handleSetTap(n)}
+              disabled={readOnly}
+              className="w-9 h-9 rounded-xl text-sm font-bold transition-all"
+              style={{
+                background: done ? accentColor : 'var(--surface-elevated)',
+                color: done ? '#fff' : 'var(--text-muted)',
+                border: `1px solid ${done ? accentColor + '80' : 'var(--border)'}`,
+                cursor: readOnly ? 'default' : 'pointer',
+                boxShadow: done ? `0 2px 8px ${accentColor}40` : 'none',
+              }}
             >
-              ✓ Done Set {completed_sets + 1}/{totalSets}
+              {n}
             </button>
-          )}
+          );
+        })}
+        {totalSets > 10 && (
+          <span className="self-center text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>
+            +{totalSets - 10} more
+          </span>
+        )}
+      </div>
+
+      {/* Bilateral: L / R buttons for the current in-progress set */}
+      {task.type === 'bilateral' && !allDone && !readOnly && (
+        <div className="flex gap-2 mt-3">
+          <SideButton
+            label="← L"
+            done={current_left_done}
+            color={accentColor}
+            onClick={() => onBilateralSide?.(task.id, 'left')}
+          />
+          <SideButton
+            label="R →"
+            done={current_right_done}
+            color={accentColor}
+            onClick={() => onBilateralSide?.(task.id, 'right')}
+          />
         </div>
       )}
 
       {allDone && (
-        <div className="mt-2 text-[11px] font-semibold" style={{ color: accentColor }}>
+        <p className="mt-2 text-[11px] font-semibold" style={{ color: accentColor }}>
           ✓ All {totalSets} sets complete
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SetDots({ total, done, color }: { total: number; done: number; color: string }) {
-  const dots = Math.min(total, 10);
-  return (
-    <div className="flex gap-1.5 flex-wrap">
-      {Array.from({ length: dots }).map((_, i) => (
-        <div
-          key={i}
-          className="w-3 h-3 rounded-full transition-all"
-          style={{
-            background: i < done ? color : 'transparent',
-            border: `2px solid ${i < done ? color : 'var(--border)'}`,
-          }}
-        />
-      ))}
-      {total > 10 && (
-        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>+{total - 10}</span>
+        </p>
       )}
     </div>
   );

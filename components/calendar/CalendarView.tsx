@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -12,8 +12,9 @@ import type { DateClickArg, EventResizeDoneArg } from '@fullcalendar/interaction
 import type { EventClickArg, EventDropArg, EventInput, DatesSetArg, EventContentArg } from '@fullcalendar/core';
 import { createClient } from '@/lib/supabase/client';
 import { updateCalendarEvent } from '@/lib/calendar';
+import { getRoutines } from '@/lib/routines';
 import { useLocale } from '@/lib/i18n';
-import type { CalendarEvent, Habit } from '@/lib/types';
+import type { CalendarEvent, Routine } from '@/lib/types';
 import type { GoogleCalendarEvent } from '@/lib/google-calendar';
 import EventModal from './EventModal';
 
@@ -53,10 +54,10 @@ function EventPill({ info }: { info: EventContentArg }) {
       {!isAllDay && timeText && (
         <span style={{ fontSize: '0.62rem', opacity: 0.8, fontWeight: 500, color: '#fff', lineHeight: 1 }}>
           {timeText}
-          {!!(event.extendedProps.linkedHabitIds as string[] | undefined)?.length && (
+          {!!(event.extendedProps.linkedRoutineIds as string[] | undefined)?.length && (
             <span style={{ marginLeft: 3 }}>
-              🔗{(event.extendedProps.linkedHabitIds as string[]).length > 1
-                ? ` ×${(event.extendedProps.linkedHabitIds as string[]).length}`
+              🏋️{(event.extendedProps.linkedRoutineIds as string[]).length > 1
+                ? ` ×${(event.extendedProps.linkedRoutineIds as string[]).length}`
                 : ''}
             </span>
           )}
@@ -76,7 +77,11 @@ export default function CalendarView({ userId }: { userId: string }) {
   const [modal, setModal] = useState<ModalState>(null);
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>([]);
+
+  useEffect(() => {
+    getRoutines().then(setRoutines).catch(() => {});
+  }, []);
 
   const fcLocale = locale === 'fr' ? frLocale : locale === 'ar' ? arLocale : undefined;
 
@@ -100,7 +105,6 @@ export default function CalendarView({ userId }: { userId: string }) {
       const habitMap = new Map(
         (habitsRes.data ?? []).map(h => [h.id, h as { id: string; name: string; icon: string; color: string; frequency: string; target_days: number[] }])
       );
-      setHabits((habitsRes.data ?? []) as Habit[]);
 
       // Build a set of completed dates per habit for quick lookup
       const logMap = new Map<string, Set<string>>();
@@ -168,7 +172,7 @@ export default function CalendarView({ userId }: { userId: string }) {
         extendedProps: {
           eventType: 'calendar_event',
           rawEvent: ev,
-          linkedHabitIds: (ev.linked_habit_ids ?? []) as string[],
+          linkedRoutineIds: (ev.linked_routine_ids ?? []) as string[],
         },
         editable: true,
       }));
@@ -356,7 +360,7 @@ export default function CalendarView({ userId }: { userId: string }) {
           visible={true}
           mode={modal.mode}
           userId={userId}
-          habits={habits}
+          routines={routines}
           initialStart={modal.mode === 'create' ? modal.start : undefined}
           initialEnd={modal.mode === 'create' ? modal.end : undefined}
           event={modal.mode === 'edit' ? modal.event : undefined}

@@ -92,12 +92,12 @@ export default function SessionView({ routine, initialSession }: Props) {
 
   // ─── Sport: set tracking ──────────────────────────────────────────────────────
 
-  async function handleSetDone(taskId: string) {
+  async function handleSetCount(taskId: string, n: number) {
     const task = routine.tasks.find(t => t.id === taskId);
     if (!task) return;
     const current = exerciseProgress[taskId] ?? EMPTY_PROGRESS;
-    if (current.completed_sets >= (task.sets ?? 1)) return;
-    const next = { ...current, completed_sets: current.completed_sets + 1 };
+    const clamped = Math.max(0, Math.min(n, task.sets ?? 1));
+    const next: ExerciseProgress = { completed_sets: clamped, current_left_done: false, current_right_done: false };
     const updated = { ...exerciseProgress, [taskId]: next };
     setExerciseProgress(updated);
     setSaving(true);
@@ -276,7 +276,7 @@ export default function SessionView({ routine, initialSession }: Props) {
                   task={task}
                   progress={exerciseProgress[task.id] ?? EMPTY_PROGRESS}
                   accentColor={accentColor}
-                  onSetDone={isFinished ? undefined : handleSetDone}
+                  onSetCount={isFinished ? undefined : handleSetCount}
                   onBilateralSide={isFinished ? undefined : handleBilateralSide}
                   readOnly={isFinished}
                 />
