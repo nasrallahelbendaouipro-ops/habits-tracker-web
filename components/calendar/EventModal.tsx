@@ -3,8 +3,14 @@
 import { useState, useEffect } from 'react';
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
 import { useLocale } from '@/lib/i18n';
-import type { CalendarEvent, CalendarEventType, Routine } from '@/lib/types';
+import type { CalendarEvent, CalendarEventType, Habit, Routine } from '@/lib/types';
 import ModalShell from '@/components/ui/ModalShell';
+
+const DIMENSION_COLOR: Record<string, string> = {
+  body: 'var(--body)',
+  mind: 'var(--mind)',
+  soul: 'var(--soul)',
+};
 
 const EVENT_COLORS = ['#6C63FF', '#FF6B35', '#4ECDC4', '#45B7D1', '#FF6B6B', '#96CEB4', '#FFD93D', '#DDA0DD'];
 
@@ -17,6 +23,7 @@ type Props = {
   initialEnd?: string;
   event?: CalendarEvent;
   userId: string;
+  habits: Habit[];
   routines: Routine[];
   onClose: () => void;
   onSaved: () => void;
@@ -38,7 +45,7 @@ function defaultEnd(start: string): string {
   return toLocalInput(d.toISOString());
 }
 
-export default function EventModal({ visible, mode, initialStart, initialEnd, event, userId, routines, onClose, onSaved }: Props) {
+export default function EventModal({ visible, mode, initialStart, initialEnd, event, userId, habits, routines, onClose, onSaved }: Props) {
   const { t } = useLocale();
   const [title, setTitle]   = useState('');
   const [type, setType]     = useState<CalendarEventType>('event');
@@ -46,6 +53,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
   const [end, setEnd]       = useState(initialEnd ?? '');
   const [color, setColor]   = useState('#6C63FF');
   const [notes, setNotes]   = useState('');
+  const [linkedHabitIds, setLinkedHabitIds]   = useState<string[]>([]);
   const [linkedRoutineIds, setLinkedRoutineIds] = useState<string[]>([]);
   const [loading, setLoading]   = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -67,12 +75,14 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
       setEnd(toLocalInput(event.end_at));
       setColor(event.color);
       setNotes(event.notes ?? '');
+      setLinkedHabitIds(event.linked_habit_ids ?? []);
       setLinkedRoutineIds(event.linked_routine_ids ?? []);
     } else {
       setTitle('');
       setType('event');
       setColor('#6C63FF');
       setNotes('');
+      setLinkedHabitIds([]);
       setLinkedRoutineIds([]);
       const s = initialStart ?? toLocalInput(new Date().toISOString());
       setStart(s);
@@ -83,6 +93,23 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
   }, [visible]);
 
   if (!visible) return null;
+
+  function addHabit(id: string) {
+    if (!id || linkedHabitIds.includes(id)) return;
+    const habit = habits.find(h => h.id === id);
+    if (!habit) return;
+    setLinkedHabitIds(prev => {
+      if (prev.length === 0 && linkedRoutineIds.length === 0 && !title.trim()) {
+        setTitle(habit.name);
+        setColor(habit.color);
+      }
+      return [...prev, id];
+    });
+  }
+
+  function removeHabit(id: string) {
+    setLinkedHabitIds(prev => prev.filter(x => x !== id));
+  }
 
   function addRoutine(id: string) {
     if (!id || linkedRoutineIds.includes(id)) return;
@@ -115,7 +142,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
           start_at: fromLocalInput(start), end_at: fromLocalInput(end),
           color, notes: notes.trim() || undefined,
           source: 'manual',
-          linked_habit_ids: [],
+          linked_habit_ids: linkedHabitIds,
           linked_routine_ids: linkedRoutineIds,
         });
       } else if (event) {
@@ -123,6 +150,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
           title: title.trim(), type,
           start_at: fromLocalInput(start), end_at: fromLocalInput(end),
           color, notes: notes.trim() || undefined,
+          linked_habit_ids: linkedHabitIds,
           linked_routine_ids: linkedRoutineIds,
         });
       }
@@ -277,32 +305,93 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
             </div>
           </div>
 
-          {/* Link to routines */}
-          {routines.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>
-                Link Routine
+          {/* Link Habits & Routines */}
+          {(habits.length > 0 || routines.length > 0) && (
+            <div className="flex flex-col gap-3">
+              <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                Link Habit or Routine
               </label>
 
-              <select
-                value=""
-                onChange={e => { addRoutine(e.target.value); e.currentTarget.value = ''; }}
-                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
-                style={{ ...inputStyle, cursor: 'pointer' }}
-                onFocus={focusBorder}
-                onBlur={blurBorder}
-              >
-                <option value="">Add a routine…</option>
-                {routines
-                  .filter(r => !linkedRoutineIds.includes(r.id))
-                  .map(r => (
-                    <option key={r.id} value={r.id}>{r.icon ?? '📋'} {r.name}</option>
-                  ))}
-              </select>
+              {/* Habit dropdown */}
+              {habits.length > 0 && (
+                <select
+                  value=""
+                  onChange={e => { addHabit(e.target.value); e.currentTarget.value = ''; }}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                >
+                  <option value="">Add a habit…</option>
+                  {habits
+                    .filter(h => !linkedHabitIds.includes(h.id))
+                    .map(h => (
+                      <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
+                    ))}
+                </select>
+              )}
 
-              {/* Linked routine cards */}
+              {/* Routine dropdown */}
+              {routines.length > 0 && (
+                <select
+                  value=""
+                  onChange={e => { addRoutine(e.target.value); e.currentTarget.value = ''; }}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                >
+                  <option value="">Add a routine…</option>
+                  {routines
+                    .filter(r => !linkedRoutineIds.includes(r.id))
+                    .map(r => (
+                      <option key={r.id} value={r.id}>{r.icon ?? '📋'} {r.name}</option>
+                    ))}
+                </select>
+              )}
+
+              {/* Linked habit chips */}
+              {linkedHabitIds.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {linkedHabitIds.map(id => {
+                    const habit = habits.find(h => h.id === id);
+                    if (!habit) return null;
+                    const accentColor = DIMENSION_COLOR[habit.dimension] ?? habit.color;
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                        style={{ background: accentColor + '12', border: `1px solid ${accentColor}35` }}
+                      >
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
+                          style={{ background: accentColor + '25' }}
+                        >
+                          {habit.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate" style={{ color: accentColor }}>
+                            {habit.name}
+                          </p>
+                          <p className="text-[10px] mt-0.5 capitalize" style={{ color: 'var(--text-muted)' }}>
+                            {habit.dimension} · {habit.type}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeHabit(id)}
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-xs flex-shrink-0 transition-all"
+                          style={{ background: 'var(--surface-elevated)', color: 'var(--text-muted)' }}
+                        >✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Linked routine chips */}
               {linkedRoutineIds.length > 0 && (
-                <div className="flex flex-col gap-2 mt-2">
+                <div className="flex flex-col gap-2">
                   {linkedRoutineIds.map(id => {
                     const routine = routines.find(r => r.id === id);
                     if (!routine) return null;
