@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getRoutine, getSession, countBilateralSlots } from '@/lib/routines';
+import { getRoutine, getSession, computeSetProgress } from '@/lib/routines';
 import type { Routine, RoutineSession, RoutineTask } from '@/lib/types';
 import { TODAY } from '@/lib/utils';
 
@@ -48,8 +48,9 @@ export default function RoutineDetailPage() {
 
   const accentColor = routine.color ?? 'var(--primary)';
   const scheduledDays = routine.schedule_days.map(d => DAY_LABELS[d]).join(' · ');
-  const total = countBilateralSlots(routine.tasks);
-  const done = session?.completed_task_ids.length ?? 0;
+  const { totalSets, doneSets } = computeSetProgress(routine, session);
+  const total = totalSets;
+  const done = doneSets;
   const isFinished = !!session?.completed_at;
   const sections = getSections(routine.tasks);
 
