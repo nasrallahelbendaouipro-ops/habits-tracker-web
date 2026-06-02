@@ -19,6 +19,7 @@ import type { HabitWithStreak, HabitLog, HabitFormValues, GoalWithHabits, HabitD
 import GlassCard from '@/components/ui/GlassCard';
 import HabitModal from '@/components/habits/HabitModal';
 import SessionTimer from '@/components/ui/SessionTimer';
+import DayProgramSheet from '@/components/ui/DayProgramSheet';
 
 function shiftDate(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -234,6 +235,7 @@ export default function DashboardPage() {
   const [logs, setLogs]               = useState<HabitLog[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showAdd, setShowAdd]         = useState(false);
+  const [showDayProgram, setShowDayProgram] = useState(false);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [activeDim, setActiveDim]     = useState<HabitDimension | null>(null);
   const [activeSession, setActiveSession] = useState<HabitWithStreak | null>(null);
@@ -515,6 +517,25 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Day Programme FAB */}
+      <button
+        onClick={() => setShowDayProgram(true)}
+        className="fixed right-4 md:right-6 z-30 w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all active:scale-95 fab-programme"
+        style={{ background: 'var(--primary)', boxShadow: 'var(--shadow-glow)' }}
+        aria-label="Programme du jour"
+      >
+        📅
+      </button>
+
+      {userId && (
+        <DayProgramSheet
+          isOpen={showDayProgram}
+          onClose={() => setShowDayProgram(false)}
+          selectedDate={selectedDate}
+          userId={userId}
+        />
       )}
 
       <HabitModal mode="add" visible={showAdd} onClose={() => setShowAdd(false)} onSubmit={handleAdd} />

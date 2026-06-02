@@ -5,6 +5,7 @@ export type ParsedShift = {
   start: string;  // HH:MM (24h)
   end: string;    // HH:MM (24h)
   title: string;
+  isTravel?: boolean;
 };
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
@@ -56,13 +57,60 @@ function parseTime(raw: string): string | null {
   return null;
 }
 
+// ─── Travel helpers ────────────────────────────────────────────────────────────
+
+function subtractMinutes(time: string, mins: number): { time: string; dayOffset: number } {
+  const [h, m] = time.split(':').map(Number);
+  let total = h * 60 + m - mins;
+  let dayOffset = 0;
+  if (total < 0) { total += 24 * 60; dayOffset = -1; }
+  return {
+    time: `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`,
+    dayOffset,
+  };
+}
+
+function addDaysToISO(iso: string, days: number): string {
+  const [y, mo, d] = iso.split('-').map(Number);
+  const dt = new Date(y, mo - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return localIsoDate(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+}
+
+function emitWithTravel(results: ParsedShift[], date: string, start: string, end: string, title: string): void {
+  const { time: travelStart, dayOffset } = subtractMinutes(start, 30);
+  const travelDate = dayOffset !== 0 ? addDaysToISO(date, dayOffset) : date;
+  results.push({ date: travelDate, start: travelStart, end: start, title: 'Trajet', isTravel: true });
+  results.push({ date, start, end, title });
+}
+
+function expandWithTravel(raw: ParsedShift[]): ParsedShift[] {
+  const out: ParsedShift[] = [];
+  for (const s of raw) emitWithTravel(out, s.date, s.start, s.end, s.title);
+  return out;
+}
+
 // ─── French roster parser ──────────────────────────────────────────────────────
-// Handles the VandB-style format:
+// Handles two VandB-style layouts:
+//
+// Inline format (time immediately follows location):
 //   LUNDI 04 MAI 2026
 //   Apéro latino                  ← optional event name
 //   VandB Saint-Memmie • Planning ← location line (contains •)
 //   17:00 - 22:30 (+1h30m)        ← time range (extra tokens ignored)
 //   Shift validé O                ← status line (ignored)
+//
+// Deferred format (times grouped at the bottom, one per date, in order):
+//   JEUDI 21 MAI 2026
+//   Soirée stand up Livraison 14h-16h   ← embedded time = event context, not shift
+//   VandB Saint-Memmie • Planning
+//   VENDREDI 22 MAI 2026
+//   VandB Saint-Memmie • Planning
+//   SAMEDI 23 MAI 2026
+//   VandB Saint-Memmie • Planning
+//   19:30 - 22:30   ← JEUDI's time
+//   17:30 - 22:30   ← VENDREDI's time
+//   18:30 - 22:30   ← SAMEDI's time
 
 const FR_MONTHS: Record<string, number> = {
   janvier: 1, fevrier: 2, février: 2, mars: 3, avril: 4, mai: 5, juin: 6,
@@ -70,7 +118,7 @@ const FR_MONTHS: Record<string, number> = {
   decembre: 12, décembre: 12,
 };
 
-// Matches: LUNDI 04 MAI 2026  (day-name is captured but only used for context)
+// Matches: LUNDI 04 MAI 2026
 const FR_DATE_HEADER = /^(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s+([a-zéûô]+)\s+(\d{4})$/i;
 
 // Matches a time range anywhere in a line: 17:00 - 22:30 or 17h - 22h30
@@ -79,16 +127,80 @@ const TIME_RANGE = /(\d{1,2}(?:h\d{0,2}|:\d{2}))\s*[-–]\s*(\d{1,2}(?:h\d{0,2}|
 // Lines to skip outright
 const SKIP_LINE = /shift\s+valid|^[0-9]{1,2}\s+[a-zéûô]+\s*[-–]\s*[0-9]{1,2}\s+[a-zéûô]+/i;
 
+// True when a line is exclusively a time range (e.g. "19:30 - 22:30") with no other meaningful text
+function isStandaloneTimeRange(line: string): boolean {
+  const m = line.match(TIME_RANGE);
+  if (!m) return false;
+  const rest = line.replace(m[0], '').replace(/[-–()+\dhms\s]/g, '');
+  return rest.length === 0;
+}
+
 function parseFrenchRoster(text: string): ParsedShift[] {
   const shifts: ParsedShift[] = [];
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
 
+  // First pass: collect date headers in order
+  type DateEntry = { lineIdx: number; date: string };
+  const dateHeaders: DateEntry[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(FR_DATE_HEADER);
+    if (m) {
+      const day = parseInt(m[1]);
+      const month = FR_MONTHS[m[2].toLowerCase()];
+      const year = parseInt(m[3]);
+      if (month) dateHeaders.push({ lineIdx: i, date: localIsoDate(year, month, day) });
+    }
+  }
+
+  if (dateHeaders.length === 0) return [];
+
+  // Collect standalone time ranges that appear after the last date header
+  const lastDateLineIdx = dateHeaders[dateHeaders.length - 1].lineIdx;
+  const trailingTimes: string[] = [];
+  for (let i = lastDateLineIdx + 1; i < lines.length; i++) {
+    if (isStandaloneTimeRange(lines[i])) trailingTimes.push(lines[i]);
+  }
+
+  // Deferred format: one trailing time per date, in order
+  if (trailingTimes.length > 0 && trailingTimes.length === dateHeaders.length) {
+    for (let idx = 0; idx < dateHeaders.length; idx++) {
+      const { lineIdx, date } = dateHeaders[idx];
+      const nextLineIdx = dateHeaders[idx + 1]?.lineIdx ?? lines.length;
+
+      // Extract event name and workplace for this date block
+      let eventName: string | null = null;
+      let workplace: string | null = null;
+      for (let i = lineIdx + 1; i < nextLineIdx; i++) {
+        const line = lines[i];
+        if (SKIP_LINE.test(line) || isStandaloneTimeRange(line)) continue;
+        if (line.includes('•')) {
+          const before = line.split('•')[0].trim();
+          if (before) workplace = before;
+          continue;
+        }
+        if (!eventName && !isStaffNote(line)) {
+          // Strip any embedded time (e.g. "Soirée stand up Livraison 14h-16h" → "Soirée stand up Livraison")
+          const clean = line.replace(TIME_RANGE, '').trim().replace(/\s{2,}/g, ' ');
+          if (clean) eventName = clean;
+        }
+      }
+
+      const timeMatch = trailingTimes[idx].match(TIME_RANGE)!;
+      const start = parseTime(timeMatch[1]);
+      const end   = parseTime(timeMatch[2]);
+      if (start && end) {
+        emitWithTravel(shifts, date, start, end, eventName ?? workplace ?? 'Shift');
+      }
+    }
+    return shifts;
+  }
+
+  // Inline format: time range follows each date block directly
   let currentDate: string | null = null;
   let eventName: string | null = null;
   let workplace: string | null = null;
 
   for (const line of lines) {
-    // Date header
     const dateMatch = line.match(FR_DATE_HEADER);
     if (dateMatch) {
       currentDate = null; eventName = null; workplace = null;
@@ -100,32 +212,25 @@ function parseFrenchRoster(text: string): ParsedShift[] {
     }
 
     if (!currentDate) continue;
-
-    // Skip junk lines
     if (SKIP_LINE.test(line)) continue;
 
-    // Time range — this is the core data line
     const timeMatch = line.match(TIME_RANGE);
     if (timeMatch) {
       const start = parseTime(timeMatch[1]);
       const end   = parseTime(timeMatch[2]);
       if (start && end) {
-        const title = eventName ?? workplace ?? 'Shift';
-        shifts.push({ date: currentDate, start, end, title });
+        emitWithTravel(shifts, currentDate, start, end, eventName ?? workplace ?? 'Shift');
       }
-      // Reset event name after emitting, keep date for possible multi-shift day
       eventName = null;
       continue;
     }
 
-    // Location line (contains •) — extract workplace name before the •
     if (line.includes('•')) {
       const before = line.split('•')[0].trim();
       if (before) workplace = before;
       continue;
     }
 
-    // Anything else before the time line: use as event name only if it looks like one
     if (!eventName && !isStaffNote(line)) eventName = line;
   }
 
@@ -178,7 +283,7 @@ function parseGeneric(text: string): ParsedShift[] {
       for (const dm of dayMatches) {
         const dayNum = DAY_MAP[dm[1].toLowerCase()];
         if (dayNum !== undefined)
-          shifts.push({ date: nextOccurrenceISO(dayNum), start: startTime, end: endTime, title: 'Shift' });
+          emitWithTravel(shifts, nextOccurrenceISO(dayNum), startTime, endTime, 'Shift');
       }
       continue;
     }
@@ -191,7 +296,7 @@ function parseGeneric(text: string): ParsedShift[] {
         ? (parseInt(dateMatch[3]) < 100 ? 2000 + parseInt(dateMatch[3]) : parseInt(dateMatch[3]))
         : new Date().getFullYear();
       if (month >= 1 && month <= 12 && day >= 1 && day <= 31)
-        shifts.push({ date: localIsoDate(year, month, day), start: startTime, end: endTime, title: 'Shift' });
+        emitWithTravel(shifts, localIsoDate(year, month, day), startTime, endTime, 'Shift');
     }
   }
 
@@ -256,7 +361,7 @@ export async function POST(req: NextRequest) {
       });
       const json = await res.json();
       const parsed = JSON.parse(json.choices[0].message.content);
-      shifts = parsed.shifts ?? [];
+      shifts = expandWithTravel(parsed.shifts ?? []);
     } else {
       shifts = parseStub(text);
     }
