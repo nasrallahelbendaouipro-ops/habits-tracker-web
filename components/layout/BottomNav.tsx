@@ -3,7 +3,7 @@
 import type { ComponentType } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, PenLine, Target, BarChart2, User } from 'lucide-react';
+import { Home, PenLine, ClipboardList, Target, User } from 'lucide-react';
 import { useLocale } from '@/lib/i18n';
 
 type NavItem =
@@ -11,16 +11,17 @@ type NavItem =
   | { href: string; Icon: ComponentType<{ size?: number }>; labelKey: null; staticLabel: string };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard', Icon: Home,      labelKey: 'nav_home' },
-  { href: '/checkin',   Icon: PenLine,   labelKey: null,       staticLabel: 'Check-In' },
-  { href: '/goals',     Icon: Target,    labelKey: 'nav_goals' },
-  { href: '/analytics', Icon: BarChart2, labelKey: null,       staticLabel: 'Analytics' },
-  { href: '/settings',  Icon: User,      labelKey: 'nav_profile' },
+  { href: '/dashboard', Icon: Home,          labelKey: 'nav_home' },
+  { href: '/checkin',   Icon: PenLine,       labelKey: null, staticLabel: 'Check-In' },
+  { href: '/routines',  Icon: ClipboardList, labelKey: null, staticLabel: 'Routines' },
+  { href: '/goals',     Icon: Target,        labelKey: 'nav_goals' },
+  { href: '/settings',  Icon: User,          labelKey: 'nav_profile' },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { t } = useLocale();
+
 
   return (
     <nav

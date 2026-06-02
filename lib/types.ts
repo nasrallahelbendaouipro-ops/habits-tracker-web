@@ -165,6 +165,50 @@ export type GoalWithHabits = Goal & {
   completionRate: number;  // 0–100, average across linked habits
 };
 
+// ─── Routines ─────────────────────────────────────────────────────────────────
+
+export type RoutineCategory = 'sport' | 'data' | 'custom';
+export type RoutineTaskType = 'reps' | 'time' | 'bilateral' | 'resource';
+
+export type RoutineTaskResource = { url: string; label: string };
+
+export type RoutineTask = {
+  id: string;
+  section?: string;
+  name: string;
+  type: RoutineTaskType;
+  sets?: number;
+  reps?: number;
+  duration_min?: number;
+  note?: string;
+  resources?: RoutineTaskResource[];
+};
+
+export type Routine = {
+  id: string;
+  user_id: string;
+  name: string;
+  category: RoutineCategory;
+  icon?: string;
+  color?: string;
+  schedule_days: number[];
+  tasks: RoutineTask[];
+  created_at: string;
+};
+
+export type RoutineSession = {
+  id: string;
+  user_id: string;
+  routine_id: string;
+  date: string;
+  completed_task_ids: string[];
+  completed_at?: string;
+};
+
+export type RoutineWithSession = Routine & {
+  todaySession?: RoutineSession;
+};
+
 // ─── Form Values ──────────────────────────────────────────────────────────────
 
 export type HabitFormValues = {
