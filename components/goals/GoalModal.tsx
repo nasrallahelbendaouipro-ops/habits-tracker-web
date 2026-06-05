@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useLocale } from '@/lib/i18n';
 import { HABIT_ICONS, HABIT_COLORS } from '@/lib/habits';
-import { createGoal, updateGoal, setGoalHabits } from '@/lib/goals';
-import type { Goal, GoalWithHabits, Habit, HabitDimension } from '@/lib/types';
+import { createGoal, updateGoal, setGoalHabits, setGoalRoutines } from '@/lib/goals';
+import type { Goal, GoalWithLinked, Habit, HabitDimension, Routine } from '@/lib/types';
 import ModalShell from '@/components/ui/ModalShell';
 
 const DIMENSION_COLORS: Record<HabitDimension, string> = {
@@ -23,12 +23,13 @@ type Props = {
   visible: boolean;
   userId: string;
   allHabits: Habit[];
-  goal?: GoalWithHabits;
+  allRoutines: Routine[];
+  goal?: GoalWithLinked;
   onClose: () => void;
   onSaved: () => void;
 };
 
-export default function GoalModal({ visible, userId, allHabits, goal, onClose, onSaved }: Props) {
+export default function GoalModal({ visible, userId, allHabits, allRoutines, goal, onClose, onSaved }: Props) {
   const { t } = useLocale();
   const [title, setTitle]               = useState('');
   const [icon, setIcon]                 = useState('🎯');
@@ -41,6 +42,7 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
   const [currentValue, setCurrentVal]   = useState('');
   const [unit, setUnit]                 = useState('');
   const [habitIds, setHabitIds]         = useState<string[]>([]);
+  const [routineIds, setRoutineIds]     = useState<string[]>([]);
   const [saving, setSaving]             = useState(false);
   const [error, setError]               = useState('');
 
@@ -58,11 +60,13 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
       setCurrentVal(goal.current_value != null ? String(goal.current_value) : '');
       setUnit(goal.unit ?? '');
       setHabitIds(goal.habits.map(h => h.id));
+      setRoutineIds(goal.routines?.map(r => r.id) ?? []);
     } else {
       setTitle(''); setIcon('🎯'); setColor('#6C63FF');
       setDesc(''); setDeadline(''); setDimension('body');
       setStartingPt(''); setTargetPt(''); setCurrentVal(''); setUnit('');
       setHabitIds([]);
+      setRoutineIds([]);
     }
     setError('');
   }, [visible, goal]);
@@ -71,6 +75,10 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
 
   function toggleHabit(id: string) {
     setHabitIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  function toggleRoutine(id: string) {
+    setRoutineIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }
 
   async function handleSave() {
@@ -91,6 +99,7 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
         ? (await updateGoal(goal.id, values), goal)
         : await createGoal(values);
       await setGoalHabits(goal?.id ?? saved.id, habitIds);
+      await setGoalRoutines(goal?.id ?? saved.id, routineIds);
       onSaved();
       onClose();
     } catch (err) {
@@ -336,6 +345,46 @@ export default function GoalModal({ visible, userId, allHabits, goal, onClose, o
                       </div>
                       <span className="text-sm">{h.icon}</span>
                       <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{h.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Routines */}
+          {allRoutines.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+                Linked Routines <span style={{ color: 'var(--text-disabled)', fontWeight: 400 }}>(optional)</span>
+              </label>
+              <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+                {allRoutines.map(r => {
+                  const selected = routineIds.includes(r.id);
+                  const rColor = r.color ?? 'var(--primary)';
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => toggleRoutine(r.id)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
+                      style={{
+                        background: selected ? `color-mix(in srgb, ${rColor} 12%, transparent)` : 'var(--surface-elevated)',
+                        border: `1px solid ${selected ? rColor : 'var(--border)'}`,
+                      }}
+                    >
+                      <div
+                        className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                        style={{ background: selected ? rColor : 'transparent', border: `2px solid ${selected ? rColor : 'var(--border)'}` }}
+                      >
+                        {selected && (
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                      {r.icon && <span className="text-sm">{r.icon}</span>}
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{r.name}</span>
                     </button>
                   );
                 })}

@@ -27,6 +27,8 @@ export default function HabitModal({ mode, habit, visible, onClose, onSubmit }: 
           name: habit.name, icon: habit.icon, color: habit.color,
           type: habit.type, metadata: habit.metadata,
           frequency: habit.frequency, target_days: habit.target_days,
+          calendar_start_time: habit.calendar_start_time,
+          calendar_duration_min: habit.calendar_duration_min,
         } : undefined}
         onSubmit={onSubmit}
         submitLabel={mode === 'add' ? t.modal_add_habit_btn : t.modal_save_changes}

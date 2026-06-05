@@ -10,6 +10,7 @@ import {
 import type { Routine, RoutineSession, RoutineTask, ExerciseProgress } from '@/lib/types';
 import SessionTimer from './SessionTimer';
 import SportTaskCard from './SportTaskCard';
+import TaskCountdownTimer from './TaskCountdownTimer';
 import TaskItem from './TaskItem';
 import { TODAY } from '@/lib/utils';
 
@@ -47,6 +48,7 @@ export default function SessionView({ routine, initialSession }: Props) {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set(initialSession?.completed_task_ids ?? []));
   const [completing, setCompleting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeTimerTaskId, setActiveTimerTaskId] = useState<string | null>(null);
 
   const accentColor = routine.color ?? 'var(--primary)';
   const isSport = routine.category === 'sport';
@@ -150,6 +152,12 @@ export default function SessionView({ routine, initialSession }: Props) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleTimerActivate(id: string) { setActiveTimerTaskId(id); }
+  function handleTimerComplete(id: string) {
+    if (!isFinished && !checkedIds.has(id)) handleToggle(id);
+    setActiveTimerTaskId(null);
   }
 
   // ─── Finish ───────────────────────────────────────────────────────────────────
@@ -280,6 +288,18 @@ export default function SessionView({ routine, initialSession }: Props) {
                   onBilateralSide={isFinished ? undefined : handleBilateralSide}
                   readOnly={isFinished}
                 />
+              ) : task.type === 'time' && task.duration_min ? (
+                <div key={task.id} className="px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <p className="text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>{task.name}</p>
+                  <TaskCountdownTimer
+                    taskId={task.id}
+                    durationSec={task.duration_min * 60}
+                    isActive={activeTimerTaskId === task.id}
+                    onRequestActivate={handleTimerActivate}
+                    onComplete={handleTimerComplete}
+                    accentColor={accentColor}
+                  />
+                </div>
               ) : (
                 <TaskItem
                   key={task.id}

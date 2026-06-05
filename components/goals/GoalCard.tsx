@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
-import type { GoalWithHabits, HabitWithRate, HabitDimension } from '@/lib/types';
+import type { GoalWithLinked, HabitWithRate, HabitDimension } from '@/lib/types';
 
 const DIMENSION_COLORS: Record<HabitDimension, string> = {
   body: 'var(--body)',
@@ -15,12 +15,14 @@ const DIMENSION_LABELS: Record<HabitDimension, string> = {
 };
 
 type Props = {
-  goal: GoalWithHabits;
-  onEdit: (goal: GoalWithHabits) => void;
+  goal: GoalWithLinked;
+  onEdit: (goal: GoalWithLinked) => void;
   onDelete: (id: string) => void;
 };
 
 export default function GoalCard({ goal, onEdit, onDelete }: Props) {
+  const linkedRoutines = goal.routines ?? [];
+  const totalSecs = goal.totalTimeSeconds ?? 0;
   const { t, locale } = useLocale();
 
   function formatDeadline(date?: string) {
@@ -156,6 +158,40 @@ export default function GoalCard({ goal, onEdit, onDelete }: Props) {
           )}
         </div>
       </div>
+
+      {/* Routines + time invested */}
+      {(linkedRoutines.length > 0 || totalSecs > 0) && (
+        <div style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="px-5 py-3">
+            {linkedRoutines.length > 0 && (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+                  Routines
+                </p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {linkedRoutines.map(r => (
+                    <span
+                      key={r.id}
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{
+                        background: (r.color ?? 'var(--primary)') + '20',
+                        color: r.color ?? 'var(--primary)',
+                      }}
+                    >
+                      {r.icon ?? ''} {r.name}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+            {totalSecs > 0 && (
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                ⏱ Time invested: {Math.floor(totalSecs / 3600)}h {Math.floor((totalSecs % 3600) / 60)}m
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
