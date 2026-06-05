@@ -35,36 +35,65 @@ function WeekRow({ selectedDate, onSelect }: { selectedDate: string; onSelect: (
   const startOfWeek = new Date(sel);
   startOfWeek.setDate(sel.getDate() - sel.getDay());
 
+  function jumpWeek(delta: number) {
+    const d = new Date(selectedDate + 'T00:00:00');
+    d.setDate(d.getDate() + delta * 7);
+    onSelect(toISODate(d));
+  }
+
   return (
-    <div className="flex gap-1.5 justify-between">
-      {Array.from({ length: 7 }, (_, i) => {
-        const date = new Date(startOfWeek);
-        date.setDate(startOfWeek.getDate() + i);
-        const dateS = toISODate(date);
-        const isSelected = dateS === selectedDate;
-        const isToday = dateS === TODAY;
-        const dayLabel = date.toLocaleDateString(
-          locale === 'en' ? 'en-US' : locale === 'fr' ? 'fr-FR' : 'ar-SA',
-          { weekday: 'short' }
-        );
-        return (
-          <button key={i} onClick={() => onSelect(dateS)} className="flex flex-col items-center gap-1 flex-1">
-            <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }}>
-              {dayLabel}
-            </span>
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all"
-              style={{
-                background: isSelected ? 'var(--primary)' : 'transparent',
-                color: isSelected ? 'white' : isToday ? 'var(--primary)' : 'var(--text-secondary)',
-                border: isSelected ? 'none' : isToday ? '1px solid var(--primary)' : '1px solid var(--border)',
-              }}
-            >
-              {date.getDate()}
-            </div>
-          </button>
-        );
-      })}
+    <div className="flex items-center gap-1">
+      {/* Prev-week arrow */}
+      <button
+        onClick={() => jumpWeek(-1)}
+        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+        style={{ color: 'var(--text-muted)', background: 'transparent' }}
+        aria-label="Previous week"
+      >
+        <ChevronLeft size={14} />
+      </button>
+
+      {/* 7 day buttons */}
+      <div className="flex gap-1 flex-1 justify-between">
+        {Array.from({ length: 7 }, (_, i) => {
+          const date = new Date(startOfWeek);
+          date.setDate(startOfWeek.getDate() + i);
+          const dateS = toISODate(date);
+          const isSelected = dateS === selectedDate;
+          const isToday = dateS === TODAY;
+          const dayLabel = date.toLocaleDateString(
+            locale === 'en' ? 'en-US' : locale === 'fr' ? 'fr-FR' : 'ar-SA',
+            { weekday: 'short' }
+          );
+          return (
+            <button key={i} onClick={() => onSelect(dateS)} className="flex flex-col items-center gap-1 flex-1">
+              <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }}>
+                {dayLabel}
+              </span>
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all"
+                style={{
+                  background: isSelected ? 'var(--primary)' : 'transparent',
+                  color: isSelected ? 'white' : isToday ? 'var(--primary)' : 'var(--text-secondary)',
+                  border: isSelected ? 'none' : isToday ? '1px solid var(--primary)' : '1px solid var(--border)',
+                }}
+              >
+                {date.getDate()}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Next-week arrow */}
+      <button
+        onClick={() => jumpWeek(1)}
+        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+        style={{ color: 'var(--text-muted)', background: 'transparent' }}
+        aria-label="Next week"
+      >
+        <ChevronRight size={14} />
+      </button>
     </div>
   );
 }

@@ -66,6 +66,8 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
   const [dimension, setDimension] = useState<HabitDimension>(initial?.dimension ?? DIMENSION_DEFAULTS[initial?.type ?? 'simple']);
   const [metadata, setMeta]       = useState<HabitMetadata>(initial?.metadata ?? {});
   const [targetDays, setTargetDays] = useState<number[]>(initial?.target_days ?? []);
+  const [calStartTime, setCalStartTime] = useState(initial?.calendar_start_time ?? '');
+  const [calDuration, setCalDuration]   = useState(initial?.calendar_duration_min ? String(initial.calendar_duration_min) : '');
   const [error, setError]         = useState('');
   const [errorField, setErrorField] = useState<'name' | null>(null);
   const [loading, setLoading]     = useState(false);
@@ -99,6 +101,8 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         frequency: targetDays.length > 0 ? 'weekly' : 'daily',
         target_days: targetDays,
         metadata,
+        calendar_start_time: calStartTime || undefined,
+        calendar_duration_min: calDuration ? parseInt(calDuration) : undefined,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : t.form_err_generic);
@@ -253,6 +257,40 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
           {type === 'body_metric' && <BodyMetricForm  value={metadata as BodyMetricMetadata} onChange={setMeta} />}
         </div>
       )}
+
+      {/* Calendar scheduling */}
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+          Schedule in Calendar <span style={{ color: 'var(--text-disabled)', fontWeight: 400 }}>(optional)</span>
+        </label>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <input
+              type="time"
+              value={calStartTime}
+              onChange={e => setCalStartTime(e.target.value)}
+              className="form-input w-full"
+              placeholder="Start time"
+            />
+          </div>
+          <div style={{ width: 100 }}>
+            <input
+              type="number"
+              min={5}
+              max={480}
+              value={calDuration}
+              onChange={e => setCalDuration(e.target.value)}
+              className="form-input w-full"
+              placeholder="min"
+            />
+          </div>
+        </div>
+        {calStartTime && (
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
+            Habit will appear as a draggable block in the calendar
+          </p>
+        )}
+      </div>
 
       {/* Preview */}
       <div>

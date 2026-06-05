@@ -84,6 +84,9 @@ export type Habit = {
   target_days: number[];
   metadata: HabitMetadata;
   created_at: string;
+  calendar_start_time?: string;   // HH:MM — default time for all days
+  calendar_duration_min?: number;
+  calendar_overrides?: Record<string, { start: string; duration?: number }>; // "1"–"7" keyed by ISO dow
 };
 
 export type HabitLog = {
@@ -166,6 +169,11 @@ export type GoalWithHabits = Goal & {
   completionRate: number;  // 0–100, average across linked habits
 };
 
+export type GoalWithLinked = GoalWithHabits & {
+  routines: Routine[];
+  totalTimeSeconds: number;
+};
+
 // ─── Routines ─────────────────────────────────────────────────────────────────
 
 export type RoutineCategory = 'sport' | 'data' | 'custom';
@@ -231,4 +239,7 @@ export type HabitFormValues = {
   frequency: 'daily' | 'weekly';
   target_days: number[];
   metadata: HabitMetadata;
+  calendar_start_time?: string;
+  calendar_duration_min?: number;
+  calendar_overrides?: Record<string, { start: string; duration?: number }>;
 };

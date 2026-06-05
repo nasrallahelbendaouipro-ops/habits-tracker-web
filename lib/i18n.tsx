@@ -623,15 +623,20 @@ const AR: Translations = {
 
 const TRANSLATIONS: Record<Locale, Translations> = { en: EN, fr: FR, ar: AR };
 
-// Returns "Monday's habits" (EN), "Habitudes du lundi" (FR), "عادات الاثنين" (AR)
+// Returns "Today's Plan" (EN) / "Plan du jour" (FR) for today,
+// or "Thursday's Plan" / "Plan du jeudi" for other days.
 export function formatHabitsLabel(locale: Locale, date: Date, isToday: boolean): string {
-  const t = TRANSLATIONS[locale];
-  if (isToday) return t.habits_label_today;
+  if (isToday) {
+    if (locale === 'fr') return "Plan du jour";
+    if (locale === 'ar') return "خطة اليوم";
+    return "Today's Plan";
+  }
   const tag = LOCALE_DATE_TAG[locale];
   const dayName = date.toLocaleDateString(tag, { weekday: 'long' });
-  if (locale === 'en') return `${dayName}'s habits`;
-  if (locale === 'fr') return `Habitudes du ${dayName}`;
-  return `عادات ${dayName}`;
+  if (locale === 'fr') return `Plan du ${dayName}`;
+  if (locale === 'ar') return `خطة ${dayName}`;
+  // Capitalise first letter of day name
+  return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}'s Plan`;
 }
 
 export function getGreeting(locale: Locale): string {

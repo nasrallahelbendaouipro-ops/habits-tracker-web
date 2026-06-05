@@ -81,10 +81,16 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
     try {
       await Promise.all(toSave.map(s => {
         const startISO = new Date(`${s.date}T${s.start}:00`).toISOString();
-        const endDate = s.end < s.start
-          ? new Date(`${s.date}T${s.end}:00`).setDate(new Date(`${s.date}`).getDate() + 1)
-          : new Date(`${s.date}T${s.end}:00`).getTime();
-        const endISO = new Date(endDate).toISOString();
+        let endISO: string;
+        if (s.end < s.start) {
+          const [y, mo, day] = s.date.split('-').map(Number);
+          const next = new Date(y, mo - 1, day + 1);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const nextStr = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+          endISO = new Date(`${nextStr}T${s.end}:00`).toISOString();
+        } else {
+          endISO = new Date(`${s.date}T${s.end}:00`).toISOString();
+        }
         return createCalendarEvent({
           user_id: userId,
           title: s.title || t.parser_shift_default,
@@ -185,11 +191,14 @@ export default function ShiftParserModal({ visible, userId, onClose, onSaved }: 
                 >
                   {/* Checkbox */}
                   <button
-                    onClick={() => updateShift(s.key, { selected: !s.selected })}
+                    onClick={() => { if (!s.isTravel) updateShift(s.key, { selected: !s.selected }); }}
+                    disabled={!!s.isTravel}
                     className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
                     style={{
                       background: s.selected ? accent : 'transparent',
                       border: `2px solid ${s.selected ? accent : 'var(--border)'}`,
+                      cursor: s.isTravel ? 'default' : 'pointer',
+                      opacity: s.isTravel ? 0.85 : 1,
                     }}
                   >
                     {s.selected && (

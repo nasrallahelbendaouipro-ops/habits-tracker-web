@@ -237,7 +237,6 @@ export default function CheckInPage() {
           <MetricInput label="Weight" value={body.weight} onChange={v => setBody(b => ({ ...b, weight: v }))} unit="kg" min={20} max={300} step={0.1} />
           <MetricInput label="Sleep" value={body.sleep_hours} onChange={v => setBody(b => ({ ...b, sleep_hours: v }))} unit="hrs" min={0} max={24} step={0.5} />
           <RatingPicker label="Mood" value={body.mood} onChange={v => setBody(b => ({ ...b, mood: v }))} color="var(--body)" hint="1 = very low  ·  10 = excellent" />
-          <MetricInput label="Body Fat" value={body.body_fat} onChange={v => setBody(b => ({ ...b, body_fat: v }))} unit="%" min={1} max={60} step={0.1} />
         </div>
       </GlassCard>
 
@@ -254,24 +253,10 @@ export default function CheckInPage() {
           </div>
         )}
         <div className="flex flex-col gap-4" style={{ borderTop: mindHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: mindHabits.length > 0 ? '16px' : 0 }}>
-          <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--mind)' }}>Digital Usage</p>
-          <MetricInput label="Total screen time" value={mind.screen_time_min} onChange={v => setMind(m => ({ ...m, screen_time_min: v }))} unit="min" min={0} max={1440} step={5} />
-          <MetricInput label="Social media" value={mind.social_media_min} onChange={v => setMind(m => ({ ...m, social_media_min: v }))} unit="min" min={0} max={600} step={5} />
-          <MetricInput label="Deep work" value={mind.deep_work_min} onChange={v => setMind(m => ({ ...m, deep_work_min: v }))} unit="min" min={0} max={600} step={5} />
-          {(mind.screen_time_min ?? 0) > 0 && (
-            <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: 'var(--surface)' }}>
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Productivity ratio</span>
-              <div className="flex items-center gap-2">
-                {(() => {
-                  const total = mind.screen_time_min ?? 0;
-                  const productive = (mind.deep_work_min ?? 0);
-                  const ratio = total > 0 ? Math.round((productive / total) * 100) : 0;
-                  const color = ratio >= 50 ? 'var(--success)' : ratio >= 30 ? 'var(--warning)' : 'var(--error)';
-                  return <span className="text-sm font-bold" style={{ color }}>{ratio}% productive</span>;
-                })()}
-              </div>
-            </div>
-          )}
+          <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--mind)' }}>How do you feel mentally?</p>
+          <RatingPicker label="Energy" value={mind.energy} onChange={v => setMind(m => ({ ...m, energy: v }))} color="var(--mind)" hint="1 = exhausted  ·  10 = fully energised" />
+          <RatingPicker label="Focus" value={mind.focus} onChange={v => setMind(m => ({ ...m, focus: v }))} color="var(--mind)" hint="1 = scattered  ·  10 = laser focused" />
+          <RatingPicker label="Motivation" value={mind.motivation} onChange={v => setMind(m => ({ ...m, motivation: v }))} color="var(--mind)" hint="1 = no drive  ·  10 = highly motivated" />
         </div>
       </GlassCard>
 
