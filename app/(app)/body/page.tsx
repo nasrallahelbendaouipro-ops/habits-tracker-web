@@ -15,7 +15,7 @@ import { useChartTheme } from '@/lib/chart-theme';
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import type { GoalWithHabits, HabitLog } from '@/lib/types';
 
-const METRICS: {
+type MetricConfig = {
   key: MetricKey;
   label: string;
   Icon: LucideIcon;
@@ -23,37 +23,7 @@ const METRICS: {
   color: string;
   higherIsBetter?: boolean;
   decimals?: number;
-}[] = [
-  { key: 'steps',           label: 'Pas',         Icon: Footprints, unit: 'pas',  color: 'var(--warning)', higherIsBetter: true },
-  { key: 'active_calories', label: 'Calories',    Icon: Flame,      unit: 'kcal', color: 'var(--body)',    higherIsBetter: true },
-  { key: 'weight_kg',       label: 'Poids',       Icon: Scale,      unit: 'kg',   color: 'var(--body)',    decimals: 1          },
-  { key: 'sleep_hours',     label: 'Sommeil',     Icon: BedDouble,  unit: 'h',    color: 'var(--soul)',    decimals: 1          },
-  { key: 'heart_rate_avg',  label: 'Fréq. card.', Icon: Heart,      unit: 'bpm',  color: 'var(--error)',   decimals: 0          },
-];
-
-const PERIODS: { key: Period; label: string }[] = [
-  { key: 'day',     label: 'J'  },
-  { key: 'week',    label: 'S'  },
-  { key: 'month',   label: 'M'  },
-  { key: '6months', label: '6M' },
-  { key: 'year',    label: 'A'  },
-];
-
-function periodRange(period: Period): string {
-  const now = new Date();
-  const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-  switch (period) {
-    case 'day':     return `Aujourd'hui · ${fmt(now)}`;
-    case 'week':    { const s = new Date(now); s.setDate(now.getDate() - 6); return `${fmt(s)} – ${fmt(now)}`; }
-    case 'month':   { const s = new Date(now); s.setDate(now.getDate() - 29); return `${fmt(s)} – ${fmt(now)}`; }
-    case '6months': { const s = new Date(now); s.setMonth(now.getMonth() - 6); return `${fmt(s)} – ${fmt(now)}`; }
-    case 'year':    { const s = new Date(now); s.setFullYear(now.getFullYear() - 1); return `${fmt(s)} – ${fmt(now)}`; }
-  }
-}
-
-function statLabel(period: Period) {
-  return period === 'day' ? "TOTAL AUJOURD'HUI" : 'MOYENNE';
-}
+};
 
 function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payload?: { value: number }[]; label?: string; unit: string }) {
   if (!active || !payload?.length || payload[0].value == null) return null;
@@ -94,7 +64,7 @@ function GoalKpiCard({ goal }: { goal: GoalWithHabits }) {
 
 type WorkoutWeek = { label: string; sessions: number; totalMin: number };
 
-function buildWorkoutWeeks(workoutHabitIds: string[], logs: HabitLog[]): WorkoutWeek[] {
+function buildWorkoutWeeks(workoutHabitIds: string[], logs: HabitLog[], dateTag: string): WorkoutWeek[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const workoutLogs = logs.filter(l => workoutHabitIds.includes(l.habit_id));
@@ -104,7 +74,7 @@ function buildWorkoutWeeks(workoutHabitIds: string[], logs: HabitLog[]): Workout
     weekStart.setDate(today.getDate() - today.getDay() - w * 7);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
-    const label = weekStart.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' });
+    const label = weekStart.toLocaleDateString(dateTag, { month: 'short', day: 'numeric' });
     const weekLogs = workoutLogs.filter(l => {
       const d = new Date(l.completed_at + 'T00:00:00');
       return d >= weekStart && d <= weekEnd;
@@ -119,7 +89,37 @@ function buildWorkoutWeeks(workoutHabitIds: string[], logs: HabitLog[]): Workout
 }
 
 export default function BodyPage() {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
+
+  const METRICS: MetricConfig[] = [
+    { key: 'steps',           label: t.body_metric_steps,      Icon: Footprints, unit: 'steps', color: 'var(--warning)', higherIsBetter: true },
+    { key: 'active_calories', label: t.body_metric_calories,   Icon: Flame,      unit: 'kcal',  color: 'var(--body)',    higherIsBetter: true },
+    { key: 'weight_kg',       label: t.body_metric_weight,     Icon: Scale,      unit: 'kg',    color: 'var(--body)',    decimals: 1          },
+    { key: 'sleep_hours',     label: t.body_metric_sleep,      Icon: BedDouble,  unit: 'h',     color: 'var(--soul)',    decimals: 1          },
+    { key: 'heart_rate_avg',  label: t.body_metric_heart_rate, Icon: Heart,      unit: 'bpm',   color: 'var(--error)',   decimals: 0          },
+  ];
+
+  const PERIODS: { key: Period; label: string }[] = [
+    { key: 'day',     label: t.period_d  },
+    { key: 'week',    label: t.period_w  },
+    { key: 'month',   label: t.period_m  },
+    { key: '6months', label: t.period_6m },
+    { key: 'year',    label: t.period_y  },
+  ];
+
+  function periodRange(period: Period): string {
+    const now = new Date();
+    const tag = LOCALE_DATE_TAG[locale];
+    const fmt = (d: Date) => d.toLocaleDateString(tag, { day: 'numeric', month: 'short', year: 'numeric' });
+    switch (period) {
+      case 'day':     return `${t.today} · ${fmt(now)}`;
+      case 'week':    { const s = new Date(now); s.setDate(now.getDate() - 6); return `${fmt(s)} – ${fmt(now)}`; }
+      case 'month':   { const s = new Date(now); s.setDate(now.getDate() - 29); return `${fmt(s)} – ${fmt(now)}`; }
+      case '6months': { const s = new Date(now); s.setMonth(now.getMonth() - 6); return `${fmt(s)} – ${fmt(now)}`; }
+      case 'year':    { const s = new Date(now); s.setFullYear(now.getFullYear() - 1); return `${fmt(s)} – ${fmt(now)}`; }
+    }
+  }
+
   const [userId, setUserId]             = useState<string | null>(null);
   const [goals, setGoals]               = useState<GoalWithHabits[]>([]);
   const [activeMetric, setActiveMetric] = useState<MetricKey>('steps');
@@ -152,7 +152,7 @@ export default function BodyPage() {
       setChartData(points);
       setGoals(goalsData.filter(g => g.dimension === 'body' && g.starting_point != null));
       const ids = (workoutHabits ?? []).map((h: { id: string }) => h.id);
-      setWorkoutWeeks(buildWorkoutWeeks(ids, (workoutLogs ?? []) as HabitLog[]));
+      setWorkoutWeeks(buildWorkoutWeeks(ids, (workoutLogs ?? []) as HabitLog[], LOCALE_DATE_TAG[locale]));
     } finally {
       setLoading(false);
     }
@@ -224,7 +224,7 @@ export default function BodyPage() {
       {/* Stat card */}
       <GlassCard className="mb-5">
         <p className="text-[10px] uppercase tracking-widest font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>
-          {statLabel(activePeriod)}
+          {activePeriod === 'day' ? t.body_today_total.toUpperCase() : t.body_average.toUpperCase()}
         </p>
         {stat != null ? (
           <p className="text-4xl font-bold" style={{ color: metric.color }}>
@@ -248,9 +248,9 @@ export default function BodyPage() {
           <div className="h-48 flex items-center justify-center text-center">
             <div>
               <div className="flex justify-center mb-2" style={{ color: 'var(--text-muted)' }}><BarChart2 size={32} /></div>
-              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Aucune donnée</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t.body_no_data}</p>
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                Lance le raccourci iPhone pour synchroniser
+                {t.body_no_data_desc}
               </p>
             </div>
           </div>
@@ -293,14 +293,14 @@ export default function BodyPage() {
       {workoutWeeks.some(w => w.sessions > 0) && (
         <GlassCard className="mb-6">
           <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
-            💪 Séances de workout — 8 semaines
+            {t.body_workout_title}
           </p>
           <div className="flex items-end gap-4 mb-4">
             <div>
               <p className="text-3xl font-bold" style={{ color: 'var(--body)' }}>
                 {workoutWeeks[workoutWeeks.length - 1].sessions}
               </p>
-              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>cette semaine</p>
+              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{t.body_workout_this_week}</p>
             </div>
             {workoutWeeks[workoutWeeks.length - 1].totalMin > 0 && (
               <div>
@@ -308,7 +308,7 @@ export default function BodyPage() {
                   {workoutWeeks[workoutWeeks.length - 1].totalMin}
                   <span className="text-base font-normal ml-1" style={{ color: 'var(--text-muted)' }}>min</span>
                 </p>
-                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>durée totale</p>
+                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{t.body_workout_duration}</p>
               </div>
             )}
           </div>
@@ -323,7 +323,7 @@ export default function BodyPage() {
                   return (
                     <div className="px-3 py-2 rounded-xl text-xs font-semibold" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
                       <p style={{ color: 'var(--text-muted)' }}>{label}</p>
-                      <p>{payload[0].value} séance{(payload[0].value as number) > 1 ? 's' : ''}</p>
+                      <p>{payload[0].value} session{(payload[0].value as number) !== 1 ? 's' : ''}</p>
                     </div>
                   );
                 }}
@@ -345,7 +345,7 @@ export default function BodyPage() {
       {goals.length > 0 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>
-            Objectifs Body
+            {t.body_goals_title}
           </p>
           <div className="flex flex-col gap-3">
             {goals.map(g => <GoalKpiCard key={g.id} goal={g} />)}

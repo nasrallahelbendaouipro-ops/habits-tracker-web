@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/lib/theme';
 import { useLocale, LOCALE_LABELS, type Locale } from '@/lib/i18n';
-import { CalendarDays, HeartPulse, Activity, Watch, LogOut, Bell, BellOff } from 'lucide-react';
+import { CalendarDays, HeartPulse, Activity, Watch, LogOut, Bell, BellOff, Moon, Sun, Smartphone } from 'lucide-react';
 import { getHealthConnectAuthUrl } from '@/lib/integrations/health-connect';
 import type { User } from '@supabase/supabase-js';
 import GlassCard from '@/components/ui/GlassCard';
@@ -143,7 +143,7 @@ function AppleHealthSection() {
         className="w-full text-left text-xs font-semibold py-2.5 px-3 rounded-xl transition-all flex items-center justify-between"
         style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
       >
-        <span>📱 Step-by-step Shortcut setup</span>
+        <span className="flex items-center gap-1.5"><Smartphone size={14} /> Step-by-step Shortcut setup</span>
         <span style={{ color: 'var(--text-muted)' }}>{showSteps ? '▲' : '▼'}</span>
       </button>
 
@@ -313,11 +313,13 @@ export default function SettingsPage() {
         </p>
         <button
           onClick={toggleTheme}
+          role="switch"
+          aria-checked={theme === 'dark'}
           className="flex items-center justify-between w-full py-2 text-sm"
           style={{ color: 'var(--text-primary)' }}
         >
           <div className="flex items-center gap-3">
-            <span>{theme === 'dark' ? '🌙' : '☀️'}</span>
+            {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
             <span>{theme === 'dark' ? t.settings_dark_mode : t.settings_light_mode}</span>
           </div>
           <div
@@ -450,10 +452,8 @@ export default function SettingsPage() {
         </p>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 py-2 text-sm font-medium w-full text-left transition-all rounded-lg px-2 -mx-2"
+          className="settings-signout-btn flex items-center gap-3 py-2 text-sm font-medium w-full text-left transition-all rounded-lg px-2 -mx-2"
           style={{ color: 'var(--error)' }}
-          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,107,107,0.08)')}
-          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
         >
           <LogOut size={17} />
           {t.settings_sign_out}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, CheckCircle2, Flame, ClipboardList, Sun, Moon, Activity, Brain, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, Flame, ClipboardList, Sun, Moon, Activity, Brain, Sparkles, Play, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -46,11 +46,11 @@ function WeekRow({ selectedDate, onSelect }: { selectedDate: string; onSelect: (
       {/* Prev-week arrow */}
       <button
         onClick={() => jumpWeek(-1)}
-        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
         style={{ color: 'var(--text-muted)', background: 'transparent' }}
         aria-label="Previous week"
       >
-        <ChevronLeft size={14} />
+        <ChevronLeft size={16} />
       </button>
 
       {/* 7 day buttons */}
@@ -66,7 +66,13 @@ function WeekRow({ selectedDate, onSelect }: { selectedDate: string; onSelect: (
             { weekday: 'short' }
           );
           return (
-            <button key={i} onClick={() => onSelect(dateS)} className="flex flex-col items-center gap-1 flex-1">
+            <button
+              key={i}
+              onClick={() => onSelect(dateS)}
+              className="flex flex-col items-center gap-1 flex-1 min-h-[44px] justify-center"
+              aria-label={`${dayLabel} ${date.getDate()}`}
+              aria-current={isToday ? 'date' : undefined}
+            >
               <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }}>
                 {dayLabel}
               </span>
@@ -88,11 +94,11 @@ function WeekRow({ selectedDate, onSelect }: { selectedDate: string; onSelect: (
       {/* Next-week arrow */}
       <button
         onClick={() => jumpWeek(1)}
-        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
         style={{ color: 'var(--text-muted)', background: 'transparent' }}
         aria-label="Next week"
       >
-        <ChevronRight size={14} />
+        <ChevronRight size={16} />
       </button>
     </div>
   );
@@ -215,12 +221,15 @@ function HabitCard({
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex-shrink-0"
           style={{ background: `color-mix(in srgb, ${dimColor} 15%, transparent)`, color: dimColor, border: `1px solid color-mix(in srgb, ${dimColor} 25%, transparent)` }}
         >
-          ▶ Start
+          <Play size={12} /> Start
         </button>
       ) : (
-        <div
+        <button
           key={`cb-${habit.completedToday}`}
-          className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer ${justCompleted ? 'animate-bounce-in' : 'transition-all'}`}
+          role="checkbox"
+          aria-checked={habit.completedToday}
+          aria-label={habit.completedToday ? `Mark ${habit.name} incomplete` : `Complete ${habit.name}`}
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${justCompleted ? 'animate-bounce-in' : 'transition-all'}`}
           style={{ background: habit.completedToday ? habit.color : 'transparent', border: `2px solid ${habit.completedToday ? habit.color : 'var(--border)'}` }}
           onClick={() => onToggle(habit)}
         >
@@ -229,7 +238,7 @@ function HabitCard({
               <path d="M1 5L4.5 8.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
-        </div>
+        </button>
       )}
     </div>
   );
@@ -345,13 +354,13 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-1 mb-0.5">
-            <button onClick={() => setSelectedDate(d => shiftDate(d, -1))} className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
+            <button onClick={() => setSelectedDate(d => shiftDate(d, -1))} className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ color: 'var(--text-muted)' }} aria-label="Previous day">
               <ChevronLeft size={14} />
             </button>
             <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
               {isToday ? `${t.today} · ` : ''}{selectedDateObj.toLocaleDateString(LOCALE_DATE_TAG[locale], { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
-            <button onClick={() => setSelectedDate(d => shiftDate(d, 1))} className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
+            <button onClick={() => setSelectedDate(d => shiftDate(d, 1))} className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ color: 'var(--text-muted)' }} aria-label="Next day">
               <ChevronRight size={14} />
             </button>
           </div>
@@ -395,8 +404,15 @@ export default function DashboardPage() {
                   <span className="text-sm font-medium mb-1" style={{ color: 'var(--text-muted)' }}>/100</span>
                 </div>
               </div>
-              <div className="relative w-16 h-16">
-                <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90">
+              <div
+                className="relative w-16 h-16"
+                role="meter"
+                aria-valuenow={disciplineScore}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Discipline score: ${disciplineScore} out of 100`}
+              >
+                <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90" aria-hidden="true">
                   <circle cx="32" cy="32" r="26" fill="none" stroke="var(--border)" strokeWidth="6" />
                   <circle
                     cx="32" cy="32" r="26" fill="none"
@@ -550,11 +566,11 @@ export default function DashboardPage() {
       {/* Day Programme FAB */}
       <button
         onClick={() => setShowDayProgram(true)}
-        className="fixed right-4 md:right-6 z-30 w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all active:scale-95 fab-programme"
-        style={{ background: 'var(--primary)', boxShadow: 'var(--shadow-glow)' }}
-        aria-label="Programme du jour"
+        className="fixed right-4 md:right-6 z-30 w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 fab-programme"
+        style={{ background: 'var(--primary)', boxShadow: 'var(--shadow-glow)', color: 'white' }}
+        aria-label={t.dashboard_day_program}
       >
-        📅
+        <CalendarDays size={22} />
       </button>
 
       {userId && (

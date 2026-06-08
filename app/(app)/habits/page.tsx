@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { fetchHabitsWithStatus, createHabit, updateHabit, deleteHabit } from '@/lib/habits';
 import { useLocale } from '@/lib/i18n';
 import { Pencil, Trash2, Flame, Leaf, Activity, Brain, Sparkles } from 'lucide-react';
 import HabitModal from '@/components/habits/HabitModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import GlassCard from '@/components/ui/GlassCard';
 import type { HabitWithStreak, HabitFormValues, HabitDimension } from '@/lib/types';
 
@@ -25,7 +26,6 @@ const DIM_ICON: Record<HabitDimension, React.ComponentType<{ size?: number }>> =
 };
 
 export default function HabitsPage() {
-  const router = useRouter();
   const { t } = useLocale();
   const DIM_LABEL: Record<HabitDimension, string> = { body: t.dim_body, mind: t.dim_mind, soul: t.dim_soul };
   const [userId, setUserId]       = useState<string | null>(null);
@@ -34,6 +34,7 @@ export default function HabitsPage() {
   const [showAdd, setShowAdd]     = useState(false);
   const [editing, setEditing]     = useState<HabitWithStreak | null>(null);
   const [deleting, setDeleting]   = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -147,14 +148,15 @@ export default function HabitsPage() {
                       className="flex items-center gap-4 p-4 rounded-2xl transition-all group"
                       style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${c}` }}
                     >
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 cursor-pointer"
+                      <Link
+                        href={`/habits/${h.id}`}
+                        className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
                         style={{ background: h.color + '20', border: `1px solid ${h.color}30` }}
-                        onClick={() => router.push(`/habits/${h.id}`)}
+                        aria-label={h.name}
                       >
                         {h.icon}
-                      </div>
-                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(`/habits/${h.id}`)}>
+                      </Link>
+                      <Link href={`/habits/${h.id}`} className="flex-1 min-w-0">
                         <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{h.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: `color-mix(in srgb, ${c} 15%, transparent)`, color: c }}>
@@ -163,11 +165,27 @@ export default function HabitsPage() {
                           {h.streak > 0 && <span className="text-[10px] font-medium flex items-center gap-0.5" style={{ color: 'var(--secondary)' }}><Flame size={12} /> {h.streak}d</span>}
                           {h.completedToday && <span className="text-[10px] font-medium" style={{ color: 'var(--success)' }}>{t.habits_done_today}</span>}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setEditing(h)} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}><Pencil size={14} /></button>
-                        <button onClick={() => handleDelete(h.id)} disabled={deleting === h.id} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ background: 'var(--error-muted)', color: 'var(--error)' }}>
-                          {deleting === h.id ? '…' : <Trash2 size={14} />}
+                      </Link>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditing(h)}
+                          className="w-10 h-10 rounded-lg flex items-center justify-center transition-all"
+                          style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}
+                          aria-label={`Edit ${h.name}`}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(h.id)}
+                          disabled={deleting === h.id}
+                          aria-busy={deleting === h.id}
+                          aria-label={`Delete ${h.name}`}
+                          className="w-10 h-10 rounded-lg flex items-center justify-center transition-all"
+                          style={{ background: 'var(--error-muted)', color: 'var(--error)' }}
+                        >
+                          {deleting === h.id
+                            ? <span className="animate-pulse text-xs font-bold">…</span>
+                            : <Trash2 size={14} />}
                         </button>
                       </div>
                     </div>
@@ -181,6 +199,12 @@ export default function HabitsPage() {
 
       <HabitModal mode="add" visible={showAdd} onClose={() => setShowAdd(false)} onSubmit={handleAdd} />
       <HabitModal mode="edit" habit={editing ?? undefined} visible={!!editing} onClose={() => setEditing(null)} onSubmit={handleEdit} />
+      <ConfirmDialog
+        visible={!!confirmDeleteId}
+        message={t.habit_delete_confirm}
+        onConfirm={() => { if (confirmDeleteId) handleDelete(confirmDeleteId); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

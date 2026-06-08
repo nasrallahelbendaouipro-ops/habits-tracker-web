@@ -1,17 +1,15 @@
 'use client';
 
+import { useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { GoalWithLinked, HabitWithRate, HabitDimension } from '@/lib/types';
 
 const DIMENSION_COLORS: Record<HabitDimension, string> = {
   body: 'var(--body)',
   mind: 'var(--mind)',
   soul: 'var(--soul)',
-};
-const DIMENSION_LABELS: Record<HabitDimension, string> = {
-  body: '💪 Body',
-  mind: '🧠 Mind',
-  soul: '✨ Soul',
 };
 
 type Props = {
@@ -24,6 +22,7 @@ export default function GoalCard({ goal, onEdit, onDelete }: Props) {
   const linkedRoutines = goal.routines ?? [];
   const totalSecs = goal.totalTimeSeconds ?? 0;
   const { t, locale } = useLocale();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   function formatDeadline(date?: string) {
     if (!date) return null;
@@ -35,7 +34,12 @@ export default function GoalCard({ goal, onEdit, onDelete }: Props) {
   const deadline    = formatDeadline(goal.deadline);
   const rate        = goal.completionRate;
   const dimColor    = DIMENSION_COLORS[(goal.dimension as HabitDimension) ?? 'body'];
-  const dimLabel    = DIMENSION_LABELS[(goal.dimension as HabitDimension) ?? 'body'];
+  const DIM_LABELS: Record<HabitDimension, string> = {
+    body: t.dim_body,
+    mind: t.dim_mind,
+    soul: t.dim_soul,
+  };
+  const dimLabel = DIM_LABELS[(goal.dimension as HabitDimension) ?? 'body'];
 
   // KPI progress
   const hasKpi = goal.starting_point != null && goal.target_point != null && goal.current_value != null;
@@ -46,6 +50,7 @@ export default function GoalCard({ goal, onEdit, onDelete }: Props) {
     : null;
 
   return (
+    <>
     <div
       className="rounded-2xl overflow-hidden transition-all"
       style={{
@@ -91,16 +96,22 @@ export default function GoalCard({ goal, onEdit, onDelete }: Props) {
           )}
           <button
             onClick={() => onEdit(goal)}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all"
+            className="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
             style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}
             title={t.goals_edit}
-          >✏️</button>
+            aria-label={t.goals_edit}
+          >
+            <Pencil size={14} />
+          </button>
           <button
-            onClick={() => { if (confirm(t.goals_delete_confirm)) onDelete(goal.id); }}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all"
-            style={{ background: 'rgba(255,107,107,0.1)', color: 'var(--error)' }}
-            title="Delete"
-          >🗑️</button>
+            onClick={() => setConfirmDelete(true)}
+            className="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
+            style={{ background: 'var(--error-muted)', color: 'var(--error)' }}
+            title={t.confirm_delete}
+            aria-label={t.confirm_delete}
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
       </div>
 
@@ -193,5 +204,13 @@ export default function GoalCard({ goal, onEdit, onDelete }: Props) {
         </div>
       )}
     </div>
+
+    <ConfirmDialog
+      visible={confirmDelete}
+      message={t.goals_delete_confirm}
+      onConfirm={() => { setConfirmDelete(false); onDelete(goal.id); }}
+      onCancel={() => setConfirmDelete(false)}
+    />
+    </>
   );
 }
