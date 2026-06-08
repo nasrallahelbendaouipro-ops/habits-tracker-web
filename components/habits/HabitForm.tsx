@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { HABIT_ICONS, HABIT_COLORS, DIMENSION_DEFAULTS } from '@/lib/habits';
 import { useLocale } from '@/lib/i18n';
 import type { HabitFormValues, HabitType, HabitMetadata, HabitDimension } from '@/lib/types';
@@ -65,7 +66,10 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
   const [dimension, setDimension] = useState<HabitDimension>(initial?.dimension ?? DIMENSION_DEFAULTS[initial?.type ?? 'simple']);
   const [metadata, setMeta]       = useState<HabitMetadata>(initial?.metadata ?? {});
   const [targetDays, setTargetDays] = useState<number[]>(initial?.target_days ?? []);
+  const [calStartTime, setCalStartTime] = useState(initial?.calendar_start_time ?? '');
+  const [calDuration, setCalDuration]   = useState(initial?.calendar_duration_min ? String(initial.calendar_duration_min) : '');
   const [error, setError]         = useState('');
+  const [errorField, setErrorField] = useState<'name' | null>(null);
   const [loading, setLoading]     = useState(false);
 
   const isSpecific = targetDays.length > 0;
@@ -87,8 +91,9 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { setError(t.form_err_name); return; }
+    if (!name.trim()) { setError(t.form_err_name); setErrorField('name'); return; }
     setError('');
+    setErrorField(null);
     setLoading(true);
     try {
       await onSubmit({
@@ -96,52 +101,23 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         frequency: targetDays.length > 0 ? 'weekly' : 'daily',
         target_days: targetDays,
         metadata,
+        calendar_start_time: calStartTime || undefined,
+        calendar_duration_min: calDuration ? parseInt(calDuration) : undefined,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : t.form_err_generic);
+      setErrorField(null);
     } finally {
       setLoading(false);
     }
   }
 
-  const inputBase = {
-    background: 'var(--surface-elevated)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-primary)',
-  };
+  const nameError = errorField === 'name';
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {/* Type picker */}
       <TypePicker value={type} onChange={handleTypeChange} />
-
-      {/* Dimension override */}
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          Dimension
-        </label>
-        <div className="flex gap-2">
-          {(['body', 'mind', 'soul'] as HabitDimension[]).map(d => {
-            const active = dimension === d;
-            const c = DIMENSION_COLORS[d];
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDimension(d)}
-                className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
-                style={{
-                  background: active ? c + '20' : 'var(--surface-elevated)',
-                  border: `1px solid ${active ? c : 'var(--border)'}`,
-                  color: active ? c : 'var(--text-secondary)',
-                }}
-              >
-                {DIMENSION_LABELS[d]}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Name */}
       <div>
@@ -151,14 +127,17 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         <input
           type="text"
           value={name}
-          onChange={e => { setName(e.target.value); setError(''); }}
+          onChange={e => { setName(e.target.value); setError(''); setErrorField(null); }}
           placeholder={t.form_name_placeholder}
           maxLength={40}
-          className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-          style={inputBase}
-          onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+          className={`form-input${nameError ? ' input-error' : ''}`}
         />
+        {nameError && (
+          <p className="field-error">
+            <AlertCircle size={12} aria-hidden="true" />
+            {error}
+          </p>
+        )}
       </div>
 
       {/* Icon picker */}
@@ -279,6 +258,40 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         </div>
       )}
 
+      {/* Calendar scheduling */}
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+          Schedule in Calendar <span style={{ color: 'var(--text-disabled)', fontWeight: 400 }}>(optional)</span>
+        </label>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <input
+              type="time"
+              value={calStartTime}
+              onChange={e => setCalStartTime(e.target.value)}
+              className="form-input w-full"
+              placeholder="Start time"
+            />
+          </div>
+          <div style={{ width: 100 }}>
+            <input
+              type="number"
+              min={5}
+              max={480}
+              value={calDuration}
+              onChange={e => setCalDuration(e.target.value)}
+              className="form-input w-full"
+              placeholder="min"
+            />
+          </div>
+        </div>
+        {calStartTime && (
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
+            Habit will appear as a draggable block in the calendar
+          </p>
+        )}
+      </div>
+
       {/* Preview */}
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
@@ -305,16 +318,20 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
         </div>
       </div>
 
-      {error && (
-        <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>
+      {error && !nameError && (
+        <p className="field-error">
+          <AlertCircle size={12} aria-hidden="true" />
+          {error}
+        </p>
       )}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all"
+        className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2"
         style={{ background: loading ? 'var(--text-muted)' : color, cursor: loading ? 'not-allowed' : 'pointer' }}
       >
+        {loading && <Loader2 size={15} className="animate-spin" />}
         {loading ? t.form_saving : submitLabel}
       </button>
     </form>

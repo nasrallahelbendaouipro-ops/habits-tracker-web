@@ -20,8 +20,8 @@
 
   --text-primary: #F0EEFF;
   --text-secondary: #A09BC0;
-  --text-tertiary: #7A749A;
-  --text-muted: #5E5A78;
+  --text-tertiary: #8A85A8;
+  --text-muted: #7A749A;
   --text-disabled: #3D3A55;
 
   --glass-bg: rgba(28, 26, 46, 0.7);
@@ -44,6 +44,17 @@
   --body: #ef4444;
   --mind: #3b82f6;
   --soul: #a855f7;
+
+  /* Muted variants — use these instead of color + '20' concatenation */
+  --error-muted: rgba(255, 107, 107, 0.15);
+  --success-muted: rgba(78, 205, 196, 0.15);
+  --warning-muted: rgba(255, 217, 61, 0.15);
+  --teal-muted: rgba(78, 205, 196, 0.15);
+  --body-muted: rgba(239, 68, 68, 0.15);
+  --mind-muted: rgba(59, 130, 246, 0.15);
+  --soul-muted: rgba(168, 85, 247, 0.15);
+  --primary-muted-border: rgba(108, 99, 255, 0.3);
+  --secondary-muted-border: rgba(255, 107, 53, 0.3);
 }
 
 [data-theme="light"] {
@@ -70,6 +81,22 @@
   --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.1);
   --shadow-glow: 0 0 24px rgba(108, 99, 255, 0.12);
+
+  /* Dimension colors — darkened for 4.5:1 contrast on light bg */
+  --body: #dc2626;
+  --mind: #1d4ed8;
+  --soul: #7c3aed;
+
+  /* Muted variants — light theme adjustments */
+  --error-muted: rgba(255, 107, 107, 0.12);
+  --success-muted: rgba(78, 205, 196, 0.12);
+  --warning-muted: rgba(255, 217, 61, 0.12);
+  --teal-muted: rgba(78, 205, 196, 0.12);
+  --body-muted: rgba(220, 38, 38, 0.12);
+  --mind-muted: rgba(29, 78, 216, 0.12);
+  --soul-muted: rgba(124, 58, 237, 0.12);
+  --primary-muted-border: rgba(108, 99, 255, 0.25);
+  --secondary-muted-border: rgba(255, 107, 53, 0.25);
 }
 
 @theme inline {
@@ -92,6 +119,14 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* FAB above BottomNav on mobile, fixed at bottom on desktop */
+.fab-programme {
+  bottom: calc(var(--bottomnav-height) + 16px);
+}
+@media (min-width: 768px) {
+  .fab-programme { bottom: 24px; }
+}
+
 /* ============================================
    GLASSMORPHISM
    ============================================ */
@@ -109,6 +144,10 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Hide scrollbar visually while keeping scroll functionality */
+.scroll-hidden { scrollbar-width: none; -ms-overflow-style: none; }
+.scroll-hidden::-webkit-scrollbar { display: none; }
 
 /* ============================================
    FOCUS RING
@@ -287,6 +326,99 @@ body {
   50%       { opacity: 0.5; }
 }
 
-.animate-fade-in  { animation: fadeIn 0.3s ease forwards; }
-.animate-slide-up { animation: slideUp 0.4s ease forwards; }
-.animate-pulse    { animation: pulse 1.5s ease-in-out infinite; }
+@keyframes bounceIn {
+  0%   { transform: scale(0.6); opacity: 0.6; }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1);   opacity: 1;   }
+}
+
+@keyframes checkDraw {
+  from { stroke-dashoffset: 20; opacity: 0; }
+  to   { stroke-dashoffset: 0;  opacity: 1; }
+}
+
+@keyframes slideInItem {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.animate-fade-in   { animation: fadeIn 0.3s ease forwards; }
+.animate-slide-up  { animation: slideUp 0.4s ease forwards; }
+.animate-pulse     { animation: pulse 1.5s ease-in-out infinite; }
+.animate-bounce-in { animation: bounceIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-item      { animation: slideInItem 0.28s ease forwards; animation-delay: calc(var(--i, 0) * 40ms); opacity: 0; }
+
+.animate-check-draw path {
+  stroke-dasharray: 20;
+  animation: checkDraw 0.25s ease forwards;
+}
+
+/* ============================================
+   SIDEBAR NAV — CSS hover (replaces inline JS handlers)
+   ============================================ */
+.sidebar-nav-link:hover:not([aria-current="page"]) {
+  background: var(--surface-hover) !important;
+}
+.sidebar-footer-btn:hover {
+  background: var(--surface-hover) !important;
+}
+.sidebar-signout-btn:hover {
+  background: var(--error-muted) !important;
+}
+
+/* ============================================
+   FORM UTILITIES
+   ============================================ */
+.form-input {
+  width: 100%;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.form-input:focus-visible {
+  border-color: var(--primary);
+}
+.form-input.input-error {
+  border-color: var(--error);
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--error);
+  font-size: 0.75rem;
+  margin-top: 6px;
+}
+
+/* ============================================
+   SETTINGS — sign-out hover (CSS, no inline JS)
+   ============================================ */
+.settings-signout-btn:hover {
+  background: rgba(255,107,107,0.08) !important;
+}
+
+/* ============================================
+   REDUCED MOTION — disable non-essential animations
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-bounce-in,
+  .animate-item {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .animate-pulse {
+    animation: none !important;
+  }
+  .animate-check-draw path {
+    animation: none !important;
+  }
+}

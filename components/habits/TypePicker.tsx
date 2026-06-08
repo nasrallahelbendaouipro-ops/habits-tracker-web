@@ -12,8 +12,8 @@ const DIMENSION_GROUPS: { dimension: HabitDimension; label: string; color: strin
     color: 'var(--body)',
     types: [
       { value: 'workout',     icon: '💪', label: 'Workout' },
-      { value: 'shift',       icon: '🕐', label: 'Shift' },
       { value: 'body_metric', icon: '⚖️', label: 'Metric' },
+      { value: 'simple',      icon: '🎯', label: 'Simple' },
     ],
   },
   {
@@ -23,7 +23,6 @@ const DIMENSION_GROUPS: { dimension: HabitDimension; label: string; color: strin
     types: [
       { value: 'reading', icon: '📚', label: 'Reading' },
       { value: 'study',   icon: '🧠', label: 'Study' },
-      { value: 'simple',  icon: '🎯', label: 'Simple' },
     ],
   },
   {
@@ -58,7 +57,7 @@ export default function TypePicker({
             <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: group.color }}>
               {group.label}
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className={`grid gap-2 ${group.types.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
               {group.types.map(type => {
                 const active = type.value === value;
                 return (
@@ -66,16 +65,15 @@ export default function TypePicker({
                     key={type.value}
                     type="button"
                     onClick={() => onChange(type.value)}
-                    className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all text-center"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                     style={{
-                      background: active ? group.color + '20' : 'var(--surface-elevated)',
+                      background: active ? group.color + '25' : 'var(--surface-elevated)',
                       border: `1px solid ${active ? group.color : 'var(--border)'}`,
+                      color: active ? group.color : 'var(--text-secondary)',
                     }}
                   >
-                    <span className="text-xl">{type.icon}</span>
-                    <span className="text-[10px] font-semibold" style={{ color: active ? group.color : 'var(--text-secondary)' }}>
-                      {type.label}
-                    </span>
+                    <span>{type.icon}</span>
+                    {type.label}
                   </button>
                 );
               })}

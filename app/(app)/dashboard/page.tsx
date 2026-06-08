@@ -1,18 +1,25 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, CheckCircle2, Flame, ClipboardList, Sun, Moon, Activity, Brain, Sparkles, Play, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { fetchHabitsWithStatus, toggleHabit, createHabit, TIMED_TYPES, DIMENSION_ICONS } from '@/lib/habits';
+import { fetchHabitsWithStatus, fetchWeeklyLogs, toggleHabit, createHabit, TIMED_TYPES, DIMENSION_ICONS } from '@/lib/habits';
 import { fetchGoals } from '@/lib/goals';
+import { getTodaysRoutines } from '@/lib/routines';
+import { calcDisciplineScore } from '@/lib/analytics';
 import { TODAY, toISODate } from '@/lib/utils';
+import RoutineCard from '@/components/routines/RoutineCard';
+import type { RoutineWithSession } from '@/lib/types';
 import { useLocale, getGreeting, formatHabitsLabel, LOCALE_DATE_TAG } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
-import type { HabitWithStreak, HabitFormValues, GoalWithHabits, HabitDimension } from '@/lib/types';
+import type { HabitWithStreak, HabitLog, HabitFormValues, GoalWithHabits, HabitDimension } from '@/lib/types';
 import GlassCard from '@/components/ui/GlassCard';
 import HabitModal from '@/components/habits/HabitModal';
 import SessionTimer from '@/components/ui/SessionTimer';
+import DayProgramSheet from '@/components/ui/DayProgramSheet';
 
 function shiftDate(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -28,36 +35,71 @@ function WeekRow({ selectedDate, onSelect }: { selectedDate: string; onSelect: (
   const startOfWeek = new Date(sel);
   startOfWeek.setDate(sel.getDate() - sel.getDay());
 
+  function jumpWeek(delta: number) {
+    const d = new Date(selectedDate + 'T00:00:00');
+    d.setDate(d.getDate() + delta * 7);
+    onSelect(toISODate(d));
+  }
+
   return (
-    <div className="flex gap-1.5 justify-between">
-      {Array.from({ length: 7 }, (_, i) => {
-        const date = new Date(startOfWeek);
-        date.setDate(startOfWeek.getDate() + i);
-        const dateS = toISODate(date);
-        const isSelected = dateS === selectedDate;
-        const isToday = dateS === TODAY;
-        const dayLabel = date.toLocaleDateString(
-          locale === 'en' ? 'en-US' : locale === 'fr' ? 'fr-FR' : 'ar-SA',
-          { weekday: 'short' }
-        );
-        return (
-          <button key={i} onClick={() => onSelect(dateS)} className="flex flex-col items-center gap-1 flex-1">
-            <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }}>
-              {dayLabel}
-            </span>
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all"
-              style={{
-                background: isSelected ? 'var(--primary)' : 'transparent',
-                color: isSelected ? 'white' : isToday ? 'var(--primary)' : 'var(--text-secondary)',
-                border: isSelected ? 'none' : isToday ? '1px solid var(--primary)' : '1px solid var(--border)',
-              }}
+    <div className="flex items-center gap-1">
+      {/* Prev-week arrow */}
+      <button
+        onClick={() => jumpWeek(-1)}
+        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+        style={{ color: 'var(--text-muted)', background: 'transparent' }}
+        aria-label="Previous week"
+      >
+        <ChevronLeft size={16} />
+      </button>
+
+      {/* 7 day buttons */}
+      <div className="flex gap-1 flex-1 justify-between">
+        {Array.from({ length: 7 }, (_, i) => {
+          const date = new Date(startOfWeek);
+          date.setDate(startOfWeek.getDate() + i);
+          const dateS = toISODate(date);
+          const isSelected = dateS === selectedDate;
+          const isToday = dateS === TODAY;
+          const dayLabel = date.toLocaleDateString(
+            locale === 'en' ? 'en-US' : locale === 'fr' ? 'fr-FR' : 'ar-SA',
+            { weekday: 'short' }
+          );
+          return (
+            <button
+              key={i}
+              onClick={() => onSelect(dateS)}
+              className="flex flex-col items-center gap-1 flex-1 min-h-[44px] justify-center"
+              aria-label={`${dayLabel} ${date.getDate()}`}
+              aria-current={isToday ? 'date' : undefined}
             >
-              {date.getDate()}
-            </div>
-          </button>
-        );
-      })}
+              <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: isSelected ? 'var(--primary)' : 'var(--text-muted)' }}>
+                {dayLabel}
+              </span>
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all"
+                style={{
+                  background: isSelected ? 'var(--primary)' : 'transparent',
+                  color: isSelected ? 'white' : isToday ? 'var(--primary)' : 'var(--text-secondary)',
+                  border: isSelected ? 'none' : isToday ? '1px solid var(--primary)' : '1px solid var(--border)',
+                }}
+              >
+                {date.getDate()}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Next-week arrow */}
+      <button
+        onClick={() => jumpWeek(1)}
+        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+        style={{ color: 'var(--text-muted)', background: 'transparent' }}
+        aria-label="Next week"
+      >
+        <ChevronRight size={16} />
+      </button>
     </div>
   );
 }
@@ -87,11 +129,12 @@ function ProgressBar({ completed, total, label }: { completed: number; total: nu
 const DIM_COLOR: Record<HabitDimension, string> = { body: 'var(--body)', mind: 'var(--mind)', soul: 'var(--soul)' };
 
 function DimensionTabs({ active, onChange }: { active: HabitDimension | null; onChange: (d: HabitDimension | null) => void }) {
-  const tabs: { label: string; value: HabitDimension | null }[] = [
-    { label: 'All', value: null },
-    { label: `${DIMENSION_ICONS.body} Body`, value: 'body' },
-    { label: `${DIMENSION_ICONS.mind} Mind`, value: 'mind' },
-    { label: `${DIMENSION_ICONS.soul} Soul`, value: 'soul' },
+  const { t } = useLocale();
+  const tabs: { label: string; Icon: React.ComponentType<{ size?: number }> | null; value: HabitDimension | null }[] = [
+    { label: t.dim_all,  Icon: null,      value: null },
+    { label: t.dim_body, Icon: Activity,  value: 'body' },
+    { label: t.dim_mind, Icon: Brain,     value: 'mind' },
+    { label: t.dim_soul, Icon: Sparkles,  value: 'soul' },
   ];
   return (
     <div className="flex gap-1.5 mb-4 overflow-x-auto">
@@ -102,13 +145,14 @@ function DimensionTabs({ active, onChange }: { active: HabitDimension | null; on
           <button
             key={String(tab.value)}
             onClick={() => onChange(tab.value)}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold flex-shrink-0 transition-all flex items-center gap-1"
             style={{
-              background: isActive ? c + '20' : 'var(--surface)',
+              background: isActive ? `color-mix(in srgb, ${c} 15%, transparent)` : 'var(--surface)',
               color: isActive ? c : 'var(--text-secondary)',
               border: `1px solid ${isActive ? c : 'var(--border)'}`,
             }}
           >
+            {tab.Icon && <tab.Icon size={13} />}
             {tab.label}
           </button>
         );
@@ -123,10 +167,12 @@ function HabitCard({
   habit,
   onToggle,
   onStartSession,
+  justCompleted,
 }: {
   habit: HabitWithStreak;
   onToggle: (h: HabitWithStreak) => void;
   onStartSession: (h: HabitWithStreak) => void;
+  justCompleted: boolean;
 }) {
   const isTimed = TIMED_TYPES.includes(habit.type);
   const dimColor = DIM_COLOR[habit.dimension] ?? 'var(--primary)';
@@ -173,22 +219,26 @@ function HabitCard({
         <button
           onClick={() => onStartSession(habit)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex-shrink-0"
-          style={{ background: dimColor + '20', color: dimColor, border: `1px solid ${dimColor}40` }}
+          style={{ background: `color-mix(in srgb, ${dimColor} 15%, transparent)`, color: dimColor, border: `1px solid color-mix(in srgb, ${dimColor} 25%, transparent)` }}
         >
-          ▶ Start
+          <Play size={12} /> Start
         </button>
       ) : (
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all cursor-pointer"
+        <button
+          key={`cb-${habit.completedToday}`}
+          role="checkbox"
+          aria-checked={habit.completedToday}
+          aria-label={habit.completedToday ? `Mark ${habit.name} incomplete` : `Complete ${habit.name}`}
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${justCompleted ? 'animate-bounce-in' : 'transition-all'}`}
           style={{ background: habit.completedToday ? habit.color : 'transparent', border: `2px solid ${habit.completedToday ? habit.color : 'var(--border)'}` }}
           onClick={() => onToggle(habit)}
         >
           {habit.completedToday && (
-            <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+            <svg width="12" height="10" viewBox="0 0 12 10" fill="none" className={justCompleted ? 'animate-check-draw' : ''}>
               <path d="M1 5L4.5 8.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
-        </div>
+        </button>
       )}
     </div>
   );
@@ -212,16 +262,21 @@ function EmptyState({ onAdd, noHabitsLabel, noHabitsDesc, addHabitLabel }: { onA
 // ─── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { toggleTheme, isDark } = useTheme();
   const { t, locale } = useLocale();
   const [userId, setUserId]           = useState<string | null>(null);
   const [habits, setHabits]           = useState<HabitWithStreak[]>([]);
+  const [logs, setLogs]               = useState<HabitLog[]>([]);
   const [goals, setGoals]             = useState<GoalWithHabits[]>([]);
+  const [todaysRoutines, setTodaysRoutines] = useState<RoutineWithSession[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showAdd, setShowAdd]         = useState(false);
+  const [showDayProgram, setShowDayProgram] = useState(false);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [activeDim, setActiveDim]     = useState<HabitDimension | null>(null);
   const [activeSession, setActiveSession] = useState<HabitWithStreak | null>(null);
+  const [justCompleted, setJustCompleted] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -233,12 +288,20 @@ export default function DashboardPage() {
     if (!userId) return;
     setLoading(true);
     try {
-      const [habitsData, goalsData] = await Promise.all([
+      const [habitsData, goalsData, routinesData, logsData] = await Promise.all([
         fetchHabitsWithStatus(userId, selectedDate),
         fetchGoals(userId),
+        getTodaysRoutines(),
+        fetchWeeklyLogs(userId),
       ]);
       setHabits(habitsData);
       setGoals(goalsData);
+      setTodaysRoutines(routinesData);
+      setLogs(logsData);
+      if (habitsData.length === 0 && !localStorage.getItem('onboarding_complete')) {
+        router.push('/onboarding');
+        return;
+      }
     } finally {
       setLoading(false);
     }
@@ -253,11 +316,16 @@ export default function DashboardPage() {
   };
 
   const handleToggle = async (habit: HabitWithStreak) => {
+    const completing = !habit.completedToday;
     setHabits(prev => prev.map(h =>
       h.id === habit.id
-        ? { ...h, completedToday: !h.completedToday, streak: h.completedToday ? h.streak - 1 : h.streak + 1 }
+        ? { ...h, completedToday: completing, streak: completing ? h.streak + 1 : h.streak - 1 }
         : h
     ));
+    if (completing) {
+      setJustCompleted(prev => new Set(prev).add(habit.id));
+      setTimeout(() => setJustCompleted(prev => { const n = new Set(prev); n.delete(habit.id); return n; }), 400);
+    }
     try {
       await toggleHabit(habit.id, userId!, habit.completedToday, selectedDate);
     } catch {
@@ -275,6 +343,7 @@ export default function DashboardPage() {
 
   const visibleHabits = activeDim ? habits.filter(h => h.dimension === activeDim) : habits;
   const completed = habits.filter(h => h.completedToday).length;
+  const disciplineScore = calcDisciplineScore(habits, logs, 28);
   const selectedDateObj = new Date(selectedDate + 'T00:00:00');
   const isToday = selectedDate === TODAY;
   const habitsLabel = formatHabitsLabel(locale, selectedDateObj, isToday);
@@ -285,18 +354,18 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-1 mb-0.5">
-            <button onClick={() => setSelectedDate(d => shiftDate(d, -1))} className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
+            <button onClick={() => setSelectedDate(d => shiftDate(d, -1))} className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ color: 'var(--text-muted)' }} aria-label="Previous day">
               <ChevronLeft size={14} />
             </button>
             <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
               {isToday ? `${t.today} · ` : ''}{selectedDateObj.toLocaleDateString(LOCALE_DATE_TAG[locale], { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
-            <button onClick={() => setSelectedDate(d => shiftDate(d, 1))} className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
+            <button onClick={() => setSelectedDate(d => shiftDate(d, 1))} className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ color: 'var(--text-muted)' }} aria-label="Next day">
               <ChevronRight size={14} />
             </button>
           </div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {isToday ? `${getGreeting(locale)} 👋` : habitsLabel}
+            {isToday ? getGreeting(locale) : habitsLabel}
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -305,8 +374,8 @@ export default function DashboardPage() {
               {t.today}
             </button>
           )}
-          <button onClick={toggleTheme} className="w-9 h-9 rounded-xl flex items-center justify-center text-base transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-            {isDark ? '☀️' : '🌙'}
+          <button onClick={toggleTheme} className="w-9 h-9 rounded-xl flex items-center justify-center transition-all" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           <button onClick={() => setShowAdd(true)} className="px-4 py-2 rounded-xl font-semibold text-sm text-white transition-all" style={{ background: 'var(--primary)', boxShadow: 'var(--shadow-glow)' }}>
             {t.dashboard_add}
@@ -319,6 +388,69 @@ export default function DashboardPage() {
         <WeekRow selectedDate={selectedDate} onSelect={setSelectedDate} />
       </GlassCard>
 
+      {/* Discipline Score */}
+      {habits.length > 0 && (
+        <Link href="/analytics">
+          <GlassCard className="mb-4 cursor-pointer" style={{ transition: 'opacity 0.15s' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: 'var(--text-muted)' }}>
+                  Discipline Score
+                </p>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-black tabular-nums" style={{ color: disciplineScore >= 75 ? 'var(--teal)' : disciplineScore >= 50 ? 'var(--primary)' : 'var(--secondary)' }}>
+                    {disciplineScore}
+                  </span>
+                  <span className="text-sm font-medium mb-1" style={{ color: 'var(--text-muted)' }}>/100</span>
+                </div>
+              </div>
+              <div
+                className="relative w-16 h-16"
+                role="meter"
+                aria-valuenow={disciplineScore}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Discipline score: ${disciplineScore} out of 100`}
+              >
+                <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90" aria-hidden="true">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="var(--border)" strokeWidth="6" />
+                  <circle
+                    cx="32" cy="32" r="26" fill="none"
+                    stroke={disciplineScore >= 75 ? 'var(--teal)' : disciplineScore >= 50 ? 'var(--primary)' : 'var(--secondary)'}
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(disciplineScore / 100) * 163.4} 163.4`}
+                    style={{ transition: 'stroke-dasharray 0.6s ease' }}
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
+                  28d
+                </span>
+              </div>
+            </div>
+          </GlassCard>
+        </Link>
+      )}
+
+      {/* Today's Routines */}
+      {isToday && todaysRoutines.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+              Today&apos;s Routines
+            </h2>
+            <Link href="/routines" className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
+              All routines
+            </Link>
+          </div>
+          <div className="flex flex-col gap-2">
+            {todaysRoutines.map(r => (
+              <RoutineCard key={r.id} routine={r} compact />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Progress */}
       {habits.length > 0 && (
         <GlassCard className="mb-6">
@@ -330,12 +462,12 @@ export default function DashboardPage() {
       {habits.length > 0 && (
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: t.dashboard_completed, value: `${completed}/${habits.length}`, icon: '✅' },
-            { label: t.dashboard_best_streak, value: `${Math.max(...habits.map(h => h.streak), 0)}d`, icon: '🔥' },
-            { label: t.dashboard_total, value: habits.length, icon: '📋' },
-          ].map(({ label, value, icon }) => (
+            { label: t.dashboard_completed, value: `${completed}/${habits.length}`, Icon: CheckCircle2 },
+            { label: t.dashboard_best_streak, value: `${Math.max(...habits.map(h => h.streak), 0)}d`, Icon: Flame },
+            { label: t.dashboard_total, value: habits.length, Icon: ClipboardList },
+          ].map(({ label, value, Icon }) => (
             <GlassCard key={label} style={{ padding: '14px', textAlign: 'center' }}>
-              <div className="text-xl mb-1">{icon}</div>
+              <div className="flex justify-center mb-1" style={{ color: 'var(--primary)' }}><Icon size={20} /></div>
               <p className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>{value}</p>
               <p className="text-[10px] uppercase tracking-wide font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
             </GlassCard>
@@ -358,6 +490,20 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* All-done celebration */}
+        {!loading && completed === habits.length && habits.length > 0 && (
+          <div
+            className="animate-slide-up mb-3 px-4 py-3 rounded-xl flex items-center gap-3"
+            style={{ background: 'linear-gradient(135deg, var(--primary-muted), var(--teal-muted))', border: '1px solid var(--primary-muted-border)' }}
+          >
+            <span className="text-2xl">🎉</span>
+            <div>
+              <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>All done for today!</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>You completed all {habits.length} habits. Great work.</p>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex flex-col gap-3">
             {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl animate-pulse" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />)}
@@ -365,11 +511,22 @@ export default function DashboardPage() {
         ) : visibleHabits.length === 0 ? (
           <EmptyState onAdd={() => setShowAdd(true)} noHabitsLabel={t.dashboard_no_habits} noHabitsDesc={t.dashboard_no_habits_desc} addHabitLabel={t.dashboard_add_habit} />
         ) : (
-          <div className="flex flex-col gap-2">
-            {visibleHabits.map(habit => (
-              <HabitCard key={habit.id} habit={habit} onToggle={handleToggle} onStartSession={setActiveSession} />
-            ))}
-          </div>
+          <AnimatePresence mode="popLayout">
+            <div className="flex flex-col gap-2">
+              {visibleHabits.map((habit, index) => (
+                <motion.div
+                  key={habit.id}
+                  layout
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20, scale: 0.97 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 28, delay: index * 0.04 }}
+                >
+                  <HabitCard habit={habit} onToggle={handleToggle} onStartSession={setActiveSession} justCompleted={justCompleted.has(habit.id)} />
+                </motion.div>
+              ))}
+            </div>
+          </AnimatePresence>
         )}
       </div>
 
@@ -404,6 +561,25 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Day Programme FAB */}
+      <button
+        onClick={() => setShowDayProgram(true)}
+        className="fixed right-4 md:right-6 z-30 w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 fab-programme"
+        style={{ background: 'var(--primary)', boxShadow: 'var(--shadow-glow)', color: 'white' }}
+        aria-label={t.dashboard_day_program}
+      >
+        <CalendarDays size={22} />
+      </button>
+
+      {userId && (
+        <DayProgramSheet
+          isOpen={showDayProgram}
+          onClose={() => setShowDayProgram(false)}
+          selectedDate={selectedDate}
+          userId={userId}
+        />
       )}
 
       <HabitModal mode="add" visible={showAdd} onClose={() => setShowAdd(false)} onSubmit={handleAdd} />

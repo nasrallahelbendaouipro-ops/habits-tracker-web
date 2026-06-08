@@ -3,9 +3,18 @@
 import { useState, useEffect } from 'react';
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
 import { useLocale } from '@/lib/i18n';
-import type { CalendarEvent, CalendarEventType } from '@/lib/types';
+import type { CalendarEvent, CalendarEventType, Habit, Routine } from '@/lib/types';
+import ModalShell from '@/components/ui/ModalShell';
+
+const DIMENSION_COLOR: Record<string, string> = {
+  body: 'var(--body)',
+  mind: 'var(--mind)',
+  soul: 'var(--soul)',
+};
 
 const EVENT_COLORS = ['#6C63FF', '#FF6B35', '#4ECDC4', '#45B7D1', '#FF6B6B', '#96CEB4', '#FFD93D', '#DDA0DD'];
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 type Props = {
   visible: boolean;
@@ -14,6 +23,8 @@ type Props = {
   initialEnd?: string;
   event?: CalendarEvent;
   userId: string;
+  habits: Habit[];
+  routines: Routine[];
   onClose: () => void;
   onSaved: () => void;
 };
@@ -34,7 +45,7 @@ function defaultEnd(start: string): string {
   return toLocalInput(d.toISOString());
 }
 
-export default function EventModal({ visible, mode, initialStart, initialEnd, event, userId, onClose, onSaved }: Props) {
+export default function EventModal({ visible, mode, initialStart, initialEnd, event, userId, habits, routines, onClose, onSaved }: Props) {
   const { t } = useLocale();
   const [title, setTitle]   = useState('');
   const [type, setType]     = useState<CalendarEventType>('event');
@@ -42,6 +53,8 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
   const [end, setEnd]       = useState(initialEnd ?? '');
   const [color, setColor]   = useState('#6C63FF');
   const [notes, setNotes]   = useState('');
+  const [linkedHabitIds, setLinkedHabitIds]   = useState<string[]>([]);
+  const [linkedRoutineIds, setLinkedRoutineIds] = useState<string[]>([]);
   const [loading, setLoading]   = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError]   = useState('');
@@ -62,11 +75,15 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
       setEnd(toLocalInput(event.end_at));
       setColor(event.color);
       setNotes(event.notes ?? '');
+      setLinkedHabitIds(event.linked_habit_ids ?? []);
+      setLinkedRoutineIds(event.linked_routine_ids ?? []);
     } else {
       setTitle('');
       setType('event');
       setColor('#6C63FF');
       setNotes('');
+      setLinkedHabitIds([]);
+      setLinkedRoutineIds([]);
       const s = initialStart ?? toLocalInput(new Date().toISOString());
       setStart(s);
       setEnd(initialEnd ?? defaultEnd(s));
@@ -75,19 +92,41 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  useEffect(() => {
-    if (!visible) return;
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [visible, onClose]);
-
-  useEffect(() => {
-    document.body.style.overflow = visible ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [visible]);
-
   if (!visible) return null;
+
+  function addHabit(id: string) {
+    if (!id || linkedHabitIds.includes(id)) return;
+    const habit = habits.find(h => h.id === id);
+    if (!habit) return;
+    setLinkedHabitIds(prev => {
+      if (prev.length === 0 && linkedRoutineIds.length === 0 && !title.trim()) {
+        setTitle(habit.name);
+        setColor(habit.color);
+      }
+      return [...prev, id];
+    });
+  }
+
+  function removeHabit(id: string) {
+    setLinkedHabitIds(prev => prev.filter(x => x !== id));
+  }
+
+  function addRoutine(id: string) {
+    if (!id || linkedRoutineIds.includes(id)) return;
+    const routine = routines.find(r => r.id === id);
+    if (!routine) return;
+    setLinkedRoutineIds(prev => {
+      if (prev.length === 0 && !title.trim()) {
+        setTitle(routine.name);
+        if (routine.color) setColor(routine.color);
+      }
+      return [...prev, id];
+    });
+  }
+
+  function removeRoutine(id: string) {
+    setLinkedRoutineIds(prev => prev.filter(x => x !== id));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -101,13 +140,18 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
         await createCalendarEvent({
           user_id: userId, title: title.trim(), type,
           start_at: fromLocalInput(start), end_at: fromLocalInput(end),
-          color, notes: notes.trim() || undefined, source: 'manual',
+          color, notes: notes.trim() || undefined,
+          source: 'manual',
+          linked_habit_ids: linkedHabitIds,
+          linked_routine_ids: linkedRoutineIds,
         });
       } else if (event) {
         await updateCalendarEvent(event.id, {
           title: title.trim(), type,
           start_at: fromLocalInput(start), end_at: fromLocalInput(end),
           color, notes: notes.trim() || undefined,
+          linked_habit_ids: linkedHabitIds,
+          linked_routine_ids: linkedRoutineIds,
         });
       }
       onSaved();
@@ -136,36 +180,44 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
     border: '1px solid var(--border)',
     color: 'var(--text-primary)',
   };
-  const focusBorder = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const focusBorder = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     (e.target.style.borderColor = 'var(--primary)');
-  const blurBorder = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const blurBorder = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     (e.target.style.borderColor = 'var(--border)');
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="w-full md:max-w-lg rounded-2xl animate-slide-up overflow-hidden"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}
-      >
-        <div
-          className="flex items-center justify-between px-6 py-4 sticky top-0"
-          style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
+  const footer = (
+    <div className="flex gap-2">
+      {mode === 'edit' && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
+          style={{ background: 'rgba(255,107,107,0.12)', color: 'var(--error)' }}
         >
-          <h2 className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-            {mode === 'create' ? t.event_new : t.event_edit}
-          </h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all"
-            style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)' }}
-          >✕</button>
-        </div>
+          {deleting ? '…' : '🗑️'}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={e => { e.preventDefault(); handleSubmit(e as unknown as React.FormEvent); }}
+        disabled={loading}
+        className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all"
+        style={{ background: loading ? 'var(--text-muted)' : color, cursor: loading ? 'not-allowed' : 'pointer' }}
+      >
+        {loading ? t.form_saving : mode === 'create' ? t.event_add : t.modal_save_changes}
+      </button>
+    </div>
+  );
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
+  return (
+    <ModalShell
+      visible={visible}
+      onClose={onClose}
+      title={mode === 'create' ? t.event_new : t.event_edit}
+      footer={footer}
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Type */}
           <div className="flex gap-2 flex-wrap">
             {TYPE_OPTIONS.map(opt => (
@@ -253,6 +305,132 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
             </div>
           </div>
 
+          {/* Link Habits & Routines */}
+          {(habits.length > 0 || routines.length > 0) && (
+            <div className="flex flex-col gap-3">
+              <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                Link Habit or Routine
+              </label>
+
+              {/* Habit dropdown */}
+              {habits.length > 0 && (
+                <select
+                  value=""
+                  onChange={e => { addHabit(e.target.value); e.currentTarget.value = ''; }}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                >
+                  <option value="">Add a habit…</option>
+                  {habits
+                    .filter(h => !linkedHabitIds.includes(h.id))
+                    .map(h => (
+                      <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
+                    ))}
+                </select>
+              )}
+
+              {/* Routine dropdown */}
+              {routines.length > 0 && (
+                <select
+                  value=""
+                  onChange={e => { addRoutine(e.target.value); e.currentTarget.value = ''; }}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                >
+                  <option value="">Add a routine…</option>
+                  {routines
+                    .filter(r => !linkedRoutineIds.includes(r.id))
+                    .map(r => (
+                      <option key={r.id} value={r.id}>{r.icon ?? '📋'} {r.name}</option>
+                    ))}
+                </select>
+              )}
+
+              {/* Linked habit chips */}
+              {linkedHabitIds.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {linkedHabitIds.map(id => {
+                    const habit = habits.find(h => h.id === id);
+                    if (!habit) return null;
+                    const accentColor = DIMENSION_COLOR[habit.dimension] ?? habit.color;
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                        style={{ background: accentColor + '12', border: `1px solid ${accentColor}35` }}
+                      >
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
+                          style={{ background: accentColor + '25' }}
+                        >
+                          {habit.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate" style={{ color: accentColor }}>
+                            {habit.name}
+                          </p>
+                          <p className="text-[10px] mt-0.5 capitalize" style={{ color: 'var(--text-muted)' }}>
+                            {habit.dimension} · {habit.type}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeHabit(id)}
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-xs flex-shrink-0 transition-all"
+                          style={{ background: 'var(--surface-elevated)', color: 'var(--text-muted)' }}
+                        >✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Linked routine chips */}
+              {linkedRoutineIds.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {linkedRoutineIds.map(id => {
+                    const routine = routines.find(r => r.id === id);
+                    if (!routine) return null;
+                    const accentColor = routine.color ?? '#6C63FF';
+                    const scheduledDays = routine.schedule_days.map(d => DAY_LABELS[d]).join(' · ');
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                        style={{ background: accentColor + '12', border: `1px solid ${accentColor}35` }}
+                      >
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
+                          style={{ background: accentColor + '25' }}
+                        >
+                          {routine.icon ?? '📋'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate" style={{ color: accentColor }}>
+                            {routine.name}
+                          </p>
+                          <p className="text-[10px] mt-0.5 capitalize" style={{ color: 'var(--text-muted)' }}>
+                            {routine.category} · {scheduledDays || 'No schedule'} · {routine.tasks.length} tasks
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeRoutine(id)}
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-xs flex-shrink-0 transition-all"
+                          style={{ background: 'var(--surface-elevated)', color: 'var(--text-muted)' }}
+                        >✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Notes */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>
@@ -271,30 +449,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
           </div>
 
           {error && <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>}
-
-          <div className="flex gap-2">
-            {mode === 'edit' && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
-                style={{ background: 'rgba(255,107,107,0.12)', color: 'var(--error)' }}
-              >
-                {deleting ? '…' : '🗑️'}
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all"
-              style={{ background: loading ? 'var(--text-muted)' : color, cursor: loading ? 'not-allowed' : 'pointer' }}
-            >
-              {loading ? t.form_saving : mode === 'create' ? t.event_add : t.modal_save_changes}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalShell>
   );
 }

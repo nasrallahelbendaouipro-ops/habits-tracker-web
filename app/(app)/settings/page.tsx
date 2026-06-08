@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useTheme } from '@/lib/theme';
 import { useLocale, LOCALE_LABELS, type Locale } from '@/lib/i18n';
+import { CalendarDays, HeartPulse, Activity, Watch, LogOut, Bell, BellOff, Moon, Sun, Smartphone } from 'lucide-react';
 import { getHealthConnectAuthUrl } from '@/lib/integrations/health-connect';
 import type { User } from '@supabase/supabase-js';
 import GlassCard from '@/components/ui/GlassCard';
+import { requestPermission } from '@/lib/push';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
 
 function AppleHealthSection() {
   const [token, setToken]       = useState<string | null>(null);
@@ -55,7 +56,9 @@ function AppleHealthSection() {
     setTimeout(() => setCopied(null), 2000);
   }
 
-  const ingestUrl = `${APP_URL}/api/health/ingest`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ??
+    (typeof window !== 'undefined' ? window.location.origin : null);
+  const ingestUrl = appUrl ? `${appUrl}/api/health/ingest` : null;
 
   const STEPS = [
     { n: 1, text: 'Open the Shortcuts app on your iPhone.' },
@@ -113,12 +116,13 @@ function AppleHealthSection() {
       <div className="mb-4">
         <p className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: 'var(--text-muted)' }}>Ingest URL</p>
         <div className="flex items-center gap-2">
-          <div className="flex-1 px-3 py-2 rounded-xl font-mono text-xs overflow-hidden text-ellipsis whitespace-nowrap" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-            {ingestUrl}
+          <div className="flex-1 px-3 py-2 rounded-xl font-mono text-xs overflow-hidden text-ellipsis whitespace-nowrap" style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: ingestUrl ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
+            {ingestUrl ?? 'Set NEXT_PUBLIC_APP_URL in your .env'}
           </div>
           <button
-            onClick={() => copy(ingestUrl, 'url')}
-            className="px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all"
+            onClick={() => ingestUrl && copy(ingestUrl, 'url')}
+            disabled={!ingestUrl}
+            className="px-3 py-2 rounded-xl text-xs font-semibold flex-shrink-0 transition-all disabled:opacity-40"
             style={{ background: copied === 'url' ? 'var(--success)20' : 'var(--primary-muted)', color: copied === 'url' ? 'var(--success)' : 'var(--primary)', border: `1px solid ${copied === 'url' ? 'var(--success)' : 'var(--primary-muted)'}` }}
           >
             {copied === 'url' ? '✓ Copied' : 'Copy'}
@@ -139,7 +143,7 @@ function AppleHealthSection() {
         className="w-full text-left text-xs font-semibold py-2.5 px-3 rounded-xl transition-all flex items-center justify-between"
         style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
       >
-        <span>📱 Step-by-step Shortcut setup</span>
+        <span className="flex items-center gap-1.5"><Smartphone size={14} /> Step-by-step Shortcut setup</span>
         <span style={{ color: 'var(--text-muted)' }}>{showSteps ? '▲' : '▼'}</span>
       </button>
 
@@ -164,6 +168,101 @@ function AppleHealthSection() {
   "weight_kg": 80.5
 }`}</pre>
           </div>
+        </div>
+      )}
+    </GlassCard>
+  );
+}
+
+function NotificationsSection() {
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [anchorTime, setAnchorTime] = useState('08:00');
+  const [supported, setSupported] = useState(false);
+  const [iosHint, setIosHint] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setSupported(true);
+      setPermission(Notification.permission);
+      setAnchorTime(localStorage.getItem('anchor_time') ?? '08:00');
+    }
+  }, []);
+
+  if (!supported) return null;
+
+  async function handleToggle() {
+    const result = await requestPermission();
+    setPermission(result);
+    if (result === 'granted') {
+      localStorage.setItem('notifications_enabled', 'true');
+      setIosHint(false);
+    } else if (result === 'default') {
+      // iOS ≥ 16.4 not on home screen: permission stays 'default' after request
+      setIosHint(true);
+    }
+  }
+
+  function handleTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setAnchorTime(e.target.value);
+    localStorage.setItem('anchor_time', e.target.value);
+  }
+
+  return (
+    <GlassCard className="mb-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Bell size={14} style={{ color: 'var(--text-muted)' }} />
+        <p className="text-xs uppercase tracking-wide font-semibold" style={{ color: 'var(--text-muted)' }}>
+          Notifications
+        </p>
+      </div>
+
+      {permission === 'denied' ? (
+        <div className="flex items-start gap-2">
+          <BellOff size={15} style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }} />
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Notifications blocked. Enable in your browser Settings under Site Permissions.
+          </p>
+        </div>
+      ) : permission === 'granted' ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Daily check-in reminder</span>
+            <span
+              className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
+              style={{ background: 'var(--primary-muted)', color: 'var(--primary)' }}
+            >
+              ON
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Remind me at</span>
+            <input
+              type="time"
+              value={anchorTime}
+              onChange={handleTimeChange}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-mono"
+              style={{
+                background: 'var(--surface-elevated)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-primary)',
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <button
+            onClick={handleToggle}
+            className="text-sm px-4 py-2 rounded-xl font-medium transition-all w-full text-center"
+            style={{ background: 'var(--primary-muted)', color: 'var(--primary)', border: '1px solid var(--primary-muted)' }}
+          >
+            Enable notifications
+          </button>
+          {iosHint && (
+            <p className="text-xs leading-relaxed mt-1" style={{ color: 'var(--text-muted)' }}>
+              Add LifeOS to your Home Screen first (Safari → Share → Add to Home Screen), then try again.
+            </p>
+          )}
         </div>
       )}
     </GlassCard>
@@ -214,11 +313,13 @@ export default function SettingsPage() {
         </p>
         <button
           onClick={toggleTheme}
+          role="switch"
+          aria-checked={theme === 'dark'}
           className="flex items-center justify-between w-full py-2 text-sm"
           style={{ color: 'var(--text-primary)' }}
         >
           <div className="flex items-center gap-3">
-            <span>{theme === 'dark' ? '🌙' : '☀️'}</span>
+            {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
             <span>{theme === 'dark' ? t.settings_dark_mode : t.settings_light_mode}</span>
           </div>
           <div
@@ -232,6 +333,9 @@ export default function SettingsPage() {
           </div>
         </button>
       </GlassCard>
+
+      {/* Notifications */}
+      <NotificationsSection />
 
       {/* Language */}
       <GlassCard className="mb-4">
@@ -263,7 +367,7 @@ export default function SettingsPage() {
         </p>
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center gap-3">
-            <span>📅</span>
+            <CalendarDays size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t.settings_gcal}</p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.settings_gcal_desc}</p>
@@ -291,8 +395,8 @@ export default function SettingsPage() {
         {/* Google Health Connect */}
         <div className="flex items-center justify-between py-2.5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: 'var(--body)20', border: '1px solid var(--body)30' }}>
-              💪
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--body)20', border: '1px solid var(--body)30', color: 'var(--body)' }}>
+              <Activity size={18} />
             </div>
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Google Health Connect</p>
@@ -311,8 +415,8 @@ export default function SettingsPage() {
         {/* Apple Health */}
         <div className="flex items-center justify-between py-2.5" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: 'var(--mind)20', border: '1px solid var(--mind)30' }}>
-              🍎
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--mind)20', border: '1px solid var(--mind)30', color: 'var(--mind)' }}>
+              <HeartPulse size={18} />
             </div>
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Apple Health</p>
@@ -327,8 +431,8 @@ export default function SettingsPage() {
         {/* Wearables row */}
         <div className="flex items-center justify-between py-2.5" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: 'var(--soul)20', border: '1px solid var(--soul)30' }}>
-              ⌚
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--soul)20', border: '1px solid var(--soul)30', color: 'var(--soul)' }}>
+              <Watch size={18} />
             </div>
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Garmin / Fitbit / Oura / Whoop</p>
@@ -348,12 +452,10 @@ export default function SettingsPage() {
         </p>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 py-2 text-sm font-medium w-full text-left transition-all rounded-lg px-2 -mx-2"
+          className="settings-signout-btn flex items-center gap-3 py-2 text-sm font-medium w-full text-left transition-all rounded-lg px-2 -mx-2"
           style={{ color: 'var(--error)' }}
-          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,107,107,0.08)')}
-          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
         >
-          <span>🚪</span>
+          <LogOut size={17} />
           {t.settings_sign_out}
         </button>
       </GlassCard>

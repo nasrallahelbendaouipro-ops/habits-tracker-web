@@ -1,7 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -10,10 +9,14 @@ import frLocale from '@fullcalendar/core/locales/fr';
 import arLocale from '@fullcalendar/core/locales/ar';
 import type { DateClickArg, EventResizeDoneArg } from '@fullcalendar/interaction';
 import type { EventClickArg, EventDropArg, EventInput, DatesSetArg, EventContentArg } from '@fullcalendar/core';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { updateCalendarEvent } from '@/lib/calendar';
+import { updateHabit } from '@/lib/habits';
+import { getRoutines } from '@/lib/routines';
 import { useLocale } from '@/lib/i18n';
-import type { CalendarEvent } from '@/lib/types';
+import { toISODate } from '@/lib/utils';
+import type { CalendarEvent, Habit, Routine } from '@/lib/types';
 import type { GoogleCalendarEvent } from '@/lib/google-calendar';
 import EventModal from './EventModal';
 
@@ -53,6 +56,13 @@ function EventPill({ info }: { info: EventContentArg }) {
       {!isAllDay && timeText && (
         <span style={{ fontSize: '0.62rem', opacity: 0.8, fontWeight: 500, color: '#fff', lineHeight: 1 }}>
           {timeText}
+          {!!(event.extendedProps.linkedRoutineIds as string[] | undefined)?.length && (
+            <span style={{ marginLeft: 3 }}>
+              🏋️{(event.extendedProps.linkedRoutineIds as string[]).length > 1
+                ? ` ×${(event.extendedProps.linkedRoutineIds as string[]).length}`
+                : ''}
+            </span>
+          )}
         </span>
       )}
       <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#fff', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -63,12 +73,27 @@ function EventPill({ info }: { info: EventContentArg }) {
 }
 
 export default function CalendarView({ userId }: { userId: string }) {
-  const router = useRouter();
   const { locale, t } = useLocale();
+  const router = useRouter();
   const calendarRef = useRef<FullCalendar>(null);
   const [modal, setModal] = useState<ModalState>(null);
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [habits, setHabits]     = useState<Habit[]>([]);
+
+  useEffect(() => {
+    getRoutines().then(setRoutines).catch(() => {});
+    createClient().auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      createClient()
+        .from('habits')
+        .select('id, name, icon, color, type, dimension, frequency, target_days, metadata, user_id, created_at, calendar_start_time, calendar_duration_min, calendar_overrides')
+        .eq('user_id', data.user.id)
+        .order('name')
+        .then(({ data: rows }) => { if (rows) setHabits(rows as Habit[]); });
+    });
+  }, []);
 
   const fcLocale = locale === 'fr' ? frLocale : locale === 'ar' ? arLocale : undefined;
 
@@ -82,65 +107,118 @@ export default function CalendarView({ userId }: { userId: string }) {
       const rangeStart = info.startStr.slice(0, 10);
       const rangeEnd   = info.endStr.slice(0, 10);
 
-      const [habitsRes, logsRes, eventsRes, googleRes] = await Promise.all([
-        supabase.from('habits').select('id, name, icon, color, frequency, target_days').eq('user_id', userId),
-        supabase.from('habit_logs').select('habit_id, completed_at').eq('user_id', userId).gte('completed_at', rangeStart).lte('completed_at', rangeEnd),
-        supabase.from('calendar_events').select('*').eq('user_id', userId).gte('start_at', info.startStr).lte('start_at', info.endStr),
-        fetch(`/api/google-calendar/events?timeMin=${encodeURIComponent(info.startStr)}&timeMax=${encodeURIComponent(info.endStr)}`).then(r => r.json()).catch(() => ({ events: [] })),
+      // Fetch habits (for recurrence look-up), in-range events, pre-range events
+      // (pre-range needed so a recurring event created before this week still shows),
+      // and Google Calendar events.
+      const [habitsRes, eventsRes, pastEventsRes, googleRes] = await Promise.all([
+        supabase.from('habits')
+          .select('id, frequency, target_days')
+          .eq('user_id', userId),
+        supabase.from('calendar_events').select('*').eq('user_id', userId)
+          .gte('start_at', info.startStr).lte('start_at', info.endStr),
+        // events that started before the range but may recur into it
+        supabase.from('calendar_events').select('*').eq('user_id', userId)
+          .lt('start_at', info.startStr),
+        fetch(`/api/google-calendar/events?timeMin=${encodeURIComponent(info.startStr)}&timeMax=${encodeURIComponent(info.endStr)}`)
+          .then(r => r.json()).catch(() => ({ events: [] })),
       ]);
 
       const habitMap = new Map(
-        (habitsRes.data ?? []).map(h => [h.id, h as { id: string; name: string; icon: string; color: string; frequency: string; target_days: number[] }])
+        (habitsRes.data ?? []).map(h => [
+          h.id,
+          h as { id: string; frequency: string; target_days: number[] },
+        ])
       );
 
-      // Build a set of completed dates per habit for quick lookup
-      const logMap = new Map<string, Set<string>>();
-      for (const log of logsRes.data ?? []) {
-        if (!logMap.has(log.habit_id)) logMap.set(log.habit_id, new Set());
-        logMap.get(log.habit_id)!.add(log.completed_at);
-      }
+      // Pre-range events are only relevant if they have linked habits (recurrence)
+      const pastRecurring = (pastEventsRes.data ?? []).filter(
+        ev => (ev.linked_habit_ids as string[] | null)?.length
+      );
 
-      const habitEvents: EventInput[] = (logsRes.data ?? []).map(log => {
-        const h = habitMap.get(log.habit_id);
-        return {
-          id: `habit-${log.habit_id}-${log.completed_at}`,
-          title: `${h?.icon ?? '✅'} ${h?.name ?? 'Habit'}`,
-          date: log.completed_at,
-          allDay: true,
-          backgroundColor: (h?.color ?? '#6C63FF') + 'CC',
-          borderColor: h?.color ?? '#6C63FF',
-          textColor: '#ffffff',
-          extendedProps: { eventType: 'habit', habitId: log.habit_id },
-          editable: false,
-        };
-      });
+      // All events to process: in-range (editable) + past recurring (read-only anchors)
+      const allSourceEvents = [
+        ...(eventsRes.data ?? []).map(ev => ({ ev, inRange: true })),
+        ...pastRecurring.map(ev => ({ ev, inRange: false })),
+      ];
 
-      // Ghost events: scheduled but not yet done (today + future only)
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const ghostEvents: EventInput[] = [];
-      for (const [habitId, habit] of habitMap) {
+      const calEvents: EventInput[] = [];
+
+      for (const { ev, inRange } of allSourceEvents) {
+        // Original event — only add if it falls in the view range
+        if (inRange) {
+          calEvents.push({
+            id: `cal-${ev.id}`,
+            title: ev.title,
+            start: ev.start_at,
+            end: ev.end_at,
+            backgroundColor: ev.color,
+            borderColor: ev.color,
+            textColor: '#ffffff',
+            extendedProps: {
+              eventType: 'calendar_event',
+              rawEvent: ev,
+              linkedRoutineIds: (ev.linked_routine_ids ?? []) as string[],
+            },
+            editable: true,
+          });
+        }
+
+        // ── Recurrence expansion ──────────────────────────────────────
+        const linkedHabitIds = (ev.linked_habit_ids ?? []) as string[];
+        if (!linkedHabitIds.length) continue;
+
+        const linkedHabits = linkedHabitIds
+          .map(id => habitMap.get(id))
+          .filter((h): h is { id: string; frequency: string; target_days: number[] } => !!h);
+
+        if (!linkedHabits.length) continue;
+
+        const isDaily = linkedHabits.some(h => h.frequency === 'daily');
+        const weeklyDays = new Set(
+          linkedHabits
+            .filter(h => h.frequency === 'weekly')
+            .flatMap(h => h.target_days ?? [])
+        );
+
+        if (!isDaily && weeklyDays.size === 0) continue;
+
+        const startMs = new Date(ev.start_at).getTime();
+        const duration = new Date(ev.end_at).getTime() - startMs;
+        const originalDateStr = ev.start_at.slice(0, 10);
+
         const cursor = new Date(rangeStart + 'T00:00:00');
-        const endDate = new Date(rangeEnd + 'T00:00:00');
-        while (cursor <= endDate) {
+        const rangeEndDate = new Date(rangeEnd + 'T00:00:00');
+
+        while (cursor <= rangeEndDate) {
           const ds = cursor.toISOString().slice(0, 10);
-          if (ds >= todayStr) {
+
+          if (ds !== originalDateStr) {
+            // target_days uses 1=Mon…7=Sun (same convention as ghost events)
             const dow = cursor.getDay() === 0 ? 7 : cursor.getDay();
-            const scheduled =
-              habit.frequency === 'daily' || !habit.target_days?.length ||
-              habit.target_days.includes(dow);
-            const done = logMap.get(habitId)?.has(ds);
-            if (scheduled && !done) {
-              ghostEvents.push({
-                id: `sched-${habitId}-${ds}`,
-                title: `${habit.icon} ${habit.name}`,
-                date: ds,
-                allDay: true,
-                backgroundColor: (habit.color ?? '#6C63FF') + '33',
-                borderColor: habit.color ?? '#6C63FF',
+            const shouldShow = isDaily || weeklyDays.has(dow);
+
+            if (shouldShow) {
+              const offsetMs =
+                cursor.getTime() - new Date(originalDateStr + 'T00:00:00').getTime();
+              const newStart = new Date(startMs + offsetMs);
+              const newEnd   = new Date(newStart.getTime() + duration);
+
+              calEvents.push({
+                id: `cal-${ev.id}-recur-${ds}`,
+                title: ev.title,
+                start: newStart.toISOString(),
+                end: newEnd.toISOString(),
+                // slightly transparent to distinguish from the "anchor" event
+                backgroundColor: ev.color + 'CC',
+                borderColor: ev.color,
                 textColor: '#ffffff',
-                extendedProps: { eventType: 'habit_scheduled', habitId },
-                editable: false,
-                classNames: ['fc-habit-ghost'],
+                extendedProps: {
+                  eventType: 'calendar_event',
+                  rawEvent: ev,          // same raw event → edit modal opens original
+                  linkedRoutineIds: (ev.linked_routine_ids ?? []) as string[],
+                  isRecurrence: true,
+                },
+                editable: false,         // recurrences can't be dragged individually
               });
             }
           }
@@ -148,17 +226,43 @@ export default function CalendarView({ userId }: { userId: string }) {
         }
       }
 
-      const calEvents: EventInput[] = (eventsRes.data ?? []).map(ev => ({
-        id: `cal-${ev.id}`,
-        title: ev.title,
-        start: ev.start_at,
-        end: ev.end_at,
-        backgroundColor: ev.color,
-        borderColor: ev.color,
-        textColor: '#ffffff',
-        extendedProps: { eventType: 'calendar_event', rawEvent: ev },
-        editable: true,
-      }));
+      // ── Habit calendar events ─────────────────────────────────────────────────
+      const habitCalEvents: EventInput[] = [];
+      const rangeStartDate = new Date(rangeStart + 'T00:00:00');
+      const rangeEndDate   = new Date(rangeEnd   + 'T00:00:00');
+
+      for (const habit of habits) {
+        if (!habit.calendar_start_time || !habit.calendar_duration_min) continue;
+        const overrides = habit.calendar_overrides ?? {};
+        const cursor = new Date(rangeStartDate);
+        while (cursor <= rangeEndDate) {
+          const dow = cursor.getDay() === 0 ? 7 : cursor.getDay();
+          const isScheduled = habit.frequency === 'daily' || (habit.target_days ?? []).includes(dow);
+          if (isScheduled) {
+            // Per-day override takes priority over the global default
+            const ov = overrides[String(dow)];
+            const timeStr    = ov?.start    ?? habit.calendar_start_time;
+            const durationMin = ov?.duration ?? habit.calendar_duration_min;
+            const [hh, mm] = timeStr.split(':').map(Number);
+            const start = new Date(cursor);
+            start.setHours(hh, mm, 0, 0);
+            const end = new Date(start.getTime() + durationMin * 60_000);
+            const ds = toISODate(cursor);
+            habitCalEvents.push({
+              id: `habit-cal-${habit.id}-${ds}`,
+              title: `${habit.icon} ${habit.name}`,
+              start: start.toISOString(),
+              end: end.toISOString(),
+              backgroundColor: habit.color + 'CC',
+              borderColor: habit.color,
+              textColor: '#ffffff',
+              editable: true,
+              extendedProps: { eventType: 'habit_calendar', habitId: habit.id },
+            });
+          }
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      }
 
       const googleEvents: EventInput[] = ((googleRes.events ?? []) as GoogleCalendarEvent[]).map(ev => ({
         id: `gcal-${ev.id}`,
@@ -173,11 +277,11 @@ export default function CalendarView({ userId }: { userId: string }) {
         extendedProps: { eventType: 'google_event' },
       }));
 
-      successCallback([...habitEvents, ...ghostEvents, ...calEvents, ...googleEvents]);
+      successCallback([...calEvents, ...habitCalEvents, ...googleEvents]);
     } catch (err) {
       failureCallback(err instanceof Error ? err : new Error('Failed to load events'));
     }
-  }, [userId]);
+  }, [userId, habits]);
 
   function handleDatesSet(arg: DatesSetArg) {
     setViewTitle(arg.view.title);
@@ -194,16 +298,69 @@ export default function CalendarView({ userId }: { userId: string }) {
   }
 
   function handleEventClick(arg: EventClickArg) {
-    const { eventType, habitId, rawEvent } = arg.event.extendedProps;
-    if (eventType === 'habit' || eventType === 'habit_scheduled') {
+    const { eventType, rawEvent, habitId } = arg.event.extendedProps;
+    if (eventType === 'habit_calendar') {
       router.push(`/habits/${habitId}`);
-    } else if (eventType === 'calendar_event' && rawEvent) {
+      return;
+    }
+    if (eventType === 'calendar_event' && rawEvent) {
       setModal({ mode: 'edit', event: rawEvent as CalendarEvent });
     }
   }
 
   async function handleEventDrop(arg: EventDropArg) {
-    const { eventType, rawEvent } = arg.event.extendedProps;
+    const { eventType, rawEvent, habitId } = arg.event.extendedProps;
+    if (eventType === 'habit_calendar') {
+      if (!arg.event.start) { arg.revert(); return; }
+      const hStr = String(arg.event.start.getHours()).padStart(2, '0');
+      const mStr = String(arg.event.start.getMinutes()).padStart(2, '0');
+      const newTimeStr  = `${hStr}:${mStr}`;
+      const newDuration = arg.event.end
+        ? Math.round((arg.event.end.getTime() - arg.event.start.getTime()) / 60_000)
+        : undefined;
+
+      const newDow = arg.event.start.getDay() === 0 ? 7 : arg.event.start.getDay();
+      const habit  = habits.find(h => h.id === (habitId as string));
+      const currentOverrides = habit?.calendar_overrides ?? {};
+      const updatedOverrides = {
+        ...currentOverrides,
+        [String(newDow)]: {
+          start: newTimeStr,
+          duration: newDuration ?? currentOverrides[String(newDow)]?.duration ?? habit?.calendar_duration_min,
+        },
+      };
+
+      const updates: Parameters<typeof updateHabit>[1] = { calendar_overrides: updatedOverrides };
+
+      // If dragged to a new day, expand target_days to include it
+      if (arg.oldEvent.start) {
+        const oldDow = arg.oldEvent.start.getDay() === 0 ? 7 : arg.oldEvent.start.getDay();
+        if (newDow !== oldDow && habit && habit.frequency === 'weekly') {
+          const existing = habit.target_days ?? [];
+          if (!existing.includes(newDow)) {
+            const newDays = [...existing, newDow].sort((a, b) => a - b);
+            updates.target_days = newDays;
+            setHabits(prev => prev.map(h =>
+              h.id === habit.id ? { ...h, target_days: newDays, calendar_overrides: updatedOverrides } : h
+            ));
+          } else {
+            setHabits(prev => prev.map(h =>
+              h.id === (habitId as string) ? { ...h, calendar_overrides: updatedOverrides } : h
+            ));
+          }
+        } else {
+          setHabits(prev => prev.map(h =>
+            h.id === (habitId as string) ? { ...h, calendar_overrides: updatedOverrides } : h
+          ));
+        }
+      }
+
+      try {
+        await updateHabit(habitId as string, updates);
+        refreshEvents();
+      } catch { arg.revert(); }
+      return;
+    }
     if (eventType !== 'calendar_event' || !rawEvent) { arg.revert(); return; }
     try {
       await updateCalendarEvent((rawEvent as CalendarEvent).id, {
@@ -216,7 +373,28 @@ export default function CalendarView({ userId }: { userId: string }) {
   }
 
   async function handleEventResize(arg: EventResizeDoneArg) {
-    const { eventType, rawEvent } = arg.event.extendedProps;
+    const { eventType, rawEvent, habitId } = arg.event.extendedProps;
+    if (eventType === 'habit_calendar') {
+      if (!arg.event.start || !arg.event.end) { arg.revert(); return; }
+      const hStr = String(arg.event.start.getHours()).padStart(2, '0');
+      const mStr = String(arg.event.start.getMinutes()).padStart(2, '0');
+      const newTimeStr  = `${hStr}:${mStr}`;
+      const newDuration = Math.round((arg.event.end.getTime() - arg.event.start.getTime()) / 60_000);
+      const dow  = arg.event.start.getDay() === 0 ? 7 : arg.event.start.getDay();
+      const habit = habits.find(h => h.id === (habitId as string));
+      const updatedOverrides = {
+        ...(habit?.calendar_overrides ?? {}),
+        [String(dow)]: { start: newTimeStr, duration: newDuration },
+      };
+      setHabits(prev => prev.map(h =>
+        h.id === (habitId as string) ? { ...h, calendar_overrides: updatedOverrides } : h
+      ));
+      try {
+        await updateHabit(habitId as string, { calendar_overrides: updatedOverrides });
+        refreshEvents();
+      } catch { arg.revert(); }
+      return;
+    }
     if (eventType !== 'calendar_event' || !rawEvent) { arg.revert(); return; }
     try {
       await updateCalendarEvent((rawEvent as CalendarEvent).id, {
@@ -331,7 +509,7 @@ export default function CalendarView({ userId }: { userId: string }) {
         selectable={true}
         dayMaxEvents={3}
         nowIndicator={true}
-        height="auto"
+        height="calc(100vh - 250px)"
         eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
         slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
         slotMinTime="06:00:00"
@@ -343,6 +521,8 @@ export default function CalendarView({ userId }: { userId: string }) {
           visible={true}
           mode={modal.mode}
           userId={userId}
+          habits={habits}
+          routines={routines}
           initialStart={modal.mode === 'create' ? modal.start : undefined}
           initialEnd={modal.mode === 'create' ? modal.end : undefined}
           event={modal.mode === 'edit' ? modal.event : undefined}
