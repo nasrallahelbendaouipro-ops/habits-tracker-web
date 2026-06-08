@@ -2,20 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { Pencil, Trash2 } from 'lucide-react';
 import { getRoutines, deleteRoutine } from '@/lib/routines';
+import { useLocale } from '@/lib/i18n';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Routine } from '@/lib/types';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function RoutineRow({ routine, onDelete }: { routine: Routine; onDelete: (id: string) => void }) {
+function RoutineRow({ routine, onDeleteRequest }: { routine: Routine; onDeleteRequest: (id: string) => void }) {
   const accentColor = routine.color ?? 'var(--primary)';
   const scheduledDays = routine.schedule_days.map(d => DAY_LABELS[d]).join(' · ');
   const taskCount = routine.tasks.length;
 
   return (
     <div
-      className="flex items-center gap-4 p-4 rounded-2xl transition-all group"
+      className="flex items-center gap-4 p-4 rounded-2xl transition-all"
       style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${accentColor}` }}
     >
       <div
@@ -32,20 +34,22 @@ function RoutineRow({ routine, onDelete }: { routine: Routine; onDelete: (id: st
         </p>
       </div>
 
-      <div className="flex gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex gap-1.5 flex-shrink-0">
         <Link
           href={`/routines/${routine.id}/edit`}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all"
           style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+          aria-label={`Edit ${routine.name}`}
         >
-          Edit
+          <Pencil size={14} />
         </Link>
         <button
-          onClick={() => onDelete(routine.id)}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-          style={{ background: 'rgba(255,107,107,0.1)', color: 'var(--error)', border: '1px solid rgba(255,107,107,0.2)' }}
+          onClick={() => onDeleteRequest(routine.id)}
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all"
+          style={{ background: 'var(--error-muted)', color: 'var(--error)' }}
+          aria-label={`Delete ${routine.name}`}
         >
-          Delete
+          <Trash2 size={14} />
         </button>
       </div>
 
@@ -55,8 +59,10 @@ function RoutineRow({ routine, onDelete }: { routine: Routine; onDelete: (id: st
 }
 
 export default function RoutinesPage() {
+  const { t } = useLocale();
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -70,7 +76,6 @@ export default function RoutinesPage() {
   useEffect(() => { load(); }, []);
 
   async function handleDelete(id: string) {
-    if (!confirm('Delete this routine?')) return;
     await deleteRoutine(id);
     load();
   }
@@ -123,13 +128,20 @@ export default function RoutinesPage() {
                 </h2>
                 <div className="flex flex-col gap-2">
                   {group.items.map(r => (
-                    <RoutineRow key={r.id} routine={r} onDelete={handleDelete} />
+                    <RoutineRow key={r.id} routine={r} onDeleteRequest={setConfirmDeleteId} />
                   ))}
                 </div>
               </div>
             ))}
         </div>
       )}
+
+      <ConfirmDialog
+        visible={!!confirmDeleteId}
+        message={t.routines_delete_confirm}
+        onConfirm={() => { if (confirmDeleteId) handleDelete(confirmDeleteId); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

@@ -36,7 +36,9 @@ function RatingPicker({ label, value, onChange, color, hint }: {
             <button
               key={n}
               onClick={() => onChange(active ? undefined : n)}
-              className="flex-1 h-8 rounded-lg text-xs font-bold transition-all"
+              aria-label={`${label} ${n} out of 10`}
+              aria-pressed={active}
+              className="flex-1 h-11 rounded-lg text-xs font-bold transition-all"
               style={{
                 background: active ? color : 'var(--surface-elevated)',
                 color: active ? 'white' : 'var(--text-muted)',
@@ -72,14 +74,8 @@ function MetricInput({ label, value, onChange, unit, min, max, step = 0.1 }: {
           step={step}
           onChange={e => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
           placeholder="—"
-          className="w-20 px-2 py-1.5 rounded-lg text-sm text-right outline-none transition-all"
-          style={{
-            background: 'var(--surface-elevated)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-primary)',
-          }}
-          onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+          className="form-input w-20 text-right"
+          style={{ padding: '6px 8px' }}
         />
         <span className="text-xs w-8 flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{unit}</span>
       </div>
@@ -92,8 +88,10 @@ function MetricInput({ label, value, onChange, unit, min, max, step = 0.1 }: {
 function HabitRow({ habit, onToggle }: { habit: HabitWithStreak; onToggle: () => void }) {
   const dimColor = DIM_COLOR[habit.dimension] ?? 'var(--primary)';
   return (
-    <div
-      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+    <button
+      type="button"
+      aria-pressed={habit.completedToday}
+      className="flex items-center gap-3 p-3 rounded-xl transition-all w-full text-left"
       style={{ background: habit.completedToday ? dimColor + '12' : 'var(--surface-elevated)', border: `1px solid ${habit.completedToday ? dimColor + '40' : 'var(--border)'}` }}
       onClick={onToggle}
     >
@@ -112,7 +110,7 @@ function HabitRow({ habit, onToggle }: { habit: HabitWithStreak; onToggle: () =>
           </svg>
         )}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -290,10 +288,7 @@ export default function CheckInPage() {
           onChange={e => setNotes(e.target.value)}
           placeholder="How was your day? Any thoughts or reflections…"
           rows={3}
-          className="w-full px-3 py-2 rounded-xl text-sm outline-none resize-none transition-all"
-          style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-          onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-          onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+          className="form-input resize-none"
         />
       </GlassCard>
 

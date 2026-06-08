@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
 type Props = {
   visible: boolean;
@@ -69,7 +70,7 @@ export default function ModalShell({ visible, onClose, title, footer, children }
                 whileTap={{ scale: 0.9 }}
                 aria-label="Close"
               >
-                ✕
+                <X size={16} />
               </motion.button>
             </div>
 

@@ -395,3 +395,30 @@ body {
   font-size: 0.75rem;
   margin-top: 6px;
 }
+
+/* ============================================
+   SETTINGS — sign-out hover (CSS, no inline JS)
+   ============================================ */
+.settings-signout-btn:hover {
+  background: rgba(255,107,107,0.08) !important;
+}
+
+/* ============================================
+   REDUCED MOTION — disable non-essential animations
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-bounce-in,
+  .animate-item {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .animate-pulse {
+    animation: none !important;
+  }
+  .animate-check-draw path {
+    animation: none !important;
+  }
+}
