@@ -84,6 +84,9 @@ export type Habit = {
   target_days: number[];
   metadata: HabitMetadata;
   created_at: string;
+  calendar_start_time?: string;   // HH:MM — default time for all days
+  calendar_duration_min?: number;
+  calendar_overrides?: Record<string, { start: string; duration?: number }>; // "1"–"7" keyed by ISO dow
 };
 
 export type HabitLog = {
@@ -115,6 +118,8 @@ export type CalendarEvent = {
   notes?: string;
   source: CalendarEventSource;
   google_event_id?: string;
+  linked_habit_ids: string[];
+  linked_routine_ids: string[];
   created_at: string;
 };
 
@@ -164,6 +169,65 @@ export type GoalWithHabits = Goal & {
   completionRate: number;  // 0–100, average across linked habits
 };
 
+export type GoalWithLinked = GoalWithHabits & {
+  routines: Routine[];
+  totalTimeSeconds: number;
+};
+
+// ─── Routines ─────────────────────────────────────────────────────────────────
+
+export type RoutineCategory = 'sport' | 'data' | 'custom';
+export type RoutineTaskType = 'reps' | 'time' | 'bilateral' | 'resource';
+
+export type RoutineTaskResource = { url: string; label: string };
+
+export type RoutineTask = {
+  id: string;
+  section?: string;
+  name: string;
+  type: RoutineTaskType;
+  sets?: number;
+  reps?: number;
+  duration_min?: number;
+  note?: string;
+  resources?: RoutineTaskResource[];
+};
+
+export type Routine = {
+  id: string;
+  user_id: string;
+  name: string;
+  category: RoutineCategory;
+  icon?: string;
+  color?: string;
+  schedule_days: number[];
+  tasks: RoutineTask[];
+  created_at: string;
+};
+
+export type ExerciseProgress = {
+  completed_sets: number;
+  current_left_done: boolean;
+  current_right_done: boolean;
+};
+
+export type RoutineSession = {
+  id: string;
+  user_id: string;
+  routine_id: string;
+  date: string;
+  completed_task_ids: string[];
+  exercise_progress: Record<string, ExerciseProgress>;
+  started_at: string | null;
+  paused_at: string | null;
+  pause_duration_seconds: number;
+  completed_at?: string;
+};
+
+export type RoutineWithSession = Routine & {
+  todaySession?: RoutineSession;
+};
+
 // ─── Form Values ──────────────────────────────────────────────────────────────
 
 export type HabitFormValues = {
@@ -175,4 +239,7 @@ export type HabitFormValues = {
   frequency: 'daily' | 'weekly';
   target_days: number[];
   metadata: HabitMetadata;
+  calendar_start_time?: string;
+  calendar_duration_min?: number;
+  calendar_overrides?: Record<string, { start: string; duration?: number }>;
 };

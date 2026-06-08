@@ -3,18 +3,20 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchGoals, deleteGoal } from '@/lib/goals';
+import { getRoutines } from '@/lib/routines';
 import { useLocale } from '@/lib/i18n';
-import type { GoalWithHabits, Habit } from '@/lib/types';
+import type { GoalWithLinked, Habit, Routine } from '@/lib/types';
 import GoalCard from '@/components/goals/GoalCard';
 import GoalModal from '@/components/goals/GoalModal';
 
 export default function GoalsPage() {
   const { t } = useLocale();
-  const [userId, setUserId]     = useState<string | null>(null);
-  const [goals, setGoals]       = useState<GoalWithHabits[]>([]);
+  const [userId, setUserId]       = useState<string | null>(null);
+  const [goals, setGoals]         = useState<GoalWithLinked[]>([]);
   const [allHabits, setAllHabits] = useState<Habit[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [editing, setEditing]   = useState<GoalWithHabits | null>(null);
+  const [allRoutines, setAllRoutines] = useState<Routine[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [editing, setEditing]     = useState<GoalWithLinked | null>(null);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export default function GoalsPage() {
       ]);
       setGoals(goalsData);
       setAllHabits((habitsRes.data ?? []) as Habit[]);
+      getRoutines().then(setAllRoutines).catch(() => {});
     } finally {
       setLoading(false);
     }
@@ -48,7 +51,7 @@ export default function GoalsPage() {
     if (userId) load(userId);
   }
 
-  function handleEdit(goal: GoalWithHabits) {
+  function handleEdit(goal: GoalWithLinked) {
     setEditing(goal);
     setShowModal(true);
   }
@@ -91,7 +94,7 @@ export default function GoalsPage() {
       ) : goals.length === 0 ? (
         <div
           className="rounded-2xl flex flex-col items-center justify-center py-20 text-center"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+          style={{ background: 'var(--surface)' }}
         >
           <div className="text-5xl mb-4">🎯</div>
           <h2 className="font-bold text-lg mb-2" style={{ color: 'var(--text-primary)' }}>{t.goals_empty}</h2>
@@ -122,6 +125,7 @@ export default function GoalsPage() {
           visible={showModal}
           userId={userId}
           allHabits={allHabits}
+          allRoutines={allRoutines}
           goal={editing ?? undefined}
           onClose={() => { setShowModal(false); setEditing(null); }}
           onSaved={handleSaved}

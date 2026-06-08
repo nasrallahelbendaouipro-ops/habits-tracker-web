@@ -8,10 +8,13 @@ export type BodyMetrics = {
 };
 
 export type MindMetrics = {
+  energy?: number;           // 1-10 subjective
+  focus?: number;            // 1-10 subjective
+  motivation?: number;       // 1-10 subjective
+  reading_min?: number;
   screen_time_min?: number;
   social_media_min?: number;
   deep_work_min?: number;
-  reading_min?: number;
 };
 
 export type SoulMetrics = {

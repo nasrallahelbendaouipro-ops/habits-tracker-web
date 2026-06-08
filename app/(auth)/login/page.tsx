@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,14 +54,8 @@ export default function LoginPage() {
             onChange={e => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
-            className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-            style={{
-              background: 'var(--surface-elevated)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-primary)',
-            }}
-            onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            autoComplete="email"
+            className="form-input"
           />
         </div>
 
@@ -67,32 +63,38 @@ export default function LoginPage() {
           <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
             Password
           </label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-            className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-            style={{
-              background: 'var(--surface-elevated)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-primary)',
-            }}
-            onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
-          />
+          <div className="relative">
+            <input
+              type={showPw ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              autoComplete="current-password"
+              className="form-input pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw(v => !v)}
+              aria-label={showPw ? 'Hide password' : 'Show password'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all mt-2"
+          className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all mt-2 flex items-center justify-center gap-2"
           style={{
             background: loading ? 'var(--text-muted)' : 'var(--primary)',
             cursor: loading ? 'not-allowed' : 'pointer',
           }}
         >
+          {loading && <Loader2 size={15} className="animate-spin" />}
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>

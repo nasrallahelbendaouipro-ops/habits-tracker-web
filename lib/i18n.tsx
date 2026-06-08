@@ -180,6 +180,9 @@ const EN = {
   event_type_meeting: 'Meeting',
   event_type_interview: 'Interview',
   event_type_shift: 'Shift',
+  event_link_habits: 'Link to habits',
+  event_link_habits_placeholder: 'Pick a habit to add…',
+  event_routine_details: 'Routine details',
   // Shift parser modal
   parser_title: '🕐 Import Shifts',
   parser_ai_powered: '✨ AI-powered parsing',
@@ -222,6 +225,46 @@ const EN = {
   sched_label: 'Schedule',
   sched_everyday: 'Every day',
   sched_specific: 'Specific days',
+  dim_all: 'All',
+  dim_body: 'Body',
+  dim_mind: 'Mind',
+  dim_soul: 'Soul',
+  // Bottom nav & More sheet
+  nav_more: 'More',
+  nav_body: 'Body',
+  nav_mind: 'Mind',
+  nav_soul: 'Soul',
+  nav_checkin: 'Check-In',
+  nav_routines: 'Routines',
+  // Dashboard FAB
+  dashboard_day_program: 'Day Programme',
+  // Confirm dialog
+  confirm_delete_title: 'Delete?',
+  confirm_cancel: 'Cancel',
+  confirm_delete: 'Delete',
+  // Routines
+  routines_delete_confirm: 'Delete this routine? This cannot be undone.',
+  // Body page metrics
+  body_metric_steps: 'Steps',
+  body_metric_calories: 'Calories',
+  body_metric_weight: 'Weight',
+  body_metric_sleep: 'Sleep',
+  body_metric_heart_rate: 'Heart Rate',
+  // Body page periods
+  period_d: 'D',
+  period_w: 'W',
+  period_m: 'M',
+  period_6m: '6M',
+  period_y: 'Y',
+  // Body page labels
+  body_today_total: 'Today Total',
+  body_average: 'Average',
+  body_no_data: 'No data',
+  body_no_data_desc: 'Sync Apple Health to see your data.',
+  body_workout_title: 'Workouts — 8 weeks',
+  body_workout_this_week: 'This week',
+  body_workout_duration: 'Total duration',
+  body_goals_title: 'Body Goals',
 };
 
 type Translations = typeof EN;
@@ -373,6 +416,9 @@ const FR: Translations = {
   event_type_meeting: 'Réunion',
   event_type_interview: 'Entretien',
   event_type_shift: 'Service',
+  event_link_habits: 'Lier à des habitudes',
+  event_link_habits_placeholder: 'Choisir une habitude…',
+  event_routine_details: 'Détails de la routine',
   parser_title: '🕐 Importer des quarts',
   parser_ai_powered: '✨ Analyse IA',
   parser_paste_schedule: 'Collez votre texte de planning',
@@ -411,6 +457,39 @@ const FR: Translations = {
   sched_label: 'Jours',
   sched_everyday: 'Tous les jours',
   sched_specific: 'Jours spécifiques',
+  dim_all: 'Tout',
+  dim_body: 'Corps',
+  dim_mind: 'Mental',
+  dim_soul: 'Âme',
+  nav_more: 'Plus',
+  nav_body: 'Corps',
+  nav_mind: 'Mental',
+  nav_soul: 'Âme',
+  nav_checkin: 'Bilan',
+  nav_routines: 'Routines',
+  dashboard_day_program: 'Programme du jour',
+  confirm_delete_title: 'Supprimer ?',
+  confirm_cancel: 'Annuler',
+  confirm_delete: 'Supprimer',
+  routines_delete_confirm: 'Supprimer cette routine ? Cette action est irréversible.',
+  body_metric_steps: 'Pas',
+  body_metric_calories: 'Calories',
+  body_metric_weight: 'Poids',
+  body_metric_sleep: 'Sommeil',
+  body_metric_heart_rate: 'Fréq. card.',
+  period_d: 'J',
+  period_w: 'S',
+  period_m: 'M',
+  period_6m: '6M',
+  period_y: 'A',
+  body_today_total: "Total aujourd'hui",
+  body_average: 'Moyenne',
+  body_no_data: 'Aucune donnée',
+  body_no_data_desc: 'Synchronisez Apple Health pour voir vos données.',
+  body_workout_title: 'Séances — 8 semaines',
+  body_workout_this_week: 'Cette semaine',
+  body_workout_duration: 'Durée totale',
+  body_goals_title: 'Objectifs Corps',
 };
 
 const AR: Translations = {
@@ -560,6 +639,9 @@ const AR: Translations = {
   event_type_meeting: 'اجتماع',
   event_type_interview: 'مقابلة',
   event_type_shift: 'وردية',
+  event_link_habits: 'ربط بعادات',
+  event_link_habits_placeholder: 'اختر عادة للإضافة…',
+  event_routine_details: 'تفاصيل الروتين',
   parser_title: '🕐 استيراد المناوبات',
   parser_ai_powered: '✨ تحليل بالذكاء الاصطناعي',
   parser_paste_schedule: 'الصق نص جدولك',
@@ -598,19 +680,57 @@ const AR: Translations = {
   sched_label: 'الأيام',
   sched_everyday: 'كل يوم',
   sched_specific: 'أيام محددة',
+  dim_all: 'الكل',
+  dim_body: 'الجسد',
+  dim_mind: 'العقل',
+  dim_soul: 'الروح',
+  nav_more: 'المزيد',
+  nav_body: 'الجسد',
+  nav_mind: 'العقل',
+  nav_soul: 'الروح',
+  nav_checkin: 'تسجيل',
+  nav_routines: 'الروتين',
+  dashboard_day_program: 'برنامج اليوم',
+  confirm_delete_title: 'حذف؟',
+  confirm_cancel: 'إلغاء',
+  confirm_delete: 'حذف',
+  routines_delete_confirm: 'حذف هذا الروتين؟ لا يمكن التراجع.',
+  body_metric_steps: 'خطوات',
+  body_metric_calories: 'سعرات',
+  body_metric_weight: 'الوزن',
+  body_metric_sleep: 'النوم',
+  body_metric_heart_rate: 'نبض القلب',
+  period_d: 'ي',
+  period_w: 'أ',
+  period_m: 'م',
+  period_6m: '6م',
+  period_y: 'س',
+  body_today_total: 'إجمالي اليوم',
+  body_average: 'المتوسط',
+  body_no_data: 'لا توجد بيانات',
+  body_no_data_desc: 'زامن Apple Health لرؤية بياناتك.',
+  body_workout_title: 'التمارين — 8 أسابيع',
+  body_workout_this_week: 'هذا الأسبوع',
+  body_workout_duration: 'المدة الإجمالية',
+  body_goals_title: 'أهداف الجسد',
 };
 
 const TRANSLATIONS: Record<Locale, Translations> = { en: EN, fr: FR, ar: AR };
 
-// Returns "Monday's habits" (EN), "Habitudes du lundi" (FR), "عادات الاثنين" (AR)
+// Returns "Today's Plan" (EN) / "Plan du jour" (FR) for today,
+// or "Thursday's Plan" / "Plan du jeudi" for other days.
 export function formatHabitsLabel(locale: Locale, date: Date, isToday: boolean): string {
-  const t = TRANSLATIONS[locale];
-  if (isToday) return t.habits_label_today;
+  if (isToday) {
+    if (locale === 'fr') return "Plan du jour";
+    if (locale === 'ar') return "خطة اليوم";
+    return "Today's Plan";
+  }
   const tag = LOCALE_DATE_TAG[locale];
   const dayName = date.toLocaleDateString(tag, { weekday: 'long' });
-  if (locale === 'en') return `${dayName}'s habits`;
-  if (locale === 'fr') return `Habitudes du ${dayName}`;
-  return `عادات ${dayName}`;
+  if (locale === 'fr') return `Plan du ${dayName}`;
+  if (locale === 'ar') return `خطة ${dayName}`;
+  // Capitalise first letter of day name
+  return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}'s Plan`;
 }
 
 export function getGreeting(locale: Locale): string {

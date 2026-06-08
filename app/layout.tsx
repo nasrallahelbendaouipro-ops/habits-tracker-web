@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/lib/theme';
 import { LocaleProvider } from '@/lib/i18n';
+import ServiceWorkerRegistration from '@/components/pwa/ServiceWorkerRegistration';
 import './globals.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="h-full antialiased">
         <LocaleProvider>
           <ThemeProvider>
+            <ServiceWorkerRegistration />
             {children}
           </ThemeProvider>
         </LocaleProvider>

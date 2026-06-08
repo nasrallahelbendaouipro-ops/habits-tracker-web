@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { updateHabit, deleteHabit } from '@/lib/habits';
 import { dateStr, TODAY } from '@/lib/utils';
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import GlassCard from '@/components/ui/GlassCard';
 import HabitModal from '@/components/habits/HabitModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Habit, HabitLog, HabitFormValues, WorkoutMetadata, ReadingMetadata, StudyMetadata, ShiftMetadata } from '@/lib/types';
 
 // ─── Mini Heatmap ──────────────────────────────────────────────────────────────
@@ -253,6 +255,7 @@ export default function HabitDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -293,7 +296,7 @@ export default function HabitDetailPage() {
   }
 
   async function handleDelete() {
-    if (!habit || !confirm(t.habit_delete_confirm)) return;
+    if (!habit) return;
     setDeleting(true);
     try {
       await deleteHabit(habit.id);
@@ -364,18 +367,21 @@ export default function HabitDetailPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setEditing(true)}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-sm transition-all"
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
               style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+              aria-label={t.goals_edit}
             >
-              ✏️
+              <Pencil size={14} />
             </button>
             <button
-              onClick={handleDelete}
+              onClick={() => setConfirmDelete(true)}
               disabled={deleting}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-sm transition-all"
-              style={{ background: 'rgba(255,107,107,0.12)', border: '1px solid rgba(255,107,107,0.2)', color: 'var(--error)' }}
+              aria-busy={deleting}
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+              style={{ background: 'var(--error-muted)', color: 'var(--error)' }}
+              aria-label={t.confirm_delete}
             >
-              {deleting ? '…' : '🗑️'}
+              {deleting ? <span className="animate-pulse text-xs font-bold">…</span> : <Trash2 size={14} />}
             </button>
           </div>
         </div>
@@ -413,6 +419,13 @@ export default function HabitDetailPage() {
         visible={editing}
         onClose={() => setEditing(false)}
         onSubmit={handleEdit}
+      />
+
+      <ConfirmDialog
+        visible={confirmDelete}
+        message={t.habit_delete_confirm}
+        onConfirm={() => { setConfirmDelete(false); handleDelete(); }}
+        onCancel={() => setConfirmDelete(false)}
       />
     </div>
   );
