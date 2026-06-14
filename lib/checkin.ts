@@ -11,6 +11,7 @@ export type MindMetrics = {
   energy?: number;           // 1-10 subjective
   focus?: number;            // 1-10 subjective
   motivation?: number;       // 1-10 subjective
+  sleep_quality?: number;    // 1-10
   reading_min?: number;
   screen_time_min?: number;
   social_media_min?: number;
@@ -23,6 +24,19 @@ export type SoulMetrics = {
   stress_level?: number;  // 1-10
 };
 
+export type MorningData = {
+  affirmations?: string;
+  priority_goals?: string;
+  completed_at?: string;
+};
+
+export type EveningData = {
+  wins?: string;
+  improvements?: string;
+  reflection?: string;
+  completed_at?: string;
+};
+
 export type DailyCheckin = {
   id: string;
   user_id: string;
@@ -31,6 +45,8 @@ export type DailyCheckin = {
   mind_metrics: MindMetrics;
   soul_metrics: SoulMetrics;
   notes?: string;
+  morning_data?: MorningData;
+  evening_data?: EveningData;
   created_at: string;
 };
 
@@ -56,6 +72,42 @@ export async function upsertCheckin(
   const supabase = createClient();
   const { error } = await supabase.from('daily_checkins').upsert({
     user_id: userId, date, body_metrics, mind_metrics, soul_metrics, notes,
+  }, { onConflict: 'user_id,date' });
+  if (error) throw error;
+}
+
+export async function upsertMorningCheckin(
+  userId: string,
+  date: string,
+  body_metrics: BodyMetrics,
+  mind_metrics: MindMetrics,
+  morning_data: MorningData
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from('daily_checkins').upsert({
+    user_id: userId,
+    date,
+    body_metrics,
+    mind_metrics,
+    morning_data: { ...morning_data, completed_at: new Date().toISOString() },
+  }, { onConflict: 'user_id,date' });
+  if (error) throw error;
+}
+
+export async function upsertEveningCheckin(
+  userId: string,
+  date: string,
+  soul_metrics: SoulMetrics,
+  notes: string | undefined,
+  evening_data: EveningData
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from('daily_checkins').upsert({
+    user_id: userId,
+    date,
+    soul_metrics,
+    notes: notes || undefined,
+    evening_data: { ...evening_data, completed_at: new Date().toISOString() },
   }, { onConflict: 'user_id,date' });
   if (error) throw error;
 }
