@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  LineChart, Line,
 } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { fetchHabitsWithStatus } from '@/lib/habits';
 import { fetchGoals } from '@/lib/goals';
-import { calcDisciplineScore, calcDimensionScores, dailyCompletionMap, weeklyTotals, habitCompletionRate } from '@/lib/analytics';
+import { calcDisciplineScore, calcDimensionScores, dailyCompletionMap, weeklyTotals, habitCompletionRate, fetchRoutineCompletionStats, fetchDailyMetricsHistory, type RoutineStat, type DailyMetricPoint } from '@/lib/analytics';
 import { dateStr, TODAY } from '@/lib/utils';
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import GlassCard from '@/components/ui/GlassCard';
@@ -147,12 +148,14 @@ function HabitStatRow({ habit, rate }: { habit: HabitWithStreak; rate: number })
 export default function AnalyticsPage() {
   const { t } = useLocale();
   const chart = useChartTheme();
-  const [userId, setUserId]   = useState<string | null>(null);
-  const [habits, setHabits]   = useState<HabitWithStreak[]>([]);
-  const [logs, setLogs]       = useState<HabitLog[]>([]);
-  const [goals, setGoals]     = useState<GoalWithHabits[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [userId, setUserId]           = useState<string | null>(null);
+  const [habits, setHabits]           = useState<HabitWithStreak[]>([]);
+  const [logs, setLogs]               = useState<HabitLog[]>([]);
+  const [goals, setGoals]             = useState<GoalWithHabits[]>([]);
+  const [routineStats, setRoutineStats] = useState<RoutineStat[]>([]);
+  const [metricsHistory, setMetricsHistory] = useState<DailyMetricPoint[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [mounted, setMounted]         = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -167,14 +170,18 @@ export default function AnalyticsPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const [habitsData, logsRes, goalsData] = await Promise.all([
+      const [habitsData, logsRes, goalsData, routineStatsData, metricsData] = await Promise.all([
         fetchHabitsWithStatus(userId),
         supabase.from('habit_logs').select('*').eq('user_id', userId).gte('completed_at', dateStr(365)),
         fetchGoals(userId),
+        fetchRoutineCompletionStats(userId, 30),
+        fetchDailyMetricsHistory(userId, 30),
       ]);
       setHabits(habitsData);
       setLogs((logsRes.data ?? []) as HabitLog[]);
       setGoals(goalsData);
+      setRoutineStats(routineStatsData);
+      setMetricsHistory(metricsData);
     } finally {
       setLoading(false);
     }
@@ -404,6 +411,119 @@ export default function AnalyticsPage() {
           ))}
         </div>
       </GlassCard>
+
+      {/* Routine performance */}
+      {routineStats.length > 0 && mounted && (
+        <GlassCard>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
+            Performance des routines (30j)
+          </p>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={routineStats} barSize={28} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: chart.tickFill }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: chart.tickFill }} axisLine={false} tickLine={false} ticks={[0, 50, 100]} />
+              <Tooltip
+                formatter={(v: unknown) => [`${v}%`, 'Complétion moy.']}
+                contentStyle={chart.tooltipStyle}
+                cursor={{ fill: chart.cursorFill }}
+              />
+              <Bar dataKey="avgCompletionPct" radius={[4, 4, 0, 0]}>
+                {routineStats.map((entry, i) => (
+                  <Cell key={i} fill={entry.color ?? 'var(--primary)'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+
+          {/* Planned vs actual time — only for data routines */}
+          {routineStats.filter(r => r.plannedMinutes > 0 && r.avgActualMinutes != null).length > 0 && (
+            <div className="mt-5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>
+                Temps planifié vs réel
+              </p>
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart
+                  data={routineStats.filter(r => r.plannedMinutes > 0 && r.avgActualMinutes != null)}
+                  barSize={16}
+                  barGap={4}
+                  margin={{ top: 0, right: 0, bottom: 0, left: -20 }}
+                >
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: chart.tickFill }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={v => `${v}m`} tick={{ fontSize: 10, fill: chart.tickFill }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    formatter={(v: unknown, name: unknown) => [`${v} min`, String(name ?? '')]}
+                    contentStyle={chart.tooltipStyle}
+                    cursor={{ fill: chart.cursorFill }}
+                  />
+                  <Bar dataKey="plannedMinutes" fill="color-mix(in srgb, var(--text-muted) 40%, transparent)" name="Planifié" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="avgActualMinutes" fill="var(--primary)" name="Réel (moy.)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="flex items-center gap-4 mt-2 justify-center">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: 'color-mix(in srgb, var(--text-muted) 40%, transparent)' }} />
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Planifié</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--primary)' }} />
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Réel (moy.)</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </GlassCard>
+      )}
+
+      {/* Personal trends */}
+      {metricsHistory.some(m => m.weight || m.energy || m.mood) && mounted && (
+        <GlassCard>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
+            Évolution personnelle (30 jours)
+          </p>
+
+          {metricsHistory.some(m => m.weight) && (
+            <div className="mb-5">
+              <p className="text-[10px] font-semibold mb-2" style={{ color: 'var(--body)' }}>Poids (kg)</p>
+              <ResponsiveContainer width="100%" height={100}>
+                <LineChart data={metricsHistory} margin={{ top: 5, right: 8, bottom: 0, left: -25 }}>
+                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: chart.tickFill }} axisLine={false} tickLine={false} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9, fill: chart.tickFill }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
+                  <Tooltip formatter={(v: unknown) => [`${v} kg`, 'Poids']} contentStyle={chart.tooltipStyle} />
+                  <Line type="monotone" dataKey="weight" stroke="var(--body)" strokeWidth={2} dot={false} connectNulls activeDot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {metricsHistory.some(m => m.energy) && (
+            <div className="mb-5">
+              <p className="text-[10px] font-semibold mb-2" style={{ color: 'var(--mind)' }}>Énergie (/10)</p>
+              <ResponsiveContainer width="100%" height={100}>
+                <LineChart data={metricsHistory} margin={{ top: 5, right: 8, bottom: 0, left: -25 }}>
+                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: chart.tickFill }} axisLine={false} tickLine={false} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9, fill: chart.tickFill }} axisLine={false} tickLine={false} domain={[1, 10]} ticks={[1, 5, 10]} />
+                  <Tooltip formatter={(v: unknown) => [`${v}/10`, 'Énergie']} contentStyle={chart.tooltipStyle} />
+                  <Line type="monotone" dataKey="energy" stroke="var(--mind)" strokeWidth={2} dot={false} connectNulls activeDot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {metricsHistory.some(m => m.mood) && (
+            <div>
+              <p className="text-[10px] font-semibold mb-2" style={{ color: 'var(--soul)' }}>Humeur (/10)</p>
+              <ResponsiveContainer width="100%" height={100}>
+                <LineChart data={metricsHistory} margin={{ top: 5, right: 8, bottom: 0, left: -25 }}>
+                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: chart.tickFill }} axisLine={false} tickLine={false} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 9, fill: chart.tickFill }} axisLine={false} tickLine={false} domain={[1, 10]} ticks={[1, 5, 10]} />
+                  <Tooltip formatter={(v: unknown) => [`${v}/10`, 'Humeur']} contentStyle={chart.tooltipStyle} />
+                  <Line type="monotone" dataKey="mood" stroke="var(--soul)" strokeWidth={2} dot={false} connectNulls activeDot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </GlassCard>
+      )}
     </div>
   );
 }

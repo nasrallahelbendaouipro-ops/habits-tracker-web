@@ -2,15 +2,21 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { fetchHabitsWithStatus, toggleHabit, DIMENSION_ICONS } from '@/lib/habits';
-import { fetchCheckin, upsertCheckin, type BodyMetrics, type MindMetrics, type SoulMetrics } from '@/lib/checkin';
+import { fetchHabitsWithStatus, toggleHabit } from '@/lib/habits';
+import {
+  fetchCheckin, upsertMorningCheckin, upsertEveningCheckin,
+  type BodyMetrics, type MindMetrics, type SoulMetrics, type MorningData, type EveningData,
+} from '@/lib/checkin';
+import { getTodaysRoutines, computeSetProgress, countTrackableTasks } from '@/lib/routines';
+import { fetchCalendarEvents } from '@/lib/calendar';
 import { TODAY } from '@/lib/utils';
-import type { HabitWithStreak } from '@/lib/types';
+import type { HabitWithStreak, RoutineWithSession, CalendarEvent } from '@/lib/types';
 import GlassCard from '@/components/ui/GlassCard';
+import { Sun, Moon, CheckCircle2, XCircle } from 'lucide-react';
 
 const DIM_COLOR = { body: 'var(--body)', mind: 'var(--mind)', soul: 'var(--soul)' };
 
-// ─── Rating Picker (1–10 integer scales) ──────────────────────────────────────
+// ─── Rating Picker ─────────────────────────────────────────────────────────────
 
 function RatingPicker({ label, value, onChange, color, hint }: {
   label: string;
@@ -56,7 +62,7 @@ function RatingPicker({ label, value, onChange, color, hint }: {
   );
 }
 
-// ─── Metric Input (continuous decimal values) ─────────────────────────────────
+// ─── Metric Input ──────────────────────────────────────────────────────────────
 
 function MetricInput({ label, value, onChange, unit, min, max, step = 0.1 }: {
   label: string; value: number | undefined; onChange: (v: number | undefined) => void;
@@ -92,17 +98,31 @@ function HabitRow({ habit, onToggle }: { habit: HabitWithStreak; onToggle: () =>
       type="button"
       aria-pressed={habit.completedToday}
       className="flex items-center gap-3 p-3 rounded-xl transition-all w-full text-left"
-      style={{ background: habit.completedToday ? dimColor + '12' : 'var(--surface-elevated)', border: `1px solid ${habit.completedToday ? dimColor + '40' : 'var(--border)'}` }}
+      style={{
+        background: habit.completedToday ? dimColor + '12' : 'var(--surface-elevated)',
+        border: `1px solid ${habit.completedToday ? dimColor + '40' : 'var(--border)'}`,
+      }}
       onClick={onToggle}
     >
       <span className="text-lg">{habit.icon}</span>
-      <span className="flex-1 text-sm font-medium" style={{ color: habit.completedToday ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: habit.completedToday ? 'line-through' : 'none' }}>
+      <span
+        className="flex-1 text-sm font-medium"
+        style={{
+          color: habit.completedToday ? 'var(--text-muted)' : 'var(--text-primary)',
+          textDecoration: habit.completedToday ? 'line-through' : 'none',
+        }}
+      >
         {habit.name}
       </span>
-      {habit.streak > 0 && <span className="text-[10px]" style={{ color: 'var(--secondary)' }}>🔥{habit.streak}d</span>}
+      {habit.streak > 0 && (
+        <span className="text-[10px]" style={{ color: 'var(--secondary)' }}>🔥{habit.streak}d</span>
+      )}
       <div
         className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
-        style={{ background: habit.completedToday ? dimColor : 'transparent', border: `2px solid ${habit.completedToday ? dimColor : 'var(--border)'}` }}
+        style={{
+          background: habit.completedToday ? dimColor : 'transparent',
+          border: `2px solid ${habit.completedToday ? dimColor : 'var(--border)'}`,
+        }}
       >
         {habit.completedToday && (
           <svg width="10" height="8" viewBox="0 0 10 8" fill="none" className="animate-check-draw">
@@ -114,40 +134,47 @@ function HabitRow({ habit, onToggle }: { habit: HabitWithStreak; onToggle: () =>
   );
 }
 
-// ─── Score Ring ────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function ScoreRing({ score, color, label }: { score: number; color: string; label: string }) {
-  const r = 28, c = 2 * Math.PI * r;
-  const dash = (score / 10) * c;
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="relative w-16 h-16">
-        <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
-          <circle cx="32" cy="32" r={r} fill="none" stroke="var(--border)" strokeWidth="6" />
-          <circle cx="32" cy="32" r={r} fill="none" stroke={color} strokeWidth="6"
-            strokeDasharray={`${dash} ${c}`} strokeLinecap="round" style={{ transition: 'stroke-dasharray 0.7s' }} />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-base font-bold" style={{ color }}>{score}</span>
-        </div>
-      </div>
-      <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color }}>{label}</span>
-    </div>
-  );
+function getRoutineCompletionPct(routine: RoutineWithSession): number {
+  const session = routine.todaySession;
+  if (!session) return 0;
+  if (routine.category === 'sport') {
+    const { totalSets, doneSets } = computeSetProgress(routine, session);
+    return totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
+  }
+  const trackable = countTrackableTasks(routine.tasks);
+  return trackable > 0 ? Math.round((session.completed_task_ids.length / trackable) * 100) : 0;
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CheckInPage() {
-  const [userId, setUserId]   = useState<string | null>(null);
-  const [habits, setHabits]   = useState<HabitWithStreak[]>([]);
-  const [saved, setSaved]     = useState(false);
-  const [saving, setSaving]   = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'morning' | 'evening'>(
+    () => new Date().getHours() < 14 ? 'morning' : 'evening'
+  );
 
+  // Morning
   const [body, setBody] = useState<BodyMetrics>({});
   const [mind, setMind] = useState<MindMetrics>({});
+  const [morningData, setMorningData] = useState<MorningData>({});
+  const [morningComplete, setMorningComplete] = useState(false);
+  const [morningSaving, setMorningSaving] = useState(false);
+  const [morningSaved, setMorningSaved] = useState(false);
+
+  // Evening
   const [soul, setSoul] = useState<SoulMetrics>({});
+  const [eveningData, setEveningData] = useState<EveningData>({});
   const [notes, setNotes] = useState('');
+  const [eveningComplete, setEveningComplete] = useState(false);
+  const [eveningSaving, setEveningSaving] = useState(false);
+  const [eveningSaved, setEveningSaved] = useState(false);
+
+  // Evening bilan data
+  const [habits, setHabits] = useState<HabitWithStreak[]>([]);
+  const [routines, setRoutines] = useState<RoutineWithSession[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => { if (data.user) setUserId(data.user.id); });
@@ -155,16 +182,24 @@ export default function CheckInPage() {
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [habitsData, checkin] = await Promise.all([
+    const [habitsData, checkin, routinesData, events] = await Promise.all([
       fetchHabitsWithStatus(userId, TODAY),
       fetchCheckin(userId, TODAY),
+      getTodaysRoutines(),
+      fetchCalendarEvents(userId, `${TODAY}T00:00:00`, `${TODAY}T23:59:59`),
     ]);
     setHabits(habitsData);
+    setRoutines(routinesData);
+    setCalendarEvents(events);
     if (checkin) {
       setBody(checkin.body_metrics ?? {});
       setMind(checkin.mind_metrics ?? {});
       setSoul(checkin.soul_metrics ?? {});
       setNotes(checkin.notes ?? '');
+      setMorningData(checkin.morning_data ?? {});
+      setEveningData(checkin.evening_data ?? {});
+      setMorningComplete(!!checkin.morning_data?.completed_at);
+      setEveningComplete(!!checkin.evening_data?.completed_at);
     }
   }, [userId]);
 
@@ -178,123 +213,307 @@ export default function CheckInPage() {
     catch { load(); }
   };
 
-  const handleSave = async () => {
+  const handleSaveMorning = async () => {
     if (!userId) return;
-    setSaving(true);
+    setMorningSaving(true);
     try {
-      await upsertCheckin(userId, TODAY, body, mind, soul, notes || undefined);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      await upsertMorningCheckin(userId, TODAY, body, mind, morningData);
+      setMorningComplete(true);
+      setMorningSaved(true);
+      setTimeout(() => setMorningSaved(false), 3000);
     } finally {
-      setSaving(false);
+      setMorningSaving(false);
     }
   };
 
-  const bodyHabits  = habits.filter(h => h.dimension === 'body');
-  const mindHabits  = habits.filter(h => h.dimension === 'mind');
-  const soulHabits  = habits.filter(h => h.dimension === 'soul');
+  const handleSaveEvening = async () => {
+    if (!userId) return;
+    setEveningSaving(true);
+    try {
+      await upsertEveningCheckin(userId, TODAY, soul, notes || undefined, eveningData);
+      setEveningComplete(true);
+      setEveningSaved(true);
+      setTimeout(() => setEveningSaved(false), 3000);
+    } finally {
+      setEveningSaving(false);
+    }
+  };
 
-  const bodyDone  = bodyHabits.filter(h => h.completedToday).length;
-  const mindDone  = mindHabits.filter(h => h.completedToday).length;
-  const soulDone  = soulHabits.filter(h => h.completedToday).length;
-
-  const dimScore = (done: number, total: number) => total === 0 ? 0 : Math.round((done / total) * 10);
-
-  const now = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const now = new Date().toLocaleDateString('fr-FR', { weekday: 'long', month: 'long', day: 'numeric' });
+  const completedHabits = habits.filter(h => h.completedToday).length;
 
   return (
     <div className="animate-fade-in max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Today's Check-In</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>{now}</p>
+      <div className="mb-5">
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Check-in</h1>
+        <p className="text-sm mt-0.5 capitalize" style={{ color: 'var(--text-secondary)' }}>{now}</p>
       </div>
 
-      {/* Dimension overview rings */}
-      <GlassCard className="mb-5">
-        <div className="flex items-center justify-around">
-          <ScoreRing score={dimScore(bodyDone, bodyHabits.length)} color="var(--body)" label="Body" />
-          <ScoreRing score={dimScore(mindDone, mindHabits.length)} color="var(--mind)" label="Mind" />
-          <ScoreRing score={dimScore(soulDone, soulHabits.length)} color="var(--soul)" label="Soul" />
-        </div>
-      </GlassCard>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-5 p-1 rounded-xl" style={{ background: 'var(--surface)' }}>
+        {([
+          { key: 'morning' as const, Icon: Sun, label: 'Matin', done: morningComplete },
+          { key: 'evening' as const, Icon: Moon, label: 'Soir', done: eveningComplete },
+        ]).map(({ key, Icon, label, done }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all"
+            style={{
+              background: activeTab === key ? 'var(--surface-elevated)' : 'transparent',
+              color: activeTab === key ? 'var(--primary)' : 'var(--text-muted)',
+              boxShadow: activeTab === key ? '0 1px 4px rgba(0,0,0,0.15)' : 'none',
+            }}
+          >
+            <Icon size={15} />
+            {label}
+            {done && <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--teal)' }} />}
+          </button>
+        ))}
+      </div>
 
-      {/* BODY section */}
-      <GlassCard className="mb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-xl">{DIMENSION_ICONS.body}</span>
-          <h2 className="font-bold text-sm uppercase tracking-widest" style={{ color: 'var(--body)' }}>Body</h2>
-          <span className="ml-auto text-xs font-semibold" style={{ color: 'var(--body)' }}>{bodyDone}/{bodyHabits.length} habits</span>
-        </div>
-        {bodyHabits.length > 0 && (
-          <div className="flex flex-col gap-2 mb-4">
-            {bodyHabits.map(h => <HabitRow key={h.id} habit={h} onToggle={() => handleToggle(h)} />)}
-          </div>
-        )}
-        <div className="flex flex-col gap-4" style={{ borderTop: bodyHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: bodyHabits.length > 0 ? '16px' : 0 }}>
-          <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--body)' }}>Body Metrics</p>
-          <MetricInput label="Weight" value={body.weight} onChange={v => setBody(b => ({ ...b, weight: v }))} unit="kg" min={20} max={300} step={0.1} />
-          <MetricInput label="Sleep" value={body.sleep_hours} onChange={v => setBody(b => ({ ...b, sleep_hours: v }))} unit="hrs" min={0} max={24} step={0.5} />
-          <RatingPicker label="Mood" value={body.mood} onChange={v => setBody(b => ({ ...b, mood: v }))} color="var(--body)" hint="1 = very low  ·  10 = excellent" />
-        </div>
-      </GlassCard>
+      {/* ── MORNING TAB ──────────────────────────────────────────────────────── */}
+      {activeTab === 'morning' && (
+        <div className="flex flex-col gap-4">
+          {/* Physical metrics */}
+          <GlassCard>
+            <p className="text-[10px] uppercase tracking-widest font-semibold mb-4" style={{ color: 'var(--body)' }}>
+              Métriques physiques
+            </p>
+            <div className="flex flex-col gap-4">
+              <MetricInput label="Poids" value={body.weight} onChange={v => setBody(b => ({ ...b, weight: v }))} unit="kg" min={20} max={300} step={0.1} />
+              <MetricInput label="Heures de sommeil" value={body.sleep_hours} onChange={v => setBody(b => ({ ...b, sleep_hours: v }))} unit="hrs" min={0} max={24} step={0.5} />
+              <RatingPicker label="Qualité du sommeil" value={mind.sleep_quality} onChange={v => setMind(m => ({ ...m, sleep_quality: v }))} color="var(--body)" hint="1 = très mauvais  ·  10 = excellent" />
+              <RatingPicker label="Humeur" value={body.mood} onChange={v => setBody(b => ({ ...b, mood: v }))} color="var(--body)" hint="1 = très bas  ·  10 = excellent" />
+            </div>
+          </GlassCard>
 
-      {/* MIND section */}
-      <GlassCard className="mb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-xl">{DIMENSION_ICONS.mind}</span>
-          <h2 className="font-bold text-sm uppercase tracking-widest" style={{ color: 'var(--mind)' }}>Mind</h2>
-          <span className="ml-auto text-xs font-semibold" style={{ color: 'var(--mind)' }}>{mindDone}/{mindHabits.length} habits</span>
-        </div>
-        {mindHabits.length > 0 && (
-          <div className="flex flex-col gap-2 mb-4">
-            {mindHabits.map(h => <HabitRow key={h.id} habit={h} onToggle={() => handleToggle(h)} />)}
-          </div>
-        )}
-        <div className="flex flex-col gap-4" style={{ borderTop: mindHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: mindHabits.length > 0 ? '16px' : 0 }}>
-          <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--mind)' }}>How do you feel mentally?</p>
-          <RatingPicker label="Energy" value={mind.energy} onChange={v => setMind(m => ({ ...m, energy: v }))} color="var(--mind)" hint="1 = exhausted  ·  10 = fully energised" />
-          <RatingPicker label="Focus" value={mind.focus} onChange={v => setMind(m => ({ ...m, focus: v }))} color="var(--mind)" hint="1 = scattered  ·  10 = laser focused" />
-          <RatingPicker label="Motivation" value={mind.motivation} onChange={v => setMind(m => ({ ...m, motivation: v }))} color="var(--mind)" hint="1 = no drive  ·  10 = highly motivated" />
-        </div>
-      </GlassCard>
+          {/* Mental state */}
+          <GlassCard>
+            <p className="text-[10px] uppercase tracking-widest font-semibold mb-4" style={{ color: 'var(--mind)' }}>
+              État mental
+            </p>
+            <div className="flex flex-col gap-4">
+              <RatingPicker label="Énergie" value={mind.energy} onChange={v => setMind(m => ({ ...m, energy: v }))} color="var(--mind)" hint="1 = épuisé  ·  10 = plein d'énergie" />
+              <RatingPicker label="Motivation" value={mind.motivation} onChange={v => setMind(m => ({ ...m, motivation: v }))} color="var(--mind)" hint="1 = pas de motivation  ·  10 = très motivé" />
+            </div>
+          </GlassCard>
 
-      {/* SOUL section */}
-      <GlassCard className="mb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-xl">{DIMENSION_ICONS.soul}</span>
-          <h2 className="font-bold text-sm uppercase tracking-widest" style={{ color: 'var(--soul)' }}>Soul</h2>
-          <span className="ml-auto text-xs font-semibold" style={{ color: 'var(--soul)' }}>{soulDone}/{soulHabits.length} habits</span>
-        </div>
-        {soulHabits.length > 0 && (
-          <div className="flex flex-col gap-2 mb-4">
-            {soulHabits.map(h => <HabitRow key={h.id} habit={h} onToggle={() => handleToggle(h)} />)}
-          </div>
-        )}
-        <div className="flex flex-col gap-4" style={{ borderTop: soulHabits.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: soulHabits.length > 0 ? '16px' : 0 }}>
-          <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--soul)' }}>Inner Metrics</p>
-          <RatingPicker label="Gratitude" value={soul.gratitude_score} onChange={v => setSoul(s => ({ ...s, gratitude_score: v }))} color="var(--soul)" hint="1 = not grateful  ·  10 = deeply grateful" />
-          <RatingPicker label="Meditation quality" value={soul.meditation_quality} onChange={v => setSoul(s => ({ ...s, meditation_quality: v }))} color="var(--soul)" />
-          <RatingPicker label="Stress level" value={soul.stress_level} onChange={v => setSoul(s => ({ ...s, stress_level: v }))} color="#f97316" hint="1 = very calm  ·  10 = very stressed" />
-        </div>
-      </GlassCard>
+          {/* Morning intentions */}
+          <GlassCard>
+            <p className="text-[10px] uppercase tracking-widest font-semibold mb-4" style={{ color: 'var(--primary)' }}>
+              Intentions du matin
+            </p>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Affirmations du jour
+                </label>
+                <textarea
+                  value={morningData.affirmations ?? ''}
+                  onChange={e => setMorningData(d => ({ ...d, affirmations: e.target.value }))}
+                  placeholder="Je suis capable de…"
+                  rows={3}
+                  className="form-input resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Objectifs prioritaires de la journée
+                </label>
+                <textarea
+                  value={morningData.priority_goals ?? ''}
+                  onChange={e => setMorningData(d => ({ ...d, priority_goals: e.target.value }))}
+                  placeholder="Aujourd'hui je dois absolument…"
+                  rows={3}
+                  className="form-input resize-none"
+                />
+              </div>
+            </div>
+          </GlassCard>
 
-      {/* Notes */}
-      <GlassCard className="mb-24">
-        <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          Daily notes <span style={{ color: 'var(--text-disabled)' }}>(optional)</span>
-        </label>
-        <textarea
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          placeholder="How was your day? Any thoughts or reflections…"
-          rows={3}
-          className="form-input resize-none"
-        />
-      </GlassCard>
+          <div className="pb-24" />
+        </div>
+      )}
+
+      {/* ── EVENING TAB ──────────────────────────────────────────────────────── */}
+      {activeTab === 'evening' && (
+        <div className="flex flex-col gap-4">
+          {/* Habits bilan */}
+          {habits.length > 0 && (
+            <GlassCard>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--text-muted)' }}>
+                  Habitudes du jour
+                </p>
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded-lg"
+                  style={{
+                    background: completedHabits === habits.length && habits.length > 0 ? 'color-mix(in srgb, var(--teal) 20%, transparent)' : 'var(--surface-elevated)',
+                    color: completedHabits === habits.length && habits.length > 0 ? 'var(--teal)' : 'var(--text-muted)',
+                  }}
+                >
+                  {completedHabits}/{habits.length}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {habits.map(h => <HabitRow key={h.id} habit={h} onToggle={() => handleToggle(h)} />)}
+              </div>
+            </GlassCard>
+          )}
+
+          {/* Routines bilan */}
+          {routines.length > 0 && (
+            <GlassCard>
+              <p className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
+                Routines du jour
+              </p>
+              <div className="flex flex-col gap-3">
+                {routines.map(routine => {
+                  const pct = getRoutineCompletionPct(routine);
+                  const color = routine.color ?? 'var(--primary)';
+                  const hasSession = !!routine.todaySession;
+                  return (
+                    <div key={routine.id} className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{routine.icon ?? '🔄'}</span>
+                        <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                          {routine.name}
+                        </span>
+                        {hasSession ? (
+                          <span className="text-sm font-bold flex-shrink-0" style={{ color: pct >= 100 ? 'var(--teal)' : color }}>
+                            {pct}%
+                          </span>
+                        ) : (
+                          <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Non démarré</span>
+                        )}
+                      </div>
+                      {hasSession && (
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, background: pct >= 100 ? 'var(--teal)' : color }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </GlassCard>
+          )}
+
+          {/* Calendar events */}
+          {calendarEvents.length > 0 && (
+            <GlassCard>
+              <p className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
+                Programme du jour
+              </p>
+              <div className="flex flex-col gap-2">
+                {calendarEvents
+                  .sort((a, b) => a.start_at.localeCompare(b.start_at))
+                  .map(event => {
+                    const start = new Date(event.start_at);
+                    const end = new Date(event.end_at);
+                    const durationMin = Math.round((end.getTime() - start.getTime()) / 60000);
+                    const timeStr = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                    return (
+                      <div
+                        key={event.id}
+                        className="flex items-center gap-3 p-3 rounded-xl"
+                        style={{ background: 'var(--surface-elevated)', borderLeft: `3px solid ${event.color}` }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{event.title}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {timeStr}{durationMin > 0 && ` · ${durationMin} min`}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </GlassCard>
+          )}
+
+          {/* Morning priority goals reminder */}
+          {morningData.priority_goals && (
+            <GlassCard style={{ borderLeft: '3px solid var(--primary)' }}>
+              <p className="text-[10px] uppercase tracking-widest font-semibold mb-2" style={{ color: 'var(--primary)' }}>
+                Objectifs du matin
+              </p>
+              <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
+                {morningData.priority_goals}
+              </p>
+            </GlassCard>
+          )}
+
+          {/* Evening reflection */}
+          <GlassCard>
+            <p className="text-[10px] uppercase tracking-widest font-semibold mb-4" style={{ color: 'var(--teal)' }}>
+              Bilan de la journée
+            </p>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="flex items-center gap-1.5 text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  <CheckCircle2 size={14} style={{ color: 'var(--teal)' }} />
+                  Ce qui a bien marché
+                </label>
+                <textarea
+                  value={eveningData.wins ?? ''}
+                  onChange={e => setEveningData(d => ({ ...d, wins: e.target.value }))}
+                  placeholder="Victoires du jour…"
+                  rows={3}
+                  className="form-input resize-none"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-1.5 text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  <XCircle size={14} style={{ color: '#f97316' }} />
+                  Ce qui n'a pas été fait
+                </label>
+                <textarea
+                  value={eveningData.improvements ?? ''}
+                  onChange={e => setEveningData(d => ({ ...d, improvements: e.target.value }))}
+                  placeholder="À améliorer demain…"
+                  rows={3}
+                  className="form-input resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Réflexions libres
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Comment s'est passée ta journée ?"
+                  rows={3}
+                  className="form-input resize-none"
+                />
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Soul metrics */}
+          <GlassCard>
+            <p className="text-[10px] uppercase tracking-widest font-semibold mb-4" style={{ color: 'var(--soul)' }}>
+              État intérieur
+            </p>
+            <div className="flex flex-col gap-4">
+              <RatingPicker label="Gratitude" value={soul.gratitude_score} onChange={v => setSoul(s => ({ ...s, gratitude_score: v }))} color="var(--soul)" hint="1 = pas reconnaissant  ·  10 = très reconnaissant" />
+              <RatingPicker label="Qualité de méditation" value={soul.meditation_quality} onChange={v => setSoul(s => ({ ...s, meditation_quality: v }))} color="var(--soul)" />
+              <RatingPicker label="Niveau de stress" value={soul.stress_level} onChange={v => setSoul(s => ({ ...s, stress_level: v }))} color="#f97316" hint="1 = très calme  ·  10 = très stressé" />
+            </div>
+          </GlassCard>
+
+          <div className="pb-24" />
+        </div>
+      )}
 
       {/* Sticky save button */}
       <div
-        className="fixed bottom-0 left-0 right-0 px-4 pb-safe z-40 md:sticky md:bottom-0"
+        className="fixed bottom-0 left-0 right-0 px-4 z-40 md:sticky md:bottom-0"
         style={{
           paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
           paddingTop: '12px',
@@ -302,17 +521,31 @@ export default function CheckInPage() {
         }}
       >
         <div className="max-w-2xl mx-auto">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all"
-            style={{
-              background: saved ? 'var(--success)' : saving ? 'var(--text-muted)' : 'var(--primary)',
-              boxShadow: saved ? 'none' : 'var(--shadow-glow)',
-            }}
-          >
-            {saved ? '✓ Check-in saved!' : saving ? 'Saving…' : "Save Today's Check-In"}
-          </button>
+          {activeTab === 'morning' ? (
+            <button
+              onClick={handleSaveMorning}
+              disabled={morningSaving}
+              className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all"
+              style={{
+                background: morningSaved ? 'var(--teal)' : morningSaving ? 'var(--text-muted)' : 'var(--primary)',
+                boxShadow: morningSaved ? 'none' : 'var(--shadow-glow)',
+              }}
+            >
+              {morningSaved ? '✓ Matin enregistré !' : morningSaving ? 'Enregistrement…' : 'Sauvegarder le check-in du matin'}
+            </button>
+          ) : (
+            <button
+              onClick={handleSaveEvening}
+              disabled={eveningSaving}
+              className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all"
+              style={{
+                background: eveningSaved ? 'var(--teal)' : eveningSaving ? 'var(--text-muted)' : 'var(--primary)',
+                boxShadow: eveningSaved ? 'none' : 'var(--shadow-glow)',
+              }}
+            >
+              {eveningSaved ? '✓ Soir enregistré !' : eveningSaving ? 'Enregistrement…' : 'Sauvegarder le bilan du soir'}
+            </button>
+          )}
         </div>
       </div>
     </div>
