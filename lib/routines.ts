@@ -203,9 +203,24 @@ export async function updateSessionTasks(sessionId: string, completedTaskIds: st
 
 export async function completeSession(sessionId: string): Promise<RoutineSession> {
   const supabase = createClient();
+
+  const { data: current } = await supabase
+    .from('routine_sessions')
+    .select('started_at, pause_duration_seconds')
+    .eq('id', sessionId)
+    .single();
+
+  const actual_duration_seconds = current?.started_at
+    ? Math.max(0, Math.floor((Date.now() - new Date(current.started_at).getTime()) / 1000)
+        - (current.pause_duration_seconds ?? 0))
+    : undefined;
+
   const { data, error } = await supabase
     .from('routine_sessions')
-    .update({ completed_at: new Date().toISOString() })
+    .update({
+      completed_at: new Date().toISOString(),
+      ...(actual_duration_seconds != null ? { actual_duration_seconds } : {}),
+    })
     .eq('id', sessionId)
     .select()
     .single();
