@@ -222,6 +222,7 @@ export type RoutineSession = {
   paused_at: string | null;
   pause_duration_seconds: number;
   completed_at?: string;
+  actual_duration_seconds?: number;
 };
 
 export type RoutineWithSession = Routine & {
