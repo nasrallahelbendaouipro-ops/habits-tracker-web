@@ -104,7 +104,7 @@ export type HabitWithStreak = Habit & {
 
 // ─── Calendar ─────────────────────────────────────────────────────────────────
 
-export type CalendarEventType = 'event' | 'meeting' | 'interview' | 'shift';
+export type CalendarEventType = 'event' | 'meeting' | 'interview' | 'shift' | 'routine';
 export type CalendarEventSource = 'manual' | 'google' | 'ai-parsed';
 
 export type CalendarEvent = {
@@ -201,6 +201,8 @@ export type Routine = {
   icon?: string;
   color?: string;
   schedule_days: number[];
+  weekly_target_hours: number;
+  priority?: 'high' | 'medium' | 'low';
   tasks: RoutineTask[];
   created_at: string;
 };
@@ -216,6 +218,7 @@ export type RoutineSession = {
   user_id: string;
   routine_id: string;
   date: string;
+  calendar_event_id: string | null;
   completed_task_ids: string[];
   exercise_progress: Record<string, ExerciseProgress>;
   started_at: string | null;
@@ -227,6 +230,22 @@ export type RoutineSession = {
 
 export type RoutineWithSession = Routine & {
   todaySession?: RoutineSession;
+};
+
+export type RoutineCalendarBlock = {
+  calendarEvent: CalendarEvent;
+  routine: Routine;
+  session: RoutineSession | null;
+};
+
+export type RoutineWeeklyProgress = {
+  routineId: string;
+  name: string;
+  color?: string;
+  icon?: string;
+  targetHours: number;
+  plannedHours: number;
+  completedHours: number;
 };
 
 // ─── Form Values ──────────────────────────────────────────────────────────────

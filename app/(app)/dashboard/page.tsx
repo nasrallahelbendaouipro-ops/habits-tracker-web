@@ -8,11 +8,10 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { fetchHabitsWithStatus, fetchWeeklyLogs, toggleHabit, createHabit, TIMED_TYPES, DIMENSION_ICONS } from '@/lib/habits';
 import { fetchGoals } from '@/lib/goals';
-import { getTodaysRoutines } from '@/lib/routines';
+import { getRoutineBlocksForDate } from '@/lib/routines';
 import { calcDisciplineScore } from '@/lib/analytics';
 import { TODAY, toISODate } from '@/lib/utils';
-import RoutineCard from '@/components/routines/RoutineCard';
-import type { RoutineWithSession } from '@/lib/types';
+import type { RoutineCalendarBlock } from '@/lib/types';
 import { useLocale, getGreeting, formatHabitsLabel, LOCALE_DATE_TAG } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
 import type { HabitWithStreak, HabitLog, HabitFormValues, GoalWithHabits, HabitDimension } from '@/lib/types';
@@ -269,7 +268,7 @@ export default function DashboardPage() {
   const [habits, setHabits]           = useState<HabitWithStreak[]>([]);
   const [logs, setLogs]               = useState<HabitLog[]>([]);
   const [goals, setGoals]             = useState<GoalWithHabits[]>([]);
-  const [todaysRoutines, setTodaysRoutines] = useState<RoutineWithSession[]>([]);
+  const [routineBlocks, setRoutineBlocks] = useState<RoutineCalendarBlock[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showAdd, setShowAdd]         = useState(false);
   const [showDayProgram, setShowDayProgram] = useState(false);
@@ -288,15 +287,15 @@ export default function DashboardPage() {
     if (!userId) return;
     setLoading(true);
     try {
-      const [habitsData, goalsData, routinesData, logsData] = await Promise.all([
+      const [habitsData, goalsData, blocksData, logsData] = await Promise.all([
         fetchHabitsWithStatus(userId, selectedDate),
         fetchGoals(userId),
-        getTodaysRoutines(),
+        getRoutineBlocksForDate(selectedDate),
         fetchWeeklyLogs(userId),
       ]);
       setHabits(habitsData);
       setGoals(goalsData);
-      setTodaysRoutines(routinesData);
+      setRoutineBlocks(blocksData);
       setLogs(logsData);
       if (habitsData.length === 0 && !localStorage.getItem('onboarding_complete')) {
         router.push('/onboarding');
@@ -432,21 +431,65 @@ export default function DashboardPage() {
         </Link>
       )}
 
-      {/* Today's Routines */}
-      {isToday && todaysRoutines.length > 0 && (
+      {/* Today's Routine Blocks */}
+      {routineBlocks.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-sm uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              Today&apos;s Routines
+              {isToday ? "Today's Routines" : 'Routines'}
             </h2>
             <Link href="/routines" className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
               All routines
             </Link>
           </div>
           <div className="flex flex-col gap-2">
-            {todaysRoutines.map(r => (
-              <RoutineCard key={r.id} routine={r} compact />
-            ))}
+            {routineBlocks.map(block => {
+              const { calendarEvent, routine, session } = block;
+              const accentColor = routine.color ?? 'var(--primary)';
+              const startTime = new Date(calendarEvent.start_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+              const endTime = new Date(calendarEvent.end_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+              const plannedMin = Math.round((new Date(calendarEvent.end_at).getTime() - new Date(calendarEvent.start_at).getTime()) / 60000);
+              const isFinished = !!session?.completed_at;
+              const hasStarted = !!session?.started_at;
+              return (
+                <div
+                  key={calendarEvent.id}
+                  className="flex items-center gap-3 p-3.5 rounded-2xl transition-all"
+                  style={{
+                    background: isFinished ? 'var(--surface-elevated)' : 'var(--surface)',
+                    border: `1px solid ${isFinished ? accentColor + '40' : 'var(--border)'}`,
+                    borderLeft: `3px solid ${accentColor}`,
+                    opacity: isFinished ? 0.75 : 1,
+                  }}
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: accentColor + '20' }}>
+                    {routine.icon ?? '📋'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate" style={{ color: isFinished ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: isFinished ? 'line-through' : 'none' }}>
+                      {routine.name}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {startTime} – {endTime} · {plannedMin}min
+                    </p>
+                  </div>
+                  {isFinished ? (
+                    <span className="text-xs font-bold flex-shrink-0" style={{ color: accentColor }}>✓ Done</span>
+                  ) : isToday ? (
+                    <Link
+                      href={`/routines/${routine.id}/session?event=${calendarEvent.id}`}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 flex items-center gap-1.5"
+                      style={{ background: accentColor + '20', color: accentColor, border: `1px solid ${accentColor}40` }}
+                    >
+                      <Play size={11} />
+                      {hasStarted ? 'Continue' : 'Start'}
+                    </Link>
+                  ) : (
+                    <span className="text-lg flex-shrink-0" style={{ color: 'var(--text-muted)' }}>›</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -4,15 +4,13 @@ import Link from 'next/link';
 import type { RoutineWithSession } from '@/lib/types';
 import { computeSetProgress } from '@/lib/routines';
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 export default function RoutineCard({ routine, compact = false }: { routine: RoutineWithSession; compact?: boolean }) {
   const { totalSets, doneSets } = computeSetProgress(routine, routine.todaySession ?? null);
   const total = totalSets;
   const done = doneSets;
   const isComplete = !!routine.todaySession?.completed_at;
   const accentColor = routine.color ?? 'var(--primary)';
-  const scheduledDays = routine.schedule_days.map(d => DAY_LABELS[d]).join(' · ');
+  const targetLabel = routine.weekly_target_hours > 0 ? `${routine.weekly_target_hours}h/week` : 'No target set';
 
   return (
     <Link
@@ -47,7 +45,7 @@ export default function RoutineCard({ routine, compact = false }: { routine: Rou
           </p>
           {!compact && (
             <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {scheduledDays}
+              {targetLabel}
             </p>
           )}
         </div>
