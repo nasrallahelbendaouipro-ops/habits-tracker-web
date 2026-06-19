@@ -7,7 +7,6 @@ import { getRoutine, getSession, computeSetProgress } from '@/lib/routines';
 import type { Routine, RoutineSession, RoutineTask } from '@/lib/types';
 import { TODAY } from '@/lib/utils';
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function getSections(tasks: RoutineTask[]) {
   const sections: { label: string | null; tasks: RoutineTask[] }[] = [];
@@ -47,7 +46,7 @@ export default function RoutineDetailPage() {
   if (!routine) return <p style={{ color: 'var(--error)' }}>Routine not found.</p>;
 
   const accentColor = routine.color ?? 'var(--primary)';
-  const scheduledDays = routine.schedule_days.map(d => DAY_LABELS[d]).join(' · ');
+  const targetLabel = routine.weekly_target_hours > 0 ? `${routine.weekly_target_hours}h/week` : 'No target set';
   const { totalSets, doneSets } = computeSetProgress(routine, session);
   const total = totalSets;
   const done = doneSets;
@@ -70,7 +69,7 @@ export default function RoutineDetailPage() {
         <div className="flex-1">
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{routine.name}</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-            {scheduledDays || 'No schedule'} · {routine.tasks.length} tasks
+            {targetLabel} · {routine.tasks.length} tasks
           </p>
           {total > 0 && (
             <div className="mt-2 flex items-center gap-2">

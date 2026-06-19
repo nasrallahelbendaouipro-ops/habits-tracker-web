@@ -6,7 +6,11 @@ import TaskListEditor from './TaskListEditor';
 
 const ICONS = ['🦶', '💥', '🌀', '💪', '🏃', '🤸', '📊', '🗃️', '☁️', '⚡', '🔄', '📚', '🎯', '🧘', '🏋️', '🥊', '⚽', '🎵', '🧠', '💡'];
 const COLORS = ['#FF4D00', '#FFB800', '#00D4FF', '#00E676', '#F2C811', '#4A9EFF', '#FF9900', '#A78BFA', '#F97316', '#6C63FF', '#FF6B6B', '#4ECDC4'];
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const PRIORITIES: { value: 'high' | 'medium' | 'low'; label: string }[] = [
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+];
 
 interface Props {
   initial?: Partial<Routine>;
@@ -20,17 +24,23 @@ export default function RoutineForm({ initial, onSubmit, onCancel, submitting }:
   const [category, setCategory] = useState<RoutineCategory>(initial?.category ?? 'sport');
   const [icon, setIcon] = useState(initial?.icon ?? '📋');
   const [color, setColor] = useState(initial?.color ?? COLORS[0]);
-  const [days, setDays] = useState<number[]>(initial?.schedule_days ?? []);
+  const [weeklyTargetHours, setWeeklyTargetHours] = useState<number>(initial?.weekly_target_hours ?? 0);
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low' | undefined>(initial?.priority);
   const [tasks, setTasks] = useState<RoutineTask[]>(initial?.tasks ?? []);
-
-  function toggleDay(d: number) {
-    setDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort());
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    await onSubmit({ name: name.trim(), category, icon, color, schedule_days: days, tasks });
+    await onSubmit({
+      name: name.trim(),
+      category,
+      icon,
+      color,
+      schedule_days: [],
+      weekly_target_hours: weeklyTargetHours,
+      priority,
+      tasks,
+    });
   }
 
   return (
@@ -119,25 +129,48 @@ export default function RoutineForm({ initial, onSubmit, onCancel, submitting }:
         </div>
       </div>
 
-      {/* Schedule days */}
+      {/* Weekly target hours */}
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-          Schedule (days of week)
+          Weekly target (hours)
         </label>
-        <div className="flex gap-1.5">
-          {DAY_LABELS.map((label, i) => (
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min={0}
+            max={168}
+            step={0.5}
+            value={weeklyTargetHours}
+            onChange={e => setWeeklyTargetHours(parseFloat(e.target.value) || 0)}
+            className="w-28 px-4 py-3 rounded-xl text-sm font-medium outline-none"
+            style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+          />
+          <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>hours / week</span>
+        </div>
+        <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>
+          Plan your sessions by adding blocks to the calendar
+        </p>
+      </div>
+
+      {/* Priority (optional) */}
+      <div>
+        <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+          Priority <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
+        </label>
+        <div className="flex gap-2">
+          {PRIORITIES.map(p => (
             <button
-              key={i}
+              key={p.value}
               type="button"
-              onClick={() => toggleDay(i)}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
+              onClick={() => setPriority(priority === p.value ? undefined : p.value)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold capitalize transition-all"
               style={{
-                background: days.includes(i) ? color + '20' : 'var(--surface-elevated)',
-                color: days.includes(i) ? color : 'var(--text-muted)',
-                border: `1px solid ${days.includes(i) ? color : 'var(--border)'}`,
+                background: priority === p.value ? color + '20' : 'var(--surface-elevated)',
+                color: priority === p.value ? color : 'var(--text-secondary)',
+                border: `1px solid ${priority === p.value ? color : 'var(--border)'}`,
               }}
             >
-              {label}
+              {p.label}
             </button>
           ))}
         </div>

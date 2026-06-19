@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import type { Routine, RoutineSession, RoutineWithSession, RoutineTask, ExerciseProgress } from '@/lib/types';
+import type { Routine, RoutineSession, RoutineWithSession, RoutineTask, ExerciseProgress, CalendarEvent, RoutineCalendarBlock } from '@/lib/types';
 import { TODAY } from '@/lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -226,4 +226,87 @@ export async function completeSession(sessionId: string): Promise<RoutineSession
     .single();
   if (error) throw error;
   return data as RoutineSession;
+}
+
+// ─── Calendar-based session helpers ───────────────────────────────────────────
+
+export async function getRoutineBlocksForDate(date: string): Promise<RoutineCalendarBlock[]> {
+  const supabase = createClient();
+  const dayStart = `${date}T00:00:00.000Z`;
+  const dayEnd   = `${date}T23:59:59.999Z`;
+
+  const { data: events, error: evErr } = await supabase
+    .from('calendar_events')
+    .select('*')
+    .gte('start_at', dayStart)
+    .lte('start_at', dayEnd);
+  if (evErr) throw evErr;
+
+  const routineEvents = ((events ?? []) as CalendarEvent[]).filter(
+    e => e.linked_routine_ids && e.linked_routine_ids.length > 0
+  );
+  if (!routineEvents.length) return [];
+
+  const routineIds = [...new Set(routineEvents.flatMap(e => e.linked_routine_ids))];
+  const eventIds   = routineEvents.map(e => e.id);
+
+  const [routinesRes, sessionsRes] = await Promise.all([
+    supabase.from('routines').select('*').in('id', routineIds),
+    supabase.from('routine_sessions').select('*').in('calendar_event_id', eventIds),
+  ]);
+  if (routinesRes.error) throw routinesRes.error;
+
+  const routineMap  = new Map((routinesRes.data ?? []).map((r: Routine) => [r.id, r as Routine]));
+  const sessionMap  = new Map((sessionsRes.data ?? []).map((s: RoutineSession) => [s.calendar_event_id!, s as RoutineSession]));
+
+  const blocks: RoutineCalendarBlock[] = [];
+  for (const ev of routineEvents) {
+    for (const rid of ev.linked_routine_ids) {
+      const routine = routineMap.get(rid);
+      if (!routine) continue;
+      blocks.push({
+        calendarEvent: ev,
+        routine,
+        session: sessionMap.get(ev.id) ?? null,
+      });
+    }
+  }
+  return blocks;
+}
+
+export async function upsertSessionForEvent(
+  routineId: string,
+  userId: string,
+  date: string,
+  calendarEventId: string
+): Promise<RoutineSession> {
+  const supabase = createClient();
+  const { data: existing } = await supabase
+    .from('routine_sessions')
+    .select('*')
+    .eq('routine_id', routineId)
+    .eq('user_id', userId)
+    .eq('calendar_event_id', calendarEventId)
+    .maybeSingle();
+  if (existing) return existing as RoutineSession;
+
+  const { data, error } = await supabase
+    .from('routine_sessions')
+    .insert({ routine_id: routineId, user_id: userId, date, calendar_event_id: calendarEventId, completed_task_ids: [], exercise_progress: {} })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as RoutineSession;
+}
+
+export async function getSessionForEvent(routineId: string, calendarEventId: string): Promise<RoutineSession | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('routine_sessions')
+    .select('*')
+    .eq('routine_id', routineId)
+    .eq('calendar_event_id', calendarEventId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as RoutineSession | null;
 }
