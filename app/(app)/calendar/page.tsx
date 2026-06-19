@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import { useLocale } from '@/lib/i18n';
 import ShiftParserModal from '@/components/ui/ShiftParserModal';
+import RoutinePlanningPanel from '@/components/calendar/RoutinePlanningPanel';
 
 const CalendarView = dynamic(
   () => import('@/components/calendar/CalendarView'),
@@ -17,6 +18,12 @@ export default function CalendarPage() {
   const [showImport, setShowImport] = useState(false);
   const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
   const [googleBanner, setGoogleBanner] = useState<'success' | 'error' | null>(null);
+  const [weekStart, setWeekStart] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay() + 1); // Monday
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
   const { t, locale } = useLocale();
   const calendarKey = useRef(0);
   const [, forceRefresh] = useState(0);
@@ -125,12 +132,15 @@ export default function CalendarPage() {
       {loading || !userId ? (
         <div className="h-96 rounded-2xl animate-pulse" style={{ background: 'var(--surface)' }} />
       ) : (
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '20px 20px 0' }}
-        >
-          <CalendarView key={`${calendarKey.current}-${locale}`} userId={userId} />
-        </div>
+        <>
+          <RoutinePlanningPanel userId={userId} weekStart={weekStart} />
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '20px 20px 0' }}
+          >
+            <CalendarView key={`${calendarKey.current}-${locale}`} userId={userId} onWeekChange={setWeekStart} />
+          </div>
+        </>
       )}
 
       {userId && (
