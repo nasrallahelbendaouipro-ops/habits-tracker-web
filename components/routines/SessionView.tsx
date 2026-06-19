@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
-  upsertSession, completeSession, updateSessionTasks,
+  upsertSession, upsertSessionForEvent, completeSession, updateSessionTasks,
   startSession, pauseSession, resumeSession, updateExerciseProgress,
   computeSetProgress,
 } from '@/lib/routines';
@@ -17,6 +17,7 @@ import { TODAY } from '@/lib/utils';
 interface Props {
   routine: Routine;
   initialSession: RoutineSession | null;
+  calendarEventId?: string | null;
 }
 
 function getSectionedTasks(tasks: RoutineTask[]) {
@@ -39,7 +40,7 @@ function plannedSeconds(routine: Routine): number {
 
 const EMPTY_PROGRESS: ExerciseProgress = { completed_sets: 0, current_left_done: false, current_right_done: false };
 
-export default function SessionView({ routine, initialSession }: Props) {
+export default function SessionView({ routine, initialSession, calendarEventId }: Props) {
   const [userId, setUserId] = useState<string | null>(null);
   const [session, setSession] = useState<RoutineSession | null>(initialSession);
   const [exerciseProgress, setExerciseProgress] = useState<Record<string, ExerciseProgress>>(
@@ -67,7 +68,9 @@ export default function SessionView({ routine, initialSession }: Props) {
 
   async function ensureSession(): Promise<RoutineSession> {
     if (session) return session;
-    const s = await upsertSession(routine.id, userId!, TODAY);
+    const s = calendarEventId
+      ? await upsertSessionForEvent(routine.id, userId!, TODAY, calendarEventId)
+      : await upsertSession(routine.id, userId!, TODAY);
     setSession(s);
     return s;
   }

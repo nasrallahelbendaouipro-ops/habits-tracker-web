@@ -9,7 +9,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { fetchHabitsWithStatus } from '@/lib/habits';
 import { fetchGoals } from '@/lib/goals';
-import { calcDisciplineScore, calcDimensionScores, dailyCompletionMap, weeklyTotals, habitCompletionRate, fetchRoutineCompletionStats, fetchDailyMetricsHistory, type RoutineStat, type DailyMetricPoint } from '@/lib/analytics';
+import { calcDisciplineScore, calcDimensionScores, dailyCompletionMap, weeklyTotals, habitCompletionRate, fetchRoutineCompletionStats, fetchDailyMetricsHistory, fetchWeeklyTargetAchievement, type RoutineStat, type DailyMetricPoint, type WeeklyTargetAchievement } from '@/lib/analytics';
 import { dateStr, TODAY } from '@/lib/utils';
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
 import GlassCard from '@/components/ui/GlassCard';
@@ -153,7 +153,9 @@ export default function AnalyticsPage() {
   const [logs, setLogs]               = useState<HabitLog[]>([]);
   const [goals, setGoals]             = useState<GoalWithHabits[]>([]);
   const [routineStats, setRoutineStats] = useState<RoutineStat[]>([]);
+  const [weeklyAchievement, setWeeklyAchievement] = useState<WeeklyTargetAchievement[]>([]);
   const [metricsHistory, setMetricsHistory] = useState<DailyMetricPoint[]>([]);
+  const [analyticsDays, setAnalyticsDays] = useState<7 | 30 | 90>(30);
   const [loading, setLoading]         = useState(true);
   const [mounted, setMounted]         = useState(false);
 
@@ -170,22 +172,24 @@ export default function AnalyticsPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const [habitsData, logsRes, goalsData, routineStatsData, metricsData] = await Promise.all([
+      const [habitsData, logsRes, goalsData, routineStatsData, metricsData, weeklyData] = await Promise.all([
         fetchHabitsWithStatus(userId),
         supabase.from('habit_logs').select('*').eq('user_id', userId).gte('completed_at', dateStr(365)),
         fetchGoals(userId),
-        fetchRoutineCompletionStats(userId, 30),
-        fetchDailyMetricsHistory(userId, 30),
+        fetchRoutineCompletionStats(userId, analyticsDays),
+        fetchDailyMetricsHistory(userId, analyticsDays),
+        fetchWeeklyTargetAchievement(userId, 8),
       ]);
       setHabits(habitsData);
       setLogs((logsRes.data ?? []) as HabitLog[]);
       setGoals(goalsData);
       setRoutineStats(routineStatsData);
       setMetricsHistory(metricsData);
+      setWeeklyAchievement(weeklyData);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, analyticsDays]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -247,11 +251,29 @@ export default function AnalyticsPage() {
 
   return (
     <div className="animate-fade-in flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{t.analytics_title}</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-          {habits.length} {habits.length !== 1 ? t.analytics_subtitle_other : t.analytics_subtitle_one}
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{t.analytics_title}</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+            {habits.length} {habits.length !== 1 ? t.analytics_subtitle_other : t.analytics_subtitle_one}
+          </p>
+        </div>
+        <div className="flex gap-1 p-1 rounded-xl flex-shrink-0" style={{ background: 'var(--surface)' }}>
+          {([7, 30, 90] as const).map(d => (
+            <button
+              key={d}
+              onClick={() => setAnalyticsDays(d)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={{
+                background: analyticsDays === d ? 'var(--surface-elevated)' : 'transparent',
+                color: analyticsDays === d ? 'var(--primary)' : 'var(--text-muted)',
+                boxShadow: analyticsDays === d ? '0 1px 4px rgba(0,0,0,0.15)' : 'none',
+              }}
+            >
+              {d}j
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Overall summary */}
@@ -407,16 +429,76 @@ export default function AnalyticsPage() {
         <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>{t.analytics_habits_rate}</p>
         <div className="flex flex-col gap-4">
           {sorted.map(habit => (
-            <HabitStatRow key={habit.id} habit={habit} rate={habitCompletionRate(habit.id, logs, 30)} />
+            <HabitStatRow key={habit.id} habit={habit} rate={habitCompletionRate(habit.id, logs, analyticsDays)} />
           ))}
         </div>
       </GlassCard>
+
+      {/* Weekly target achievement */}
+      {weeklyAchievement.length > 0 && mounted && (() => {
+        const routineIds = [...new Set(weeklyAchievement.map(w => w.routineId))];
+        const weeks = [...new Set(weeklyAchievement.map(w => w.weekLabel))];
+        const chartData = weeks.map(weekLabel => {
+          const obj: Record<string, unknown> = { weekLabel };
+          routineIds.forEach(rid => {
+            const entry = weeklyAchievement.find(w => w.weekLabel === weekLabel && w.routineId === rid);
+            obj[rid] = entry ? Math.round(entry.achievementPct) : 0;
+          });
+          return obj;
+        });
+        const routineMeta = routineIds.map(rid => {
+          const entry = weeklyAchievement.find(w => w.routineId === rid)!;
+          return { id: rid, name: entry.name, color: entry.color ?? 'var(--primary)' };
+        });
+        const overallAvg = routineMeta.length > 0
+          ? Math.round(routineMeta.reduce((sum, r) => {
+              const vals = weeklyAchievement.filter(w => w.routineId === r.id).map(w => w.achievementPct);
+              return sum + (vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0);
+            }, 0) / routineMeta.length)
+          : 0;
+
+        return (
+          <GlassCard>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                Objectifs hebdomadaires (8 sem.)
+              </p>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg" style={{ background: 'color-mix(in srgb, var(--teal) 15%, transparent)' }}>
+                <span className="text-xs font-bold" style={{ color: 'var(--teal)' }}>{overallAvg}%</span>
+                <span className="text-[10px]" style={{ color: 'var(--teal)' }}>moy.</span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={chartData} barSize={14} barGap={2} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+                <XAxis dataKey="weekLabel" tick={{ fontSize: 9, fill: chart.tickFill }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: chart.tickFill }} axisLine={false} tickLine={false} ticks={[0, 50, 100]} />
+                <Tooltip
+                  formatter={(v: unknown, name: unknown) => [`${v}%`, String(name ?? '')]}
+                  contentStyle={chart.tooltipStyle}
+                  cursor={{ fill: chart.cursorFill }}
+                />
+                {routineMeta.map(r => (
+                  <Bar key={r.id} dataKey={r.id} name={r.name} fill={r.color} radius={[3, 3, 0, 0]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="flex items-center gap-3 mt-3 flex-wrap justify-center">
+              {routineMeta.map(r => (
+                <div key={r.id} className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: r.color }} />
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{r.name}</span>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        );
+      })()}
 
       {/* Routine performance */}
       {routineStats.length > 0 && mounted && (
         <GlassCard>
           <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
-            Performance des routines (30j)
+            Performance des routines ({analyticsDays}j)
           </p>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={routineStats} barSize={28} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
@@ -478,7 +560,7 @@ export default function AnalyticsPage() {
       {metricsHistory.some(m => m.weight || m.energy || m.mood) && mounted && (
         <GlassCard>
           <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-muted)' }}>
-            Évolution personnelle (30 jours)
+            Évolution personnelle ({analyticsDays} jours)
           </p>
 
           {metricsHistory.some(m => m.weight) && (

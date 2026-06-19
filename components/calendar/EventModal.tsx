@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/calendar';
 import { useLocale } from '@/lib/i18n';
 import type { CalendarEvent, CalendarEventType, Habit, Routine } from '@/lib/types';
 import ModalShell from '@/components/ui/ModalShell';
+import { TODAY } from '@/lib/utils';
 
 const DIMENSION_COLOR: Record<string, string> = {
   body: 'var(--body)',
@@ -13,8 +15,6 @@ const DIMENSION_COLOR: Record<string, string> = {
 };
 
 const EVENT_COLORS = ['#6C63FF', '#FF6B35', '#4ECDC4', '#45B7D1', '#FF6B6B', '#96CEB4', '#FFD93D', '#DDA0DD'];
-
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 type Props = {
   visible: boolean;
@@ -45,8 +45,21 @@ function defaultEnd(start: string): string {
   return toLocalInput(d.toISOString());
 }
 
+function endFromRoutineDuration(start: string, tasks: Routine['tasks']): string {
+  const totalMin = tasks.reduce((n, t) => n + (t.duration_min ?? 0), 0);
+  if (!totalMin) return defaultEnd(start);
+  const d = new Date(start);
+  d.setMinutes(d.getMinutes() + totalMin);
+  return toLocalInput(d.toISOString());
+}
+
+function isToday(isoString: string): boolean {
+  return isoString.startsWith(TODAY);
+}
+
 export default function EventModal({ visible, mode, initialStart, initialEnd, event, userId, habits, routines, onClose, onSaved }: Props) {
   const { t } = useLocale();
+  const router = useRouter();
   const [title, setTitle]   = useState('');
   const [type, setType]     = useState<CalendarEventType>('event');
   const [start, setStart]   = useState(initialStart ?? '');
@@ -64,6 +77,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
     { value: 'meeting',   label: t.event_type_meeting,   icon: '🤝' },
     { value: 'interview', label: t.event_type_interview, icon: '💼' },
     { value: 'shift',     label: t.event_type_shift,     icon: '🕐' },
+    { value: 'routine',   label: 'Routine',              icon: '🔄' },
   ];
 
   useEffect(() => {
@@ -120,6 +134,12 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
         setTitle(routine.name);
         if (routine.color) setColor(routine.color);
       }
+      // Auto-set end time from routine task durations when type is 'routine'
+      if (type === 'routine' && start) {
+        setEnd(endFromRoutineDuration(new Date(start).toISOString(), routine.tasks));
+      }
+      // Auto-switch type to routine
+      setType('routine');
       return [...prev, id];
     });
   }
@@ -175,6 +195,16 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
     }
   }
 
+  function handleStartSession() {
+    if (!event || linkedRoutineIds.length === 0) return;
+    const routineId = linkedRoutineIds[0];
+    onClose();
+    router.push(`/routines/${routineId}/session?event=${event.id}`);
+  }
+
+  const isRoutineBlock = type === 'routine' && linkedRoutineIds.length > 0;
+  const isTodayEvent = mode === 'edit' && event && isToday(event.start_at);
+
   const inputStyle = {
     background: 'var(--surface-elevated)',
     border: '1px solid var(--border)',
@@ -196,6 +226,16 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
           style={{ background: 'rgba(255,107,107,0.12)', color: 'var(--error)' }}
         >
           {deleting ? '…' : '🗑️'}
+        </button>
+      )}
+      {isRoutineBlock && isTodayEvent && (
+        <button
+          type="button"
+          onClick={handleStartSession}
+          className="px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
+          style={{ background: color + '20', color: color, border: `1px solid ${color}50` }}
+        >
+          Start Session
         </button>
       )}
       <button
@@ -396,7 +436,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
                     const routine = routines.find(r => r.id === id);
                     if (!routine) return null;
                     const accentColor = routine.color ?? '#6C63FF';
-                    const scheduledDays = routine.schedule_days.map(d => DAY_LABELS[d]).join(' · ');
+                    const targetLabel = routine.weekly_target_hours > 0 ? `${routine.weekly_target_hours}h/wk` : 'No target';
                     return (
                       <div
                         key={id}
@@ -414,7 +454,7 @@ export default function EventModal({ visible, mode, initialStart, initialEnd, ev
                             {routine.name}
                           </p>
                           <p className="text-[10px] mt-0.5 capitalize" style={{ color: 'var(--text-muted)' }}>
-                            {routine.category} · {scheduledDays || 'No schedule'} · {routine.tasks.length} tasks
+                            {routine.category} · {targetLabel} · {routine.tasks.length} tasks
                           </p>
                         </div>
                         <button

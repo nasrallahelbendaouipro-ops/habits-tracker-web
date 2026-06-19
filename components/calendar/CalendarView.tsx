@@ -72,7 +72,7 @@ function EventPill({ info }: { info: EventContentArg }) {
   );
 }
 
-export default function CalendarView({ userId }: { userId: string }) {
+export default function CalendarView({ userId, onWeekChange }: { userId: string; onWeekChange?: (weekStart: Date) => void }) {
   const { locale, t } = useLocale();
   const router = useRouter();
   const calendarRef = useRef<FullCalendar>(null);
@@ -286,6 +286,7 @@ export default function CalendarView({ userId }: { userId: string }) {
   function handleDatesSet(arg: DatesSetArg) {
     setViewTitle(arg.view.title);
     setViewType(arg.view.type);
+    onWeekChange?.(arg.start);
   }
 
   function handleDateClick(arg: DateClickArg) {

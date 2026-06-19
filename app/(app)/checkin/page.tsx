@@ -7,10 +7,10 @@ import {
   fetchCheckin, upsertMorningCheckin, upsertEveningCheckin,
   type BodyMetrics, type MindMetrics, type SoulMetrics, type MorningData, type EveningData,
 } from '@/lib/checkin';
-import { getTodaysRoutines, computeSetProgress, countTrackableTasks } from '@/lib/routines';
+import { getRoutineBlocksForDate, computeSetProgress, countTrackableTasks } from '@/lib/routines';
 import { fetchCalendarEvents } from '@/lib/calendar';
 import { TODAY } from '@/lib/utils';
-import type { HabitWithStreak, RoutineWithSession, CalendarEvent } from '@/lib/types';
+import type { HabitWithStreak, RoutineCalendarBlock, CalendarEvent } from '@/lib/types';
 import GlassCard from '@/components/ui/GlassCard';
 import { Sun, Moon, CheckCircle2, XCircle } from 'lucide-react';
 
@@ -136,14 +136,14 @@ function HabitRow({ habit, onToggle }: { habit: HabitWithStreak; onToggle: () =>
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function getRoutineCompletionPct(routine: RoutineWithSession): number {
-  const session = routine.todaySession;
+function getRoutineCompletionPct(block: RoutineCalendarBlock): number {
+  const session = block.session;
   if (!session) return 0;
-  if (routine.category === 'sport') {
-    const { totalSets, doneSets } = computeSetProgress(routine, session);
+  if (block.routine.category === 'sport') {
+    const { totalSets, doneSets } = computeSetProgress(block.routine, session);
     return totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
   }
-  const trackable = countTrackableTasks(routine.tasks);
+  const trackable = countTrackableTasks(block.routine.tasks);
   return trackable > 0 ? Math.round((session.completed_task_ids.length / trackable) * 100) : 0;
 }
 
@@ -173,7 +173,7 @@ export default function CheckInPage() {
 
   // Evening bilan data
   const [habits, setHabits] = useState<HabitWithStreak[]>([]);
-  const [routines, setRoutines] = useState<RoutineWithSession[]>([]);
+  const [routineBlocks, setRoutineBlocks] = useState<RoutineCalendarBlock[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
@@ -182,14 +182,14 @@ export default function CheckInPage() {
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [habitsData, checkin, routinesData, events] = await Promise.all([
+    const [habitsData, checkin, blocksData, events] = await Promise.all([
       fetchHabitsWithStatus(userId, TODAY),
       fetchCheckin(userId, TODAY),
-      getTodaysRoutines(),
+      getRoutineBlocksForDate(TODAY),
       fetchCalendarEvents(userId, `${TODAY}T00:00:00`, `${TODAY}T23:59:59`),
     ]);
     setHabits(habitsData);
-    setRoutines(routinesData);
+    setRoutineBlocks(blocksData);
     setCalendarEvents(events);
     if (checkin) {
       setBody(checkin.body_metrics ?? {});
@@ -363,23 +363,28 @@ export default function CheckInPage() {
           )}
 
           {/* Routines bilan */}
-          {routines.length > 0 && (
+          {routineBlocks.length > 0 && (
             <GlassCard>
               <p className="text-[10px] uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
                 Routines du jour
               </p>
               <div className="flex flex-col gap-3">
-                {routines.map(routine => {
-                  const pct = getRoutineCompletionPct(routine);
-                  const color = routine.color ?? 'var(--primary)';
-                  const hasSession = !!routine.todaySession;
+                {routineBlocks.map(block => {
+                  const pct = getRoutineCompletionPct(block);
+                  const color = block.routine.color ?? 'var(--primary)';
+                  const hasSession = !!block.session;
+                  const start = new Date(block.calendarEvent.start_at);
+                  const timeStr = start.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                   return (
-                    <div key={routine.id} className="flex flex-col gap-2">
+                    <div key={block.calendarEvent.id} className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{routine.icon ?? '🔄'}</span>
-                        <span className="text-sm font-medium flex-1 truncate" style={{ color: 'var(--text-primary)' }}>
-                          {routine.name}
-                        </span>
+                        <span className="text-base">{block.routine.icon ?? '🔄'}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium block truncate" style={{ color: 'var(--text-primary)' }}>
+                            {block.routine.name}
+                          </span>
+                          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{timeStr}</span>
+                        </div>
                         {hasSession ? (
                           <span className="text-sm font-bold flex-shrink-0" style={{ color: pct >= 100 ? 'var(--teal)' : color }}>
                             {pct}%

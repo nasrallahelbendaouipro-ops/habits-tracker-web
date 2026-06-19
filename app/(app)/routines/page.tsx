@@ -8,11 +8,9 @@ import { useLocale } from '@/lib/i18n';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Routine } from '@/lib/types';
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 function RoutineRow({ routine, onDeleteRequest }: { routine: Routine; onDeleteRequest: (id: string) => void }) {
   const accentColor = routine.color ?? 'var(--primary)';
-  const scheduledDays = routine.schedule_days.map(d => DAY_LABELS[d]).join(' · ');
+  const targetLabel = routine.weekly_target_hours > 0 ? `${routine.weekly_target_hours}h/week` : 'No target set';
   const taskCount = routine.tasks.length;
 
   return (
@@ -30,7 +28,7 @@ function RoutineRow({ routine, onDeleteRequest }: { routine: Routine; onDeleteRe
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{routine.name}</p>
         <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {scheduledDays || 'No schedule'} · {taskCount} task{taskCount !== 1 ? 's' : ''}
+          {targetLabel} · {taskCount} task{taskCount !== 1 ? 's' : ''}
         </p>
       </div>
 
