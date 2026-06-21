@@ -86,7 +86,7 @@ export type Habit = {
   created_at: string;
   calendar_start_time?: string;   // HH:MM — default time for all days
   calendar_duration_min?: number;
-  calendar_overrides?: Record<string, { start: string; duration?: number }>; // "1"–"7" keyed by ISO dow
+  calendar_overrides?: Record<string, { start: string; duration?: number }>; // "YYYY-MM-DD" keyed by date
 };
 
 export type HabitLog = {
