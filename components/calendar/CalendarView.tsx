@@ -239,8 +239,8 @@ export default function CalendarView({ userId, onWeekChange }: { userId: string;
           const dow = cursor.getDay() === 0 ? 7 : cursor.getDay();
           const isScheduled = habit.frequency === 'daily' || (habit.target_days ?? []).includes(dow);
           if (isScheduled) {
-            // Per-day override takes priority over the global default
-            const ov = overrides[String(dow)];
+            // Per-occurrence override takes priority over the global default
+            const ov = overrides[toISODate(cursor)];
             const timeStr    = ov?.start    ?? habit.calendar_start_time;
             const durationMin = ov?.duration ?? habit.calendar_duration_min;
             const [hh, mm] = timeStr.split(':').map(Number);
@@ -312,7 +312,13 @@ export default function CalendarView({ userId, onWeekChange }: { userId: string;
   async function handleEventDrop(arg: EventDropArg) {
     const { eventType, rawEvent, habitId } = arg.event.extendedProps;
     if (eventType === 'habit_calendar') {
-      if (!arg.event.start) { arg.revert(); return; }
+      if (!arg.event.start || !arg.oldEvent.start) { arg.revert(); return; }
+
+      // Block cross-day drags — exceptions only support time changes within the same day
+      const oldDow = arg.oldEvent.start.getDay();
+      const newDow = arg.event.start.getDay();
+      if (oldDow !== newDow) { arg.revert(); return; }
+
       const hStr = String(arg.event.start.getHours()).padStart(2, '0');
       const mStr = String(arg.event.start.getMinutes()).padStart(2, '0');
       const newTimeStr  = `${hStr}:${mStr}`;
@@ -320,44 +326,23 @@ export default function CalendarView({ userId, onWeekChange }: { userId: string;
         ? Math.round((arg.event.end.getTime() - arg.event.start.getTime()) / 60_000)
         : undefined;
 
-      const newDow = arg.event.start.getDay() === 0 ? 7 : arg.event.start.getDay();
+      const origDate = toISODate(arg.oldEvent.start);
       const habit  = habits.find(h => h.id === (habitId as string));
       const currentOverrides = habit?.calendar_overrides ?? {};
       const updatedOverrides = {
         ...currentOverrides,
-        [String(newDow)]: {
+        [origDate]: {
           start: newTimeStr,
-          duration: newDuration ?? currentOverrides[String(newDow)]?.duration ?? habit?.calendar_duration_min,
+          duration: newDuration ?? currentOverrides[origDate]?.duration ?? habit?.calendar_duration_min,
         },
       };
 
-      const updates: Parameters<typeof updateHabit>[1] = { calendar_overrides: updatedOverrides };
-
-      // If dragged to a new day, expand target_days to include it
-      if (arg.oldEvent.start) {
-        const oldDow = arg.oldEvent.start.getDay() === 0 ? 7 : arg.oldEvent.start.getDay();
-        if (newDow !== oldDow && habit && habit.frequency === 'weekly') {
-          const existing = habit.target_days ?? [];
-          if (!existing.includes(newDow)) {
-            const newDays = [...existing, newDow].sort((a, b) => a - b);
-            updates.target_days = newDays;
-            setHabits(prev => prev.map(h =>
-              h.id === habit.id ? { ...h, target_days: newDays, calendar_overrides: updatedOverrides } : h
-            ));
-          } else {
-            setHabits(prev => prev.map(h =>
-              h.id === (habitId as string) ? { ...h, calendar_overrides: updatedOverrides } : h
-            ));
-          }
-        } else {
-          setHabits(prev => prev.map(h =>
-            h.id === (habitId as string) ? { ...h, calendar_overrides: updatedOverrides } : h
-          ));
-        }
-      }
+      setHabits(prev => prev.map(h =>
+        h.id === (habitId as string) ? { ...h, calendar_overrides: updatedOverrides } : h
+      ));
 
       try {
-        await updateHabit(habitId as string, updates);
+        await updateHabit(habitId as string, { calendar_overrides: updatedOverrides });
         refreshEvents();
       } catch { arg.revert(); }
       return;
@@ -381,11 +366,11 @@ export default function CalendarView({ userId, onWeekChange }: { userId: string;
       const mStr = String(arg.event.start.getMinutes()).padStart(2, '0');
       const newTimeStr  = `${hStr}:${mStr}`;
       const newDuration = Math.round((arg.event.end.getTime() - arg.event.start.getTime()) / 60_000);
-      const dow  = arg.event.start.getDay() === 0 ? 7 : arg.event.start.getDay();
+      const origDate = toISODate(arg.event.start);
       const habit = habits.find(h => h.id === (habitId as string));
       const updatedOverrides = {
         ...(habit?.calendar_overrides ?? {}),
-        [String(dow)]: { start: newTimeStr, duration: newDuration },
+        [origDate]: { start: newTimeStr, duration: newDuration },
       };
       setHabits(prev => prev.map(h =>
         h.id === (habitId as string) ? { ...h, calendar_overrides: updatedOverrides } : h
