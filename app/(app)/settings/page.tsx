@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { useTheme } from '@/lib/theme';
+import { useTheme, COLOR_THEMES, type ColorTheme } from '@/lib/theme';
 import { useLocale, LOCALE_LABELS, type Locale } from '@/lib/i18n';
 import { CalendarDays, HeartPulse, Activity, Watch, LogOut, Bell, BellOff, Moon, Sun, Smartphone } from 'lucide-react';
 import { getHealthConnectAuthUrl } from '@/lib/integrations/health-connect';
@@ -271,7 +271,7 @@ function NotificationsSection() {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, colorTheme, setColorTheme } = useTheme();
   const { t, locale, setLocale } = useLocale();
   const [user, setUser] = useState<User | null>(null);
 
@@ -311,6 +311,8 @@ export default function SettingsPage() {
         <p className="text-xs uppercase tracking-wide font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
           {t.settings_appearance}
         </p>
+
+        {/* Dark / Light toggle */}
         <button
           onClick={toggleTheme}
           role="switch"
@@ -332,6 +334,54 @@ export default function SettingsPage() {
             />
           </div>
         </button>
+
+        {/* Color Theme picker */}
+        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+          <p className="text-xs uppercase tracking-wide font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
+            Color Theme
+          </p>
+          <div className="flex flex-col gap-2">
+            {(Object.entries(COLOR_THEMES) as [ColorTheme, typeof COLOR_THEMES[ColorTheme]][]).map(([id, meta]) => {
+              const active = colorTheme === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setColorTheme(id)}
+                  className="flex items-center gap-3 p-3 rounded-xl transition-all text-left w-full"
+                  style={{
+                    background: active ? `${meta.primary}18` : 'var(--surface-elevated)',
+                    border: `1px solid ${active ? meta.primary : 'var(--border)'}`,
+                  }}
+                >
+                  {/* Palette swatches */}
+                  <div className="flex gap-1 flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full" style={{ background: meta.bg, border: '1px solid rgba(255,255,255,0.12)' }} />
+                    <div className="w-5 h-5 rounded-full" style={{ background: meta.primary }} />
+                    <div className="w-5 h-5 rounded-full" style={{ background: meta.secondary }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold leading-none" style={{ color: active ? meta.primary : 'var(--text-primary)' }}>
+                      {meta.name}
+                    </p>
+                    <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                      {meta.description}
+                    </p>
+                  </div>
+                  {active && (
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: meta.primary }}
+                    >
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </GlassCard>
 
       {/* Notifications */}
