@@ -3,11 +3,17 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { getFreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar';
 import { googleEventsQuerySchema } from '@/lib/validation/schemas';
+import { createRateLimiter } from '@/lib/rate-limit';
+
+const limiter = createRateLimiter('google-calendar-events', 20, 60);
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (await limiter.check(user.id)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
 
   const { searchParams } = req.nextUrl;
   const parsedQuery = googleEventsQuerySchema.safeParse({

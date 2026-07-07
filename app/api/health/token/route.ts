@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createRateLimiter } from '@/lib/rate-limit';
+
+const limiter = createRateLimiter('health-token', 5, 60);
 
 // GET — return (or create) the user's sync token
 export async function GET() {
   const supabase = await createClient();
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (await limiter.check(user.id)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
 
   const { data, error } = await supabase
     .from('health_sync_tokens')
@@ -33,6 +39,9 @@ export async function POST() {
   const supabase = await createClient();
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (await limiter.check(user.id)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
 
   const { data, error } = await supabase
     .from('health_sync_tokens')

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { plannerInputSchema } from '@/lib/validation/schemas';
+import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
 
 export type PlannerInput = {
   habits: { name: string; dimension: string; type: string; streak: number; completionRate: number }[];
@@ -115,24 +116,12 @@ function ruleBasedPlan(input: PlannerInput): PlannerOutput {
   return { weeklyFocus, recommendations: recommendations.slice(0, 5), aiPowered: false };
 }
 
-// ─── Rate limiter ──────────────────────────────────────────────────────────────
-
-const rateLimitMap = new Map<string, number[]>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = (rateLimitMap.get(ip) ?? []).filter(t => now - t < 60_000);
-  if (timestamps.length >= 10) return true;
-  timestamps.push(now);
-  rateLimitMap.set(ip, timestamps);
-  return false;
-}
+const limiter = createRateLimiter('planner', 10, 60);
 
 // ─── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
-  if (isRateLimited(ip)) {
+  if (await limiter.check(getClientIp(req))) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 

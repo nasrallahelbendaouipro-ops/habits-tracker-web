@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { healthIngestSchema } from '@/lib/validation/schemas';
+import { createRateLimiter } from '@/lib/rate-limit';
+
+const limiter = createRateLimiter('health-ingest', 30, 60);
 
 export type HealthIngestPayload = {
   token: string;
@@ -28,6 +31,10 @@ export async function POST(req: NextRequest) {
   }
 
   const { token, date: rawDate, ...metrics } = parsedBody.data;
+
+  if (await limiter.check(token)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
 
   // Normalise date to YYYY-MM-DD — accepts ISO timestamps too.
   let date: string;
