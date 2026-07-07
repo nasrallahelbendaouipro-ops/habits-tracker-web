@@ -111,6 +111,15 @@ Each non-simple type has a `*Metadata` shape stored in `habits.metadata` JSONB. 
 
 All tables use Row Level Security — every query is scoped to `auth.uid() = user_id`.
 
+### Database migrations
+
+All schema changes are applied via Supabase MCP `apply_migration` AND checked into
+`supabase/migrations/` in the same commit — the two must never drift. `supabase/migrations/`
+is the source of truth for schema history; `list_migrations` on the live project should
+always match it 1:1 going forward. Backups: see Supabase dashboard → Database → Backups;
+confirm/upgrade the billing tier before real user data goes live (the free tier has
+limited/no point-in-time recovery).
+
 ### PWA
 
 - `app/manifest.ts` — Next.js route that serves the Web App Manifest (makes app installable).

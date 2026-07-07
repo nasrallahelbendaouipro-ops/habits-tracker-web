@@ -27,13 +27,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isAuthPath = pathname.startsWith('/login') || pathname.startsWith('/register');
-  const isAppPath =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/calendar') ||
-    pathname.startsWith('/habits') ||
-    pathname.startsWith('/analytics') ||
-    pathname.startsWith('/planner') ||
-    pathname.startsWith('/settings');
+  const isAppPath = !isAuthPath && pathname !== '/' && !pathname.startsWith('/api');
 
   if (!user && isAppPath) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -51,5 +45,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };
