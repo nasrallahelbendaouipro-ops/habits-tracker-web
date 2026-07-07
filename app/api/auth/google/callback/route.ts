@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { upsertToken } from '@/lib/google-calendar';
+import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+const limiter = createRateLimiter('auth-google-callback', 10, 60);
 
 export async function GET(req: NextRequest) {
+  if (await limiter.check(getClientIp(req))) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.redirect(`${BASE_URL}/login`);
@@ -30,6 +36,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!res.ok) {
+    console.error('[auth/google/callback] token exchange failed:', res.status, await res.text());
     return NextResponse.redirect(`${BASE_URL}/calendar?google_error=token_exchange`);
   }
 
