@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createCalendarEvent } from '@/lib/calendar';
 import { useLocale, LOCALE_DATE_TAG } from '@/lib/i18n';
-import type { ParsedShift } from '@/app/api/parse-shift/route';
+import type { ParsedShift } from '@/lib/shift-parser';
 import ModalShell from '@/components/ui/ModalShell';
 
 type ShiftEntry = ParsedShift & { selected: boolean; key: string };
