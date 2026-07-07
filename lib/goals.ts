@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { dateStr } from '@/lib/utils';
-import type { Goal, GoalWithHabits, GoalWithLinked, Habit, HabitWithRate, Routine } from '@/lib/types';
+import type { Goal, GoalWithLinked, Habit, HabitWithRate, Routine } from '@/lib/types';
 
 function sessionSeconds(s: { started_at: string | null; completed_at?: string | null; pause_duration_seconds: number }): number {
   if (!s.started_at || !s.completed_at) return 0;
@@ -18,9 +18,9 @@ export async function fetchGoals(userId: string): Promise<GoalWithLinked[]> {
     { data: links, error: le },
     { data: habits, error: he },
     { data: logs, error: lge },
-    { data: goalRoutineLinks, error: grle },
-    { data: routines, error: re },
-    { data: sessions, error: se },
+    { data: goalRoutineLinks },
+    { data: routines },
+    { data: sessions },
   ] = await Promise.all([
     supabase.from('goals').select('*').eq('user_id', userId).order('created_at'),
     supabase.from('goal_habits').select('goal_id, habit_id'),

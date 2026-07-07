@@ -69,6 +69,5 @@ export function useChartTheme(): ChartTheme {
         boxShadow:    isDark ? '0 4px 24px rgba(0,0,0,0.4)' : '0 4px 24px rgba(0,0,0,0.08)',
       },
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDark]);
 }

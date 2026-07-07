@@ -10,10 +10,6 @@ export type ParsedShift = {
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
-function isoDate(d: Date): string {
-  return d.toISOString().split('T')[0];
-}
-
 // Build a YYYY-MM-DD string from local year/month/day without timezone shifting
 function localIsoDate(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;

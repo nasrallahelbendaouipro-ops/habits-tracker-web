@@ -7,7 +7,7 @@ import { fetchGoals } from '@/lib/goals';
 import { fetchRecentCheckins } from '@/lib/checkin';
 import { calcDimensionScores, habitCompletionRate } from '@/lib/analytics';
 import GlassCard from '@/components/ui/GlassCard';
-import type { HabitWithStreak, HabitLog, GoalWithHabits } from '@/lib/types';
+import type { HabitLog, GoalWithHabits } from '@/lib/types';
 import type { PlannerOutput, PlannerRecommendation } from '@/app/api/planner/route';
 
 const DIM_COLOR = { body: 'var(--body)', mind: 'var(--mind)', soul: 'var(--soul)' };
