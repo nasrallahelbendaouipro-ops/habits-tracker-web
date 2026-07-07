@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { getFreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar';
+import { googleEventsQuerySchema } from '@/lib/validation/schemas';
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
@@ -8,15 +10,14 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
-  const timeMin = searchParams.get('timeMin');
-  const timeMax = searchParams.get('timeMax');
-  if (!timeMin || !timeMax) {
-    return NextResponse.json({ error: 'timeMin and timeMax are required' }, { status: 400 });
+  const parsedQuery = googleEventsQuerySchema.safeParse({
+    timeMin: searchParams.get('timeMin'),
+    timeMax: searchParams.get('timeMax'),
+  });
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: 'Invalid query params', issues: z.treeifyError(parsedQuery.error) }, { status: 400 });
   }
-  const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
-  if (!ISO_RE.test(timeMin) || !ISO_RE.test(timeMax)) {
-    return NextResponse.json({ error: 'timeMin and timeMax must be ISO 8601 datetime strings' }, { status: 400 });
-  }
+  const { timeMin, timeMax } = parsedQuery.data;
 
   const accessToken = await getFreshAccessToken(user.id);
   if (!accessToken) {

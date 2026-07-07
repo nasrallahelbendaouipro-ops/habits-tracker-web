@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { HABIT_ICONS, HABIT_COLORS, DIMENSION_DEFAULTS } from '@/lib/habits';
 import { useLocale } from '@/lib/i18n';
+import { habitFormSchema } from '@/lib/validation/schemas';
 import type { HabitFormValues, HabitType, HabitMetadata, HabitDimension } from '@/lib/types';
 import TypePicker from './TypePicker';
 import WorkoutForm, { defaultWorkout } from './WorkoutForm';
@@ -92,18 +93,28 @@ export default function HabitForm({ initial, onSubmit, submitLabel }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) { setError(t.form_err_name); setErrorField('name'); return; }
+
+    const values: HabitFormValues = {
+      name: name.trim(), icon, color, type, dimension,
+      frequency: targetDays.length > 0 ? 'weekly' : 'daily',
+      target_days: targetDays,
+      metadata,
+      calendar_start_time: calStartTime || undefined,
+      calendar_duration_min: calDuration ? parseInt(calDuration) : undefined,
+    };
+
+    const parsed = habitFormSchema.safeParse(values);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? t.form_err_generic);
+      setErrorField(null);
+      return;
+    }
+
     setError('');
     setErrorField(null);
     setLoading(true);
     try {
-      await onSubmit({
-        name: name.trim(), icon, color, type, dimension,
-        frequency: targetDays.length > 0 ? 'weekly' : 'daily',
-        target_days: targetDays,
-        metadata,
-        calendar_start_time: calStartTime || undefined,
-        calendar_duration_min: calDuration ? parseInt(calDuration) : undefined,
-      });
+      await onSubmit(values);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.form_err_generic);
       setErrorField(null);

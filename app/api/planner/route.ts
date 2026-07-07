@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { plannerInputSchema } from '@/lib/validation/schemas';
 
 export type PlannerInput = {
   habits: { name: string; dimension: string; type: string; streak: number; completionRate: number }[];
@@ -135,7 +137,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const input = await req.json() as PlannerInput;
+    const rawBody = await req.json();
+    const parsedBody = plannerInputSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return NextResponse.json({ error: 'Invalid payload', issues: z.treeifyError(parsedBody.error) }, { status: 400 });
+    }
+    const input: PlannerInput = parsedBody.data;
 
     const hasEnoughData = input.habits.length >= 2 && input.habits.some(h => h.completionRate > 0);
 

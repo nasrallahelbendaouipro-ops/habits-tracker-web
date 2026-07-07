@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { healthIngestSchema } from '@/lib/validation/schemas';
 
 export type HealthIngestPayload = {
   token: string;
@@ -13,18 +15,19 @@ export type HealthIngestPayload = {
 };
 
 export async function POST(req: NextRequest) {
-  let body: HealthIngestPayload;
+  let rawBody: unknown;
   try {
-    body = await req.json() as HealthIngestPayload;
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { token, date: rawDate, ...metrics } = body;
-
-  if (!token || !rawDate) {
-    return NextResponse.json({ error: 'token and date are required' }, { status: 400 });
+  const parsedBody = healthIngestSchema.safeParse(rawBody);
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: 'Invalid payload', issues: z.treeifyError(parsedBody.error) }, { status: 400 });
   }
+
+  const { token, date: rawDate, ...metrics } = parsedBody.data;
 
   // Normalise date to YYYY-MM-DD — accepts ISO timestamps too.
   let date: string;

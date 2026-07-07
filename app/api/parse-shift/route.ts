@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { parseShiftSchema } from '@/lib/validation/schemas';
 
 export type ParsedShift = {
   date: string;   // YYYY-MM-DD
@@ -331,8 +333,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
   try {
-    const { text } = await req.json() as { text: string };
-    if (!text?.trim()) return NextResponse.json({ error: 'text is required' }, { status: 400 });
+    const rawBody = await req.json();
+    const parsedBody = parseShiftSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return NextResponse.json({ error: 'Invalid payload', issues: z.treeifyError(parsedBody.error) }, { status: 400 });
+    }
+    const { text } = parsedBody.data;
 
     let shifts: ParsedShift[];
     const aiPowered = !!process.env.OPENAI_API_KEY;
