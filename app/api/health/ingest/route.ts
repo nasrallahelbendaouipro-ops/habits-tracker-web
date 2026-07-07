@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import * as Sentry from '@sentry/nextjs';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { healthIngestSchema } from '@/lib/validation/schemas';
 import { createRateLimiter } from '@/lib/rate-limit';
@@ -96,6 +97,7 @@ export async function POST(req: NextRequest) {
   });
   if (rpcErr) {
     console.error('[health/ingest] upsert_health_reading rpc:', rpcErr);
+    Sentry.captureException(rpcErr);
     return NextResponse.json({ error: 'Failed to save data' }, { status: 500 });
   }
 
@@ -121,6 +123,7 @@ export async function POST(req: NextRequest) {
     .upsert({ user_id: userId, date, body_metrics: merged }, { onConflict: 'user_id,date' });
   if (upsertErr) {
     console.error('[health/ingest] daily_checkins upsert:', upsertErr);
+    Sentry.captureException(upsertErr);
   }
 
   // Update last_used on the token that was actually used

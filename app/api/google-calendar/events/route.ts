@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { getFreshAccessToken, fetchGoogleCalendarEvents } from '@/lib/google-calendar';
 import { googleEventsQuerySchema } from '@/lib/validation/schemas';
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ connected: true, events });
   } catch (err) {
     console.error('[google-calendar/events]', err);
+    Sentry.captureException(err);
     return NextResponse.json({ connected: true, events: [], error: 'Failed to fetch from Google' });
   }
 }

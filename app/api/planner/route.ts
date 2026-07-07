@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import * as Sentry from '@sentry/nextjs';
 import { plannerInputSchema } from '@/lib/validation/schemas';
 import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
 
@@ -181,12 +182,14 @@ Provide 3-5 recommendations. Be specific, motivating, and practical. Focus on wh
         return NextResponse.json({ ...parsed, aiPowered: true } as PlannerOutput);
       } catch (aiErr) {
         console.warn('[planner] OpenAI failed, falling back to rule-based:', aiErr);
+        Sentry.captureException(aiErr);
       }
     }
 
     return NextResponse.json(ruleBasedPlan(input));
   } catch (err) {
     console.error('[planner]', err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: 'Failed to generate plan' }, { status: 500 });
   }
 }
