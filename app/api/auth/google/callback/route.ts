@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@/lib/supabase/server';
 import { upsertToken } from '@/lib/google-calendar';
 import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
@@ -36,7 +37,9 @@ export async function GET(req: NextRequest) {
   });
 
   if (!res.ok) {
-    console.error('[auth/google/callback] token exchange failed:', res.status, await res.text());
+    const bodyText = await res.text();
+    console.error('[auth/google/callback] token exchange failed:', res.status, bodyText);
+    Sentry.captureException(new Error(`Google token exchange failed: ${res.status} ${bodyText}`));
     return NextResponse.redirect(`${BASE_URL}/calendar?google_error=token_exchange`);
   }
 

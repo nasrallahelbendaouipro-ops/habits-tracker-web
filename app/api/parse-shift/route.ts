@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import * as Sentry from '@sentry/nextjs';
 import { parseShiftSchema } from '@/lib/validation/schemas';
 import { parseStub, expandWithTravel, type ParsedShift } from '@/lib/shift-parser';
 import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ shifts, aiPowered });
   } catch (err) {
     console.error('[parse-shift]', err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: 'Failed to parse shifts' }, { status: 500 });
   }
 }
