@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { getRoutine, getSession, computeSetProgress } from '@/lib/routines';
 import type { Routine, RoutineSession, RoutineTask } from '@/lib/types';
@@ -24,7 +24,6 @@ function getSections(tasks: RoutineTask[]) {
 
 export default function RoutineDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [session, setSession] = useState<RoutineSession | null>(null);
   const [loading, setLoading] = useState(true);

@@ -100,7 +100,6 @@ export default function SessionView({ routine, initialSession, calendarEventId }
   async function handleSetCount(taskId: string, n: number) {
     const task = routine.tasks.find(t => t.id === taskId);
     if (!task) return;
-    const current = exerciseProgress[taskId] ?? EMPTY_PROGRESS;
     const clamped = Math.max(0, Math.min(n, task.sets ?? 1));
     const next: ExerciseProgress = { completed_sets: clamped, current_left_done: false, current_right_done: false };
     const updated = { ...exerciseProgress, [taskId]: next };

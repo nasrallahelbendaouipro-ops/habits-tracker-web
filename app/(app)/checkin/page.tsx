@@ -475,7 +475,7 @@ export default function CheckInPage() {
               <div>
                 <label className="flex items-center gap-1.5 text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   <XCircle size={14} style={{ color: '#f97316' }} />
-                  Ce qui n'a pas été fait
+                  Ce qui n&apos;a pas été fait
                 </label>
                 <textarea
                   value={eveningData.improvements ?? ''}

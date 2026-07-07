@@ -317,7 +317,7 @@ export default function DayProgramSheet({ isOpen, onClose, selectedDate, userId 
                     Importe ton programme quotidien
                   </h3>
                   <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                    Upload ton fichier HTML. Le bon programme (service / libre / dimanche) s'affiche automatiquement selon tes shifts du calendrier.
+                    Upload ton fichier HTML. Le bon programme (service / libre / dimanche) s&apos;affiche automatiquement selon tes shifts du calendrier.
                   </p>
                 </div>
                 {uploadError && (

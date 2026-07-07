@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dumbbell, ClipboardList, Target, Activity, Brain,
-  Sparkles, BarChart2, Bot, Settings, PenLine,
+  Sparkles, BarChart2, Bot, Settings,
 } from 'lucide-react';
 import { useLocale } from '@/lib/i18n';
 
