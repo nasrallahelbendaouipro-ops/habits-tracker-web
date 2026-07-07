@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Routine, RoutineTask, RoutineCategory } from '@/lib/types';
+import { routineTasksSchema } from '@/lib/validation/schemas';
 import TaskListEditor from './TaskListEditor';
 
 const ICONS = ['🦶', '💥', '🌀', '💪', '🏃', '🤸', '📊', '🗃️', '☁️', '⚡', '🔄', '📚', '🎯', '🧘', '🏋️', '🥊', '⚽', '🎵', '🧠', '💡'];
@@ -27,10 +28,19 @@ export default function RoutineForm({ initial, onSubmit, onCancel, submitting }:
   const [weeklyTargetHours, setWeeklyTargetHours] = useState<number>(initial?.weekly_target_hours ?? 0);
   const [priority, setPriority] = useState<'high' | 'medium' | 'low' | undefined>(initial?.priority);
   const [tasks, setTasks] = useState<RoutineTask[]>(initial?.tasks ?? []);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
+
+    const parsedTasks = routineTasksSchema.safeParse(tasks);
+    if (!parsedTasks.success) {
+      setError(parsedTasks.error.issues[0]?.message ?? 'Invalid task list');
+      return;
+    }
+    setError('');
+
     await onSubmit({
       name: name.trim(),
       category,
@@ -39,7 +49,7 @@ export default function RoutineForm({ initial, onSubmit, onCancel, submitting }:
       schedule_days: [],
       weekly_target_hours: weeklyTargetHours,
       priority,
-      tasks,
+      tasks: parsedTasks.data,
     });
   }
 
@@ -183,6 +193,10 @@ export default function RoutineForm({ initial, onSubmit, onCancel, submitting }:
         </label>
         <TaskListEditor tasks={tasks} onChange={setTasks} accentColor={color} />
       </div>
+
+      {error && (
+        <p className="text-xs font-medium" style={{ color: 'var(--error)' }}>{error}</p>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">
