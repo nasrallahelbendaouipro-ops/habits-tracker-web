@@ -152,11 +152,16 @@ Seed script: `scripts/seed-routines.ts` — populates initial routines for a use
 Required in `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` — used by `lib/supabase/admin.ts`; without it, `/api/health/ingest` fails. Get it from the Supabase dashboard → Settings → API.
 
 Optional:
 - `OPENAI_API_KEY` — enables AI shift parsing (`/api/parse-shift`) and AI planner (`/api/planner`)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Google Calendar OAuth
-- `HEALTH_INGEST_SECRET` — auth token for iOS Shortcut health sync
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` — Google Calendar OAuth
+- `NEXT_PUBLIC_SITE_URL` — used to build absolute redirect URLs in the Google OAuth flow; defaults to `http://localhost:3000`
+- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — durable rate limiting (`lib/rate-limit.ts`); falls back to in-memory per-instance limiting when unset
+- `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_AUTH_TOKEN` — error tracking; no-ops when unset
+
+iOS Shortcuts health sync (`/api/health/ingest`) authenticates via a per-user token from the `health_sync_tokens` table (issued at `/api/health/token`), not a shared env var.
 
 ## Skill routing
 
