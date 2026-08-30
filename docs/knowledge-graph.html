@@ -1,0 +1,270 @@
+<title>Habits Tracker Codebase Graph</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#eef1f0; --paper:#fbfcfb; --line:#d3dad7; --line-soft:#e3e8e6;
+  --ink:#161d1b; --ink-2:#4a5754; --ink-3:#7c8a86; --accent:#0f6f63; --accent-soft:#cfe7e2;
+  --route:#b4671a; --api:#b23a48; --component:#6a4fb0; --lib:#0f6f63; --data:#20618f;
+  --table:#3f7d3a; --external:#8a7a2f; --infra:#5c6663;
+  --shadow:0 1px 2px rgba(20,35,32,.06),0 8px 24px rgba(20,35,32,.07);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0e1413; --paper:#151d1c; --line:#2b3735; --line-soft:#222c2b;
+  --ink:#e7edeb; --ink-2:#a6b4b0; --ink-3:#71807c; --accent:#5bd0bd; --accent-soft:#1d3b37;
+  --route:#e0a35c; --api:#e8757f; --component:#a894ea; --lib:#5bd0bd; --data:#6fb3e0;
+  --table:#7fc276; --external:#d3c26a; --infra:#93a09c;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  --ground:#0e1413; --paper:#151d1c; --line:#2b3735; --line-soft:#222c2b;
+  --ink:#e7edeb; --ink-2:#a6b4b0; --ink-3:#71807c; --accent:#5bd0bd; --accent-soft:#1d3b37;
+  --route:#e0a35c; --api:#e8757f; --component:#a894ea; --lib:#5bd0bd; --data:#6fb3e0;
+  --table:#7fc276; --external:#d3c26a; --infra:#93a09c;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;font-size:15px;line-height:1.55}
+h1,h2,h3{font-family:Archivo,ui-sans-serif,system-ui,sans-serif;margin:0;text-wrap:balance;letter-spacing:-.01em}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.wrap{max-width:1400px;margin:0 auto;padding:28px 24px 64px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px 32px;border-bottom:1px solid var(--line);padding-bottom:18px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-size:clamp(26px,3.4vw,38px);font-weight:700;line-height:1.05}
+header p{margin:6px 0 0;color:var(--ink-2);max-width:62ch}
+.counts{display:flex;gap:26px;margin-left:auto;font-variant-numeric:tabular-nums}
+.counts div{text-align:right}
+.counts b{display:block;font-family:Archivo,sans-serif;font-size:26px;font-weight:600;line-height:1}
+.counts span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.layoutgrid{display:grid;grid-template-columns:250px minmax(0,1fr) 300px;gap:18px;margin-top:20px;align-items:start}
+@media(max-width:1080px){.layoutgrid{grid-template-columns:1fr}}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.pad{padding:14px 16px}
+.card h3{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;font-weight:500;margin-bottom:10px}
+.legend button{display:flex;width:100%;align-items:center;gap:9px;background:none;border:0;padding:5px 6px;border-radius:6px;cursor:pointer;color:var(--ink);font:inherit;font-size:13.5px;text-align:left}
+.legend button:hover{background:var(--line-soft)}
+.legend button[aria-pressed="false"]{opacity:.38}
+.legend .dot{width:10px;height:10px;border-radius:50%;flex:none}
+.legend .n{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+input[type=search]{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--ground);color:var(--ink);font:inherit;font-size:13.5px}
+input[type=search]:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#stage{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;height:min(74vh,720px)}
+#c{display:block;width:100%;height:100%;cursor:grab}
+#c.drag{cursor:grabbing}
+.hint{position:absolute;left:14px;bottom:12px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3);pointer-events:none}
+#tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--ground);padding:5px 8px;border-radius:6px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;opacity:0;transition:opacity .1s}
+.detail .path{font-family:"IBM Plex Mono",monospace;font-size:13px;word-break:break-all;line-height:1.4}
+.tagrow{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid currentColor}
+.rel{margin-top:12px}
+.rel h4{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0 0 5px;font-weight:500}
+.rel ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.rel li button{background:none;border:0;padding:2px 0;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2);cursor:pointer;text-align:left;line-height:1.35}
+.rel li button:hover{color:var(--accent);text-decoration:underline}
+.empty{color:var(--ink-3);font-size:13.5px}
+section.notes{margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+section.notes h2{font-size:17px;margin-bottom:8px}
+.notes ol,.notes ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:14px}
+.notes li{margin:6px 0}
+.notes li b{color:var(--ink)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+.scroll{overflow-x:auto}
+th,td{text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+th{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+td.num{font-variant-numeric:tabular-nums;text-align:right;padding-right:0}
+footer{margin-top:38px;padding-top:14px;border-top:1px solid var(--line);color:var(--ink-3);font-size:12.5px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">habits-tracker-web · static analysis</div>
+    <h1>Codebase Knowledge Graph</h1>
+    <p>Every TypeScript module, Supabase table and external service in the repository, wired by the relations found in the source: <code>imports</code>, <code>queries</code>, <code>calls</code>.</p>
+  </div>
+  <div class="counts">
+    <div><b id="nc">0</b><span>nodes</span></div>
+    <div><b id="ec">0</b><span>edges</span></div>
+    <div><b>15.1k</b><span>lines</span></div>
+  </div>
+</header>
+
+<div class="layoutgrid">
+  <aside style="display:flex;flex-direction:column;gap:18px">
+    <div class="card pad legend">
+      <h3>Layers</h3>
+      <div id="legend"></div>
+    </div>
+    <div class="card pad">
+      <h3>Find</h3>
+      <input type="search" id="q" placeholder="routines, habit_logs, …" aria-label="Search nodes">
+      <div id="qres" style="margin-top:8px;display:flex;flex-direction:column;gap:2px"></div>
+    </div>
+  </aside>
+
+  <div id="stage">
+    <canvas id="c"></canvas>
+    <div id="tip"></div>
+    <div class="hint">drag a node · scroll to zoom · click to inspect</div>
+  </div>
+
+  <div class="card pad detail" id="detail"></div>
+</div>
+
+<section class="notes">
+  <div class="card pad">
+    <h2>Hubs</h2>
+    <p class="empty" style="margin:0 0 8px">Highest-degree nodes — the three at the top are articulation points: cut one and the graph fractures.</p>
+    <div class="scroll"><table id="hubs"><thead><tr><th>Node</th><th>Layer</th><th class="num">Deg</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="card pad">
+    <h2>Domain model</h2>
+    <ul>
+      <li><b>Habit</b> → <code>habit_logs</code> per day; 9 types, each with a <code>*Metadata</code> JSONB shape and its own subform.</li>
+      <li><b>Routine</b> holds <code>tasks</code> JSONB + <code>schedule_days[]</code>; a run is a <b>RoutineSession</b>, unique on (user, routine, date), tracking <code>completed_task_ids[]</code> — bilateral tasks store <code>id:right</code> / <code>id:left</code>.</li>
+      <li><b>Goal</b> links to habits and routines through the <code>goal_habits</code> / <code>goal_routines</code> join tables.</li>
+      <li><b>DailyCheckin</b> feeds the body / mind / soul pages; <b>HealthReading</b> arrives from the iOS Shortcut through a per-user sync token.</li>
+      <li><b>CalendarEvent</b> carries <code>linked_habit_ids[]</code> and an optional <code>google_event_id</code>.</li>
+    </ul>
+  </div>
+  <div class="card pad">
+    <h2>Invariants</h2>
+    <ol>
+      <li>The auth gate is a single node — <code>proxy.ts</code>, re-exported by <code>middleware.ts</code>.</li>
+      <li>Every API route pairs <code>lib/rate-limit</code> with a zod schema from <code>lib/validation/schemas</code>. All 7 currently do.</li>
+      <li>Only <code>/api/health/ingest</code> touches the service-role client <code>lib/supabase/admin.ts</code>.</li>
+      <li>Adding a page means editing both <code>Sidebar.tsx</code> and <code>BottomNav.tsx</code>.</li>
+      <li><code>supabase/migrations/</code> must stay 1:1 with the live database.</li>
+      <li><code>CalendarView</code> is the only <code>dynamic()</code> import — FullCalendar is client-only.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>Generated from import specifiers, <code>supabase.from('…')</code> literals and outbound host regexes over <code>app/</code>, <code>components/</code>, <code>lib/</code>, <code>scripts/</code>, <code>proxy.ts</code> and the instrumentation files. Machine-readable source: <code>docs/knowledge-graph.json</code>.</footer>
+</div>
+
+<script>
+const DATA = {"nodes":[{"id":"app/(app)/analytics/page.tsx","type":"route","loc":612,"degree":11},{"id":"db:habit_logs","type":"table","degree":6},{"id":"app/(app)/body/page.tsx","type":"route","loc":358,"degree":9},{"id":"db:habits","type":"table","degree":6},{"id":"app/(app)/calendar/page.tsx","type":"route","loc":157,"degree":4},{"id":"app/(app)/checkin/page.tsx","type":"route","loc":559,"degree":8},{"id":"app/(app)/dashboard/page.tsx","type":"route","loc":640,"degree":13},{"id":"app/(app)/goals/page.tsx","type":"route","loc":137,"degree":8},{"id":"app/(app)/habits/[id]/page.tsx","type":"route","loc":433,"degree":10},{"id":"app/(app)/habits/page.tsx","type":"route","loc":211,"degree":7},{"id":"app/(app)/layout.tsx","type":"route","loc":31,"degree":4},{"id":"app/(app)/loading.tsx","type":"route","loc":11,"degree":0},{"id":"app/(app)/mind/page.tsx","type":"route","loc":292,"degree":6},{"id":"app/(app)/onboarding/page.tsx","type":"route","loc":167,"degree":4},{"id":"app/(app)/planner/page.tsx","type":"route","loc":189,"degree":9},{"id":"app/(app)/routines/[id]/edit/page.tsx","type":"route","loc":51,"degree":3},{"id":"app/(app)/routines/[id]/page.tsx","type":"route","loc":156,"degree":3},{"id":"app/(app)/routines/[id]/session/page.tsx","type":"route","loc":50,"degree":4},{"id":"app/(app)/routines/new/page.tsx","type":"route","loc":36,"degree":4},{"id":"app/(app)/routines/page.tsx","type":"route","loc":146,"degree":4},{"id":"app/(app)/settings/page.tsx","type":"route","loc":515,"degree":6},{"id":"app/(app)/soul/page.tsx","type":"route","loc":308,"degree":7},{"id":"app/(auth)/layout.tsx","type":"route","loc":25,"degree":0},{"id":"app/(auth)/loading.tsx","type":"route","loc":11,"degree":0},{"id":"app/(auth)/login/page.tsx","type":"route","loc":111,"degree":1},{"id":"app/(auth)/register/page.tsx","type":"route","loc":163,"degree":1},{"id":"app/api/auth/google/callback/route.ts","type":"api","loc":57,"degree":5},{"id":"ext:Google OAuth","type":"external","degree":4},{"id":"ext:Sentry","type":"external","degree":8},{"id":"app/api/auth/google/route.ts","type":"api","loc":31,"degree":3},{"id":"app/api/google-calendar/events/route.ts","type":"api","loc":43,"degree":5},{"id":"app/api/health/ingest/route.ts","type":"api","loc":146,"degree":6},{"id":"db:health_sync_tokens","type":"table","degree":2},{"id":"db:daily_checkins","type":"table","degree":3},{"id":"app/api/health/token/route.ts","type":"api","loc":55,"degree":3},{"id":"app/api/parse-shift/route.ts","type":"api","loc":59,"degree":5},{"id":"ext:OpenAI GPT-4o","type":"external","degree":2},{"id":"app/api/planner/route.ts","type":"api","loc":196,"degree":5},{"id":"app/error.tsx","type":"route","loc":50,"degree":1},{"id":"app/layout.tsx","type":"route","loc":34,"degree":3},{"id":"app/manifest.ts","type":"route","loc":19,"degree":0},{"id":"app/page.tsx","type":"route","loc":5,"degree":0},{"id":"components/calendar/CalendarView.tsx","type":"component","loc":522,"degree":11},{"id":"db:calendar_events","type":"table","degree":4},{"id":"components/calendar/EventModal.tsx","type":"component","loc":496,"degree":6},{"id":"components/calendar/RoutinePlanningPanel.tsx","type":"component","loc":110,"degree":4},{"id":"components/charts/ProgressRing.tsx","type":"component","loc":54,"degree":1},{"id":"components/goals/GoalCard.tsx","type":"component","loc":217,"degree":4},{"id":"components/goals/GoalModal.tsx","type":"component","loc":400,"degree":6},{"id":"components/habits/BodyMetricForm.tsx","type":"component","loc":55,"degree":2},{"id":"components/habits/HabitForm.tsx","type":"component","loc":351,"degree":15},{"id":"components/habits/HabitModal.tsx","type":"component","loc":39,"degree":7},{"id":"components/habits/JournalingForm.tsx","type":"component","loc":35,"degree":2},{"id":"components/habits/MeditationForm.tsx","type":"component","loc":65,"degree":2},{"id":"components/habits/PrayerForm.tsx","type":"component","loc":52,"degree":2},{"id":"components/habits/ReadingForm.tsx","type":"component","loc":59,"degree":3},{"id":"components/habits/ShiftForm.tsx","type":"component","loc":97,"degree":3},{"id":"components/habits/StudyForm.tsx","type":"component","loc":89,"degree":3},{"id":"components/habits/TypePicker.tsx","type":"component","loc":87,"degree":3},{"id":"components/habits/WorkoutForm.tsx","type":"component","loc":46,"degree":3},{"id":"components/layout/BottomNav.tsx","type":"component","loc":105,"degree":3},{"id":"components/layout/MoreSheet.tsx","type":"component","loc":101,"degree":2},{"id":"components/layout/Sidebar.tsx","type":"component","loc":112,"degree":5},{"id":"components/pwa/NotificationCheck.tsx","type":"component","loc":12,"degree":2},{"id":"components/pwa/ServiceWorkerRegistration.tsx","type":"component","loc":15,"degree":1},{"id":"components/routines/RoutineCard.tsx","type":"component","loc":79,"degree":2},{"id":"components/routines/RoutineForm.tsx","type":"component","loc":223,"degree":5},{"id":"components/routines/SessionTimer.tsx","type":"component","loc":184,"degree":3},{"id":"components/routines/SessionView.tsx","type":"component","loc":353,"degree":9},{"id":"components/routines/SportTaskCard.tsx","type":"component","loc":147,"degree":2},{"id":"components/routines/TaskCountdownTimer.tsx","type":"component","loc":142,"degree":1},{"id":"components/routines/TaskItem.tsx","type":"component","loc":164,"degree":2},{"id":"components/routines/TaskListEditor.tsx","type":"component","loc":225,"degree":2},{"id":"components/ui/ConfirmDialog.tsx","type":"component","loc":45,"degree":6},{"id":"components/ui/DayProgramSheet.tsx","type":"component","loc":348,"degree":3},{"id":"components/ui/GlassCard.tsx","type":"component","loc":25,"degree":11},{"id":"components/ui/ModalShell.tsx","type":"component","loc":94,"degree":5},{"id":"components/ui/SessionTimer.tsx","type":"component","loc":172,"degree":3},{"id":"components/ui/ShiftParserModal.tsx","type":"component","loc":271,"degree":5},{"id":"lib/analytics.ts","type":"lib","loc":318,"degree":11},{"id":"db:routines","type":"table","degree":4},{"id":"db:routine_sessions","type":"table","degree":3},{"id":"lib/calendar.ts","type":"lib","loc":53,"degree":8},{"id":"lib/chart-theme.ts","type":"lib","loc":74,"degree":5},{"id":"lib/checkin.ts","type":"lib","loc":127,"degree":6},{"id":"lib/dayProgram.ts","type":"lib","loc":66,"degree":1},{"id":"lib/goals.ts","type":"lib","loc":121,"degree":18},{"id":"db:goals","type":"table","degree":1},{"id":"db:goal_habits","type":"table","degree":1},{"id":"db:goal_routines","type":"table","degree":1},{"id":"lib/google-calendar.ts","type":"lib","loc":102,"degree":7},{"id":"db:google_tokens","type":"table","degree":1},{"id":"ext:Google Calendar API","type":"external","degree":1},{"id":"lib/habits.ts","type":"lib","loc":145,"degree":17},{"id":"lib/health-readings.ts","type":"lib","loc":163,"degree":3},{"id":"db:health_readings","type":"table","degree":1},{"id":"lib/i18n.tsx","type":"lib","loc":794,"degree":26},{"id":"lib/integrations/health-connect.ts","type":"lib","loc":58,"degree":3},{"id":"ext:Google Health Connect","type":"external","degree":1},{"id":"lib/push.ts","type":"lib","loc":62,"degree":2},{"id":"lib/rate-limit.ts","type":"lib","loc":48,"degree":8},{"id":"ext:Upstash Redis","type":"external","degree":1},{"id":"lib/routines.ts","type":"lib","loc":313,"degree":19},{"id":"lib/shift-parser.ts","type":"lib","loc":308,"degree":2},{"id":"lib/supabase/admin.ts","type":"data-client","loc":9,"degree":1},{"id":"lib/supabase/client.ts","type":"data-client","loc":11,"degree":27},{"id":"lib/supabase/server.ts","type":"data-client","loc":25,"degree":6},{"id":"lib/theme.tsx","type":"lib","loc":81,"degree":5},{"id":"lib/types.ts","type":"lib","loc":266,"degree":45},{"id":"lib/utils.ts","type":"lib","loc":33,"degree":14},{"id":"lib/validation/schemas.ts","type":"lib","loc":101,"degree":6},{"id":"scripts/seed-routines.ts","type":"infra","loc":253,"degree":1},{"id":"proxy.ts","type":"infra","loc":50,"degree":0},{"id":"instrumentation.ts","type":"infra","loc":28,"degree":1},{"id":"instrumentation-client.ts","type":"infra","loc":9,"degree":1}],"edges":[{"source":"app/(app)/analytics/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"lib/goals.ts","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"lib/analytics.ts","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"components/charts/ProgressRing.tsx","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"lib/chart-theme.ts","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/analytics/page.tsx","target":"db:habit_logs","kind":"queries"},{"source":"app/(app)/body/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/body/page.tsx","target":"lib/goals.ts","kind":"imports"},{"source":"app/(app)/body/page.tsx","target":"lib/health-readings.ts","kind":"imports"},{"source":"app/(app)/body/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/body/page.tsx","target":"lib/chart-theme.ts","kind":"imports"},{"source":"app/(app)/body/page.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/(app)/body/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/body/page.tsx","target":"db:habits","kind":"queries"},{"source":"app/(app)/body/page.tsx","target":"db:habit_logs","kind":"queries"},{"source":"app/(app)/calendar/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/calendar/page.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/(app)/calendar/page.tsx","target":"components/ui/ShiftParserModal.tsx","kind":"imports"},{"source":"app/(app)/calendar/page.tsx","target":"components/calendar/RoutinePlanningPanel.tsx","kind":"imports"},{"source":"app/(app)/checkin/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/checkin/page.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"app/(app)/checkin/page.tsx","target":"lib/checkin.ts","kind":"imports"},{"source":"app/(app)/checkin/page.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"app/(app)/checkin/page.tsx","target":"lib/calendar.ts","kind":"imports"},{"source":"app/(app)/checkin/page.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"app/(app)/checkin/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/checkin/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"lib/goals.ts","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"lib/analytics.ts","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"lib/theme.tsx","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"components/habits/HabitModal.tsx","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"components/ui/SessionTimer.tsx","kind":"imports"},{"source":"app/(app)/dashboard/page.tsx","target":"components/ui/DayProgramSheet.tsx","kind":"imports"},{"source":"app/(app)/goals/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/goals/page.tsx","target":"lib/goals.ts","kind":"imports"},{"source":"app/(app)/goals/page.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"app/(app)/goals/page.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/(app)/goals/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/goals/page.tsx","target":"components/goals/GoalCard.tsx","kind":"imports"},{"source":"app/(app)/goals/page.tsx","target":"components/goals/GoalModal.tsx","kind":"imports"},{"source":"app/(app)/goals/page.tsx","target":"db:habits","kind":"queries"},{"source":"app/(app)/habits/[id]/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/habits/[id]/page.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"app/(app)/habits/[id]/page.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"app/(app)/habits/[id]/page.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/(app)/habits/[id]/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/habits/[id]/page.tsx","target":"components/habits/HabitModal.tsx","kind":"imports"},{"source":"app/(app)/habits/[id]/page.tsx","target":"components/ui/ConfirmDialog.tsx","kind":"imports"},{"source":"app/(app)/habits/[id]/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/habits/[id]/page.tsx","target":"db:habit_logs","kind":"queries"},{"source":"app/(app)/habits/[id]/page.tsx","target":"db:habits","kind":"queries"},{"source":"app/(app)/habits/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/habits/page.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"app/(app)/habits/page.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/(app)/habits/page.tsx","target":"components/habits/HabitModal.tsx","kind":"imports"},{"source":"app/(app)/habits/page.tsx","target":"components/ui/ConfirmDialog.tsx","kind":"imports"},{"source":"app/(app)/habits/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/habits/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/layout.tsx","target":"lib/supabase/server.ts","kind":"imports"},{"source":"app/(app)/layout.tsx","target":"components/layout/Sidebar.tsx","kind":"imports"},{"source":"app/(app)/layout.tsx","target":"components/layout/BottomNav.tsx","kind":"imports"},{"source":"app/(app)/layout.tsx","target":"components/pwa/NotificationCheck.tsx","kind":"imports"},{"source":"app/(app)/mind/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/mind/page.tsx","target":"lib/checkin.ts","kind":"imports"},{"source":"app/(app)/mind/page.tsx","target":"lib/goals.ts","kind":"imports"},{"source":"app/(app)/mind/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/mind/page.tsx","target":"lib/chart-theme.ts","kind":"imports"},{"source":"app/(app)/mind/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/onboarding/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/onboarding/page.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"app/(app)/onboarding/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/onboarding/page.tsx","target":"components/habits/HabitForm.tsx","kind":"imports"},{"source":"app/(app)/planner/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/planner/page.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"app/(app)/planner/page.tsx","target":"lib/goals.ts","kind":"imports"},{"source":"app/(app)/planner/page.tsx","target":"lib/checkin.ts","kind":"imports"},{"source":"app/(app)/planner/page.tsx","target":"lib/analytics.ts","kind":"imports"},{"source":"app/(app)/planner/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/planner/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/planner/page.tsx","target":"app/api/planner/route.ts","kind":"imports"},{"source":"app/(app)/planner/page.tsx","target":"db:habit_logs","kind":"queries"},{"source":"app/(app)/routines/[id]/edit/page.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"app/(app)/routines/[id]/edit/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/routines/[id]/edit/page.tsx","target":"components/routines/RoutineForm.tsx","kind":"imports"},{"source":"app/(app)/routines/[id]/page.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"app/(app)/routines/[id]/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/routines/[id]/page.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"app/(app)/routines/[id]/session/page.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"app/(app)/routines/[id]/session/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/routines/[id]/session/page.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"app/(app)/routines/[id]/session/page.tsx","target":"components/routines/SessionView.tsx","kind":"imports"},{"source":"app/(app)/routines/new/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/routines/new/page.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"app/(app)/routines/new/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/routines/new/page.tsx","target":"components/routines/RoutineForm.tsx","kind":"imports"},{"source":"app/(app)/routines/page.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"app/(app)/routines/page.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/(app)/routines/page.tsx","target":"components/ui/ConfirmDialog.tsx","kind":"imports"},{"source":"app/(app)/routines/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(app)/settings/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/settings/page.tsx","target":"lib/theme.tsx","kind":"imports"},{"source":"app/(app)/settings/page.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/(app)/settings/page.tsx","target":"lib/integrations/health-connect.ts","kind":"imports"},{"source":"app/(app)/settings/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/settings/page.tsx","target":"lib/push.ts","kind":"imports"},{"source":"app/(app)/soul/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(app)/soul/page.tsx","target":"lib/checkin.ts","kind":"imports"},{"source":"app/(app)/soul/page.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"app/(app)/soul/page.tsx","target":"lib/goals.ts","kind":"imports"},{"source":"app/(app)/soul/page.tsx","target":"components/ui/GlassCard.tsx","kind":"imports"},{"source":"app/(app)/soul/page.tsx","target":"lib/chart-theme.ts","kind":"imports"},{"source":"app/(app)/soul/page.tsx","target":"lib/types.ts","kind":"imports"},{"source":"app/(auth)/login/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/(auth)/register/page.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"app/api/auth/google/callback/route.ts","target":"lib/supabase/server.ts","kind":"imports"},{"source":"app/api/auth/google/callback/route.ts","target":"lib/google-calendar.ts","kind":"imports"},{"source":"app/api/auth/google/callback/route.ts","target":"lib/rate-limit.ts","kind":"imports"},{"source":"app/api/auth/google/callback/route.ts","target":"ext:Google OAuth","kind":"calls"},{"source":"app/api/auth/google/callback/route.ts","target":"ext:Sentry","kind":"calls"},{"source":"app/api/auth/google/route.ts","target":"lib/supabase/server.ts","kind":"imports"},{"source":"app/api/auth/google/route.ts","target":"lib/rate-limit.ts","kind":"imports"},{"source":"app/api/auth/google/route.ts","target":"ext:Google OAuth","kind":"calls"},{"source":"app/api/google-calendar/events/route.ts","target":"lib/supabase/server.ts","kind":"imports"},{"source":"app/api/google-calendar/events/route.ts","target":"lib/google-calendar.ts","kind":"imports"},{"source":"app/api/google-calendar/events/route.ts","target":"lib/validation/schemas.ts","kind":"imports"},{"source":"app/api/google-calendar/events/route.ts","target":"lib/rate-limit.ts","kind":"imports"},{"source":"app/api/google-calendar/events/route.ts","target":"ext:Sentry","kind":"calls"},{"source":"app/api/health/ingest/route.ts","target":"lib/supabase/admin.ts","kind":"imports"},{"source":"app/api/health/ingest/route.ts","target":"lib/validation/schemas.ts","kind":"imports"},{"source":"app/api/health/ingest/route.ts","target":"lib/rate-limit.ts","kind":"imports"},{"source":"app/api/health/ingest/route.ts","target":"db:health_sync_tokens","kind":"queries"},{"source":"app/api/health/ingest/route.ts","target":"db:daily_checkins","kind":"queries"},{"source":"app/api/health/ingest/route.ts","target":"ext:Sentry","kind":"calls"},{"source":"app/api/health/token/route.ts","target":"lib/supabase/server.ts","kind":"imports"},{"source":"app/api/health/token/route.ts","target":"lib/rate-limit.ts","kind":"imports"},{"source":"app/api/health/token/route.ts","target":"db:health_sync_tokens","kind":"queries"},{"source":"app/api/parse-shift/route.ts","target":"lib/validation/schemas.ts","kind":"imports"},{"source":"app/api/parse-shift/route.ts","target":"lib/shift-parser.ts","kind":"imports"},{"source":"app/api/parse-shift/route.ts","target":"lib/rate-limit.ts","kind":"imports"},{"source":"app/api/parse-shift/route.ts","target":"ext:OpenAI GPT-4o","kind":"calls"},{"source":"app/api/parse-shift/route.ts","target":"ext:Sentry","kind":"calls"},{"source":"app/api/planner/route.ts","target":"lib/validation/schemas.ts","kind":"imports"},{"source":"app/api/planner/route.ts","target":"lib/rate-limit.ts","kind":"imports"},{"source":"app/api/planner/route.ts","target":"ext:OpenAI GPT-4o","kind":"calls"},{"source":"app/api/planner/route.ts","target":"ext:Sentry","kind":"calls"},{"source":"app/error.tsx","target":"ext:Sentry","kind":"calls"},{"source":"app/layout.tsx","target":"lib/theme.tsx","kind":"imports"},{"source":"app/layout.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"app/layout.tsx","target":"components/pwa/ServiceWorkerRegistration.tsx","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"lib/calendar.ts","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"lib/google-calendar.ts","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"components/calendar/EventModal.tsx","kind":"imports"},{"source":"components/calendar/CalendarView.tsx","target":"db:habits","kind":"queries"},{"source":"components/calendar/CalendarView.tsx","target":"db:calendar_events","kind":"queries"},{"source":"components/calendar/EventModal.tsx","target":"lib/calendar.ts","kind":"imports"},{"source":"components/calendar/EventModal.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/calendar/EventModal.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/calendar/EventModal.tsx","target":"components/ui/ModalShell.tsx","kind":"imports"},{"source":"components/calendar/EventModal.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"components/calendar/RoutinePlanningPanel.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"components/calendar/RoutinePlanningPanel.tsx","target":"lib/analytics.ts","kind":"imports"},{"source":"components/calendar/RoutinePlanningPanel.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/goals/GoalCard.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/goals/GoalCard.tsx","target":"components/ui/ConfirmDialog.tsx","kind":"imports"},{"source":"components/goals/GoalCard.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/goals/GoalModal.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/goals/GoalModal.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"components/goals/GoalModal.tsx","target":"lib/goals.ts","kind":"imports"},{"source":"components/goals/GoalModal.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/goals/GoalModal.tsx","target":"components/ui/ModalShell.tsx","kind":"imports"},{"source":"components/habits/BodyMetricForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"lib/validation/schemas.ts","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"components/habits/TypePicker.tsx","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"components/habits/WorkoutForm.tsx","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"components/habits/ReadingForm.tsx","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"components/habits/StudyForm.tsx","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"components/habits/ShiftForm.tsx","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"components/habits/MeditationForm.tsx","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"components/habits/PrayerForm.tsx","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"components/habits/JournalingForm.tsx","kind":"imports"},{"source":"components/habits/HabitForm.tsx","target":"components/habits/BodyMetricForm.tsx","kind":"imports"},{"source":"components/habits/HabitModal.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/habits/HabitModal.tsx","target":"components/ui/ModalShell.tsx","kind":"imports"},{"source":"components/habits/HabitModal.tsx","target":"components/habits/HabitForm.tsx","kind":"imports"},{"source":"components/habits/HabitModal.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/JournalingForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/MeditationForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/PrayerForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/ReadingForm.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/habits/ReadingForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/ShiftForm.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/habits/ShiftForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/StudyForm.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/habits/StudyForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/TypePicker.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/habits/TypePicker.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/habits/WorkoutForm.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/habits/WorkoutForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/layout/BottomNav.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/layout/BottomNav.tsx","target":"components/layout/MoreSheet.tsx","kind":"imports"},{"source":"components/layout/MoreSheet.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/layout/Sidebar.tsx","target":"lib/theme.tsx","kind":"imports"},{"source":"components/layout/Sidebar.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/layout/Sidebar.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"components/layout/Sidebar.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"components/pwa/NotificationCheck.tsx","target":"lib/push.ts","kind":"imports"},{"source":"components/routines/RoutineCard.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/routines/RoutineCard.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"components/routines/RoutineForm.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/routines/RoutineForm.tsx","target":"lib/validation/schemas.ts","kind":"imports"},{"source":"components/routines/RoutineForm.tsx","target":"components/routines/TaskListEditor.tsx","kind":"imports"},{"source":"components/routines/SessionTimer.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"components/routines/SessionTimer.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/routines/SessionView.tsx","target":"lib/supabase/client.ts","kind":"imports"},{"source":"components/routines/SessionView.tsx","target":"lib/routines.ts","kind":"imports"},{"source":"components/routines/SessionView.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/routines/SessionView.tsx","target":"components/routines/SessionTimer.tsx","kind":"imports"},{"source":"components/routines/SessionView.tsx","target":"components/routines/SportTaskCard.tsx","kind":"imports"},{"source":"components/routines/SessionView.tsx","target":"components/routines/TaskCountdownTimer.tsx","kind":"imports"},{"source":"components/routines/SessionView.tsx","target":"components/routines/TaskItem.tsx","kind":"imports"},{"source":"components/routines/SessionView.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"components/routines/SportTaskCard.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/routines/TaskItem.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/routines/TaskListEditor.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/ui/ConfirmDialog.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/ui/ConfirmDialog.tsx","target":"components/ui/ModalShell.tsx","kind":"imports"},{"source":"components/ui/DayProgramSheet.tsx","target":"lib/calendar.ts","kind":"imports"},{"source":"components/ui/DayProgramSheet.tsx","target":"lib/dayProgram.ts","kind":"imports"},{"source":"components/ui/GlassCard.tsx","target":"lib/utils.ts","kind":"imports"},{"source":"components/ui/SessionTimer.tsx","target":"lib/types.ts","kind":"imports"},{"source":"components/ui/SessionTimer.tsx","target":"lib/habits.ts","kind":"imports"},{"source":"components/ui/ShiftParserModal.tsx","target":"lib/calendar.ts","kind":"imports"},{"source":"components/ui/ShiftParserModal.tsx","target":"lib/i18n.tsx","kind":"imports"},{"source":"components/ui/ShiftParserModal.tsx","target":"lib/shift-parser.ts","kind":"imports"},{"source":"components/ui/ShiftParserModal.tsx","target":"components/ui/ModalShell.tsx","kind":"imports"},{"source":"lib/analytics.ts","target":"lib/supabase/client.ts","kind":"imports"},{"source":"lib/analytics.ts","target":"lib/types.ts","kind":"imports"},{"source":"lib/analytics.ts","target":"lib/routines.ts","kind":"imports"},{"source":"lib/analytics.ts","target":"db:routines","kind":"queries"},{"source":"lib/analytics.ts","target":"db:routine_sessions","kind":"queries"},{"source":"lib/analytics.ts","target":"db:daily_checkins","kind":"queries"},{"source":"lib/analytics.ts","target":"db:calendar_events","kind":"queries"},{"source":"lib/calendar.ts","target":"lib/supabase/client.ts","kind":"imports"},{"source":"lib/calendar.ts","target":"lib/types.ts","kind":"imports"},{"source":"lib/calendar.ts","target":"db:calendar_events","kind":"queries"},{"source":"lib/chart-theme.ts","target":"lib/theme.tsx","kind":"imports"},{"source":"lib/checkin.ts","target":"lib/supabase/client.ts","kind":"imports"},{"source":"lib/checkin.ts","target":"db:daily_checkins","kind":"queries"},{"source":"lib/goals.ts","target":"lib/supabase/client.ts","kind":"imports"},{"source":"lib/goals.ts","target":"lib/utils.ts","kind":"imports"},{"source":"lib/goals.ts","target":"lib/types.ts","kind":"imports"},{"source":"lib/goals.ts","target":"db:goals","kind":"queries"},{"source":"lib/goals.ts","target":"db:goal_habits","kind":"queries"},{"source":"lib/goals.ts","target":"db:habits","kind":"queries"},{"source":"lib/goals.ts","target":"db:habit_logs","kind":"queries"},{"source":"lib/goals.ts","target":"db:goal_routines","kind":"queries"},{"source":"lib/goals.ts","target":"db:routines","kind":"queries"},{"source":"lib/goals.ts","target":"db:routine_sessions","kind":"queries"},{"source":"lib/google-calendar.ts","target":"lib/supabase/server.ts","kind":"imports"},{"source":"lib/google-calendar.ts","target":"db:google_tokens","kind":"queries"},{"source":"lib/google-calendar.ts","target":"ext:Google Calendar API","kind":"calls"},{"source":"lib/google-calendar.ts","target":"ext:Google OAuth","kind":"calls"},{"source":"lib/habits.ts","target":"lib/supabase/client.ts","kind":"imports"},{"source":"lib/habits.ts","target":"lib/types.ts","kind":"imports"},{"source":"lib/habits.ts","target":"lib/utils.ts","kind":"imports"},{"source":"lib/habits.ts","target":"db:habits","kind":"queries"},{"source":"lib/habits.ts","target":"db:habit_logs","kind":"queries"},{"source":"lib/health-readings.ts","target":"lib/supabase/client.ts","kind":"imports"},{"source":"lib/health-readings.ts","target":"db:health_readings","kind":"queries"},{"source":"lib/integrations/health-connect.ts","target":"ext:Google OAuth","kind":"calls"},{"source":"lib/integrations/health-connect.ts","target":"ext:Google Health Connect","kind":"calls"},{"source":"lib/rate-limit.ts","target":"ext:Upstash Redis","kind":"calls"},{"source":"lib/routines.ts","target":"lib/supabase/client.ts","kind":"imports"},{"source":"lib/routines.ts","target":"lib/types.ts","kind":"imports"},{"source":"lib/routines.ts","target":"lib/utils.ts","kind":"imports"},{"source":"lib/routines.ts","target":"db:routines","kind":"queries"},{"source":"lib/routines.ts","target":"db:routine_sessions","kind":"queries"},{"source":"lib/routines.ts","target":"db:calendar_events","kind":"queries"},{"source":"scripts/seed-routines.ts","target":"db:routines","kind":"queries"},{"source":"instrumentation.ts","target":"ext:Sentry","kind":"calls"},{"source":"instrumentation-client.ts","target":"ext:Sentry","kind":"calls"}]};
+const COLORS={route:'--route',api:'--api',component:'--component',lib:'--lib','data-client':'--data',table:'--table',external:'--external',infra:'--infra'};
+const LABELS={route:'Pages & layouts',api:'API routes',component:'Components',lib:'Domain modules','data-client':'Supabase clients',table:'DB tables',external:'External services',infra:'Infrastructure'};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const short=id=>id.startsWith('db:')?id.slice(3):id.startsWith('ext:')?id.slice(4):id.split('/').pop().replace(/\.tsx?$/,'');
+const off=new Set();
+
+const nodes=DATA.nodes.map((n,i)=>({...n,x:Math.cos(i*2.4)*260+Math.random()*40,y:Math.sin(i*2.4)*220+Math.random()*40,vx:0,vy:0}));
+const byId=new Map(nodes.map(n=>[n.id,n]));
+const links=DATA.edges.filter(e=>byId.has(e.source)&&byId.has(e.target)).map(e=>({...e,s:byId.get(e.source),t:byId.get(e.target)}));
+document.getElementById('nc').textContent=nodes.length;
+document.getElementById('ec').textContent=links.length;
+
+const counts={};nodes.forEach(n=>counts[n.type]=(counts[n.type]||0)+1);
+const legend=document.getElementById('legend');
+Object.keys(LABELS).filter(t=>counts[t]).forEach(t=>{
+  const b=document.createElement('button');b.setAttribute('aria-pressed','true');
+  b.innerHTML=`<span class="dot" style="background:var(${COLORS[t]})"></span><span>${LABELS[t]}</span><span class="n">${counts[t]}</span>`;
+  b.onclick=()=>{off.has(t)?off.delete(t):off.add(t);b.setAttribute('aria-pressed',String(!off.has(t)));if(sel&&off.has(sel.type))select(null);};
+  legend.appendChild(b);
+});
+
+const hubs=[...nodes].sort((a,b)=>b.degree-a.degree).slice(0,10);
+document.querySelector('#hubs tbody').innerHTML=hubs.map(n=>`<tr><td><code>${n.id}</code></td><td style="color:var(${COLORS[n.type]})">${LABELS[n.type]}</td><td class="num">${n.degree}</td></tr>`).join('');
+
+const cvs=document.getElementById('c'),ctx=cvs.getContext('2d'),tip=document.getElementById('tip');
+let W=0,H=0,dpr=Math.min(2,devicePixelRatio||1),scale=1,ox=0,oy=0,hover=null,sel=null,drag=null,pan=null;
+function resize(){const r=cvs.getBoundingClientRect();W=r.width;H=r.height;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+new ResizeObserver(resize).observe(cvs);resize();
+
+const vis=n=>!off.has(n.type);
+const rad=n=>4+Math.sqrt(n.degree)*1.9;
+function tick(){
+  const act=nodes.filter(vis);
+  for(const n of act){n.vx-=n.x*0.0016;n.vy-=n.y*0.0016;}
+  for(let i=0;i<act.length;i++)for(let j=i+1;j<act.length;j++){
+    const a=act[i],b=act[j];let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy||1;
+    if(d2>90000)continue;const f=1400/d2,d=Math.sqrt(d2);dx/=d;dy/=d;
+    a.vx-=dx*f;a.vy-=dy*f;b.vx+=dx*f;b.vy+=dy*f;
+  }
+  for(const l of links){if(!vis(l.s)||!vis(l.t))continue;
+    const dx=l.t.x-l.s.x,dy=l.t.y-l.s.y,d=Math.hypot(dx,dy)||1,f=(d-95)*0.012;
+    const ux=dx/d*f,uy=dy/d*f;l.s.vx+=ux;l.s.vy+=uy;l.t.vx-=ux;l.t.vy-=uy;}
+  for(const n of act){if(n===drag)continue;n.vx*=.86;n.vy*=.86;n.x+=Math.max(-9,Math.min(9,n.vx));n.y+=Math.max(-9,Math.min(9,n.vy));}
+}
+const sx=n=>n.x*scale+ox+W/2, sy=n=>n.y*scale+oy+H/2;
+const neigh=n=>{const s=new Set();links.forEach(l=>{if(l.s===n)s.add(l.t);if(l.t===n)s.add(l.s);});return s;};
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const focus=sel||hover, near=focus?neigh(focus):null;
+  for(const l of links){
+    if(!vis(l.s)||!vis(l.t))continue;
+    const on=focus&&(l.s===focus||l.t===focus);
+    ctx.strokeStyle=on?css('--accent'):css('--line');
+    ctx.globalAlpha=focus?(on?.9:.15):.5;ctx.lineWidth=on?1.5:.8;
+    ctx.beginPath();ctx.moveTo(sx(l.s),sy(l.s));ctx.lineTo(sx(l.t),sy(l.t));ctx.stroke();
+    if(on){const ang=Math.atan2(sy(l.t)-sy(l.s),sx(l.t)-sx(l.s)),r=rad(l.t)*scale+3;
+      const hx=sx(l.t)-Math.cos(ang)*r,hy=sy(l.t)-Math.sin(ang)*r;
+      ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(hx-Math.cos(ang-.4)*7,hy-Math.sin(ang-.4)*7);
+      ctx.lineTo(hx-Math.cos(ang+.4)*7,hy-Math.sin(ang+.4)*7);ctx.closePath();ctx.fillStyle=css('--accent');ctx.fill();}
+  }
+  ctx.globalAlpha=1;
+  for(const n of nodes){
+    if(!vis(n))continue;
+    const dim=focus&&n!==focus&&!near.has(n);
+    const r=rad(n)*Math.max(.75,Math.min(1.4,scale));
+    ctx.globalAlpha=dim?.22:1;
+    ctx.beginPath();ctx.arc(sx(n),sy(n),r,0,6.2832);
+    ctx.fillStyle=css(COLORS[n.type]);ctx.fill();
+    if(n===focus){ctx.lineWidth=2;ctx.strokeStyle=css('--ink');ctx.stroke();}
+    if(!dim&&(n.degree>7||n===focus||near&&near.has(n)||scale>1.5)){
+      ctx.font='500 11px "IBM Plex Mono", monospace';ctx.fillStyle=css('--ink-2');
+      ctx.textAlign='center';ctx.fillText(short(n.id),sx(n),sy(n)-r-5);
+    }
+  }
+  ctx.globalAlpha=1;
+}
+function loop(){tick();draw();requestAnimationFrame(loop)}loop();
+
+function at(mx,my){let best=null,bd=1e9;
+  for(const n of nodes){if(!vis(n))continue;const d=Math.hypot(sx(n)-mx,sy(n)-my);if(d<rad(n)+7&&d<bd){bd=d;best=n;}}
+  return best;}
+cvs.addEventListener('mousemove',e=>{
+  const r=cvs.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+  if(drag){drag.x=(mx-ox-W/2)/scale;drag.y=(my-oy-H/2)/scale;drag.vx=drag.vy=0;return;}
+  if(pan){ox+=mx-pan.x;oy+=my-pan.y;pan={x:mx,y:my};return;}
+  hover=at(mx,my);
+  if(hover){tip.style.opacity=1;tip.textContent=hover.id;tip.style.left=(mx+12)+'px';tip.style.top=(my+12)+'px';}
+  else tip.style.opacity=0;
+});
+cvs.addEventListener('mousedown',e=>{const r=cvs.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+  const n=at(mx,my);if(n){drag=n;select(n);}else{pan={x:mx,y:my};cvs.classList.add('drag');}});
+addEventListener('mouseup',()=>{drag=null;pan=null;cvs.classList.remove('drag')});
+cvs.addEventListener('mouseleave',()=>{tip.style.opacity=0;hover=null});
+cvs.addEventListener('wheel',e=>{e.preventDefault();const k=Math.exp(-e.deltaY*0.0012);scale=Math.max(.35,Math.min(3.5,scale*k));},{passive:false});
+
+function select(n){
+  sel=n;const d=document.getElementById('detail');
+  if(!n){d.innerHTML='<h3>Selection</h3><p class="empty">Click any node to see what it imports, what imports it, and which tables or services it reaches.</p>';return;}
+  const outI=links.filter(l=>l.s===n),inI=links.filter(l=>l.t===n);
+  const list=(arr,dir)=>arr.length?`<ul>${arr.map(l=>{const o=dir==='out'?l.t:l.s;return `<li><button data-id="${o.id}">${o.id} <span style="color:var(--ink-3)">· ${l.kind}</span></button></li>`}).join('')}</ul>`:'<p class="empty">none</p>';
+  d.innerHTML=`<h3>Selection</h3>
+    <div class="path">${n.id}</div>
+    <div class="tagrow"><span class="tag" style="color:var(${COLORS[n.type]})">${LABELS[n.type]}</span>
+      <span class="tag" style="color:var(--ink-3)">deg ${n.degree}</span>
+      ${n.loc?`<span class="tag" style="color:var(--ink-3)">${n.loc} loc</span>`:''}</div>
+    <div class="rel"><h4>Depends on (${outI.length})</h4>${list(outI,'out')}</div>
+    <div class="rel"><h4>Depended on by (${inI.length})</h4>${list(inI,'in')}</div>`;
+  d.querySelectorAll('button[data-id]').forEach(b=>b.onclick=()=>select(byId.get(b.dataset.id)));
+}
+select(null);
+
+const q=document.getElementById('q'),qres=document.getElementById('qres');
+q.addEventListener('input',()=>{
+  const v=q.value.trim().toLowerCase();
+  if(!v){qres.innerHTML='';return;}
+  qres.innerHTML=nodes.filter(n=>n.id.toLowerCase().includes(v)).slice(0,8)
+    .map(n=>`<button data-id="${n.id}" style="background:none;border:0;padding:2px 0;text-align:left;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(${COLORS[n.type]})">${n.id}</button>`).join('')
+    ||'<span class="empty">no match</span>';
+  qres.querySelectorAll('button').forEach(b=>b.onclick=()=>{const n=byId.get(b.dataset.id);off.delete(n.type);select(n);scale=1.6;ox=-n.x*scale;oy=-n.y*scale;
+    [...legend.children].forEach((el,i)=>el.setAttribute('aria-pressed',String(!off.has(Object.keys(LABELS).filter(t=>counts[t])[i]))));});
+});
+</script>

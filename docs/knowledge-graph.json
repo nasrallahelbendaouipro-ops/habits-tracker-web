@@ -1,0 +1,2191 @@
+{
+  "generated_from": "static import/query analysis",
+  "node_count": 115,
+  "edge_count": 302,
+  "nodes": [
+    {
+      "id": "app/(app)/analytics/page.tsx",
+      "type": "route",
+      "loc": 612,
+      "degree": 11
+    },
+    {
+      "id": "db:habit_logs",
+      "type": "table",
+      "degree": 6
+    },
+    {
+      "id": "app/(app)/body/page.tsx",
+      "type": "route",
+      "loc": 358,
+      "degree": 9
+    },
+    {
+      "id": "db:habits",
+      "type": "table",
+      "degree": 6
+    },
+    {
+      "id": "app/(app)/calendar/page.tsx",
+      "type": "route",
+      "loc": 157,
+      "degree": 4
+    },
+    {
+      "id": "app/(app)/checkin/page.tsx",
+      "type": "route",
+      "loc": 559,
+      "degree": 8
+    },
+    {
+      "id": "app/(app)/dashboard/page.tsx",
+      "type": "route",
+      "loc": 640,
+      "degree": 13
+    },
+    {
+      "id": "app/(app)/goals/page.tsx",
+      "type": "route",
+      "loc": 137,
+      "degree": 8
+    },
+    {
+      "id": "app/(app)/habits/[id]/page.tsx",
+      "type": "route",
+      "loc": 433,
+      "degree": 10
+    },
+    {
+      "id": "app/(app)/habits/page.tsx",
+      "type": "route",
+      "loc": 211,
+      "degree": 7
+    },
+    {
+      "id": "app/(app)/layout.tsx",
+      "type": "route",
+      "loc": 31,
+      "degree": 4
+    },
+    {
+      "id": "app/(app)/loading.tsx",
+      "type": "route",
+      "loc": 11,
+      "degree": 0
+    },
+    {
+      "id": "app/(app)/mind/page.tsx",
+      "type": "route",
+      "loc": 292,
+      "degree": 6
+    },
+    {
+      "id": "app/(app)/onboarding/page.tsx",
+      "type": "route",
+      "loc": 167,
+      "degree": 4
+    },
+    {
+      "id": "app/(app)/planner/page.tsx",
+      "type": "route",
+      "loc": 189,
+      "degree": 9
+    },
+    {
+      "id": "app/(app)/routines/[id]/edit/page.tsx",
+      "type": "route",
+      "loc": 51,
+      "degree": 3
+    },
+    {
+      "id": "app/(app)/routines/[id]/page.tsx",
+      "type": "route",
+      "loc": 156,
+      "degree": 3
+    },
+    {
+      "id": "app/(app)/routines/[id]/session/page.tsx",
+      "type": "route",
+      "loc": 50,
+      "degree": 4
+    },
+    {
+      "id": "app/(app)/routines/new/page.tsx",
+      "type": "route",
+      "loc": 36,
+      "degree": 4
+    },
+    {
+      "id": "app/(app)/routines/page.tsx",
+      "type": "route",
+      "loc": 146,
+      "degree": 4
+    },
+    {
+      "id": "app/(app)/settings/page.tsx",
+      "type": "route",
+      "loc": 515,
+      "degree": 6
+    },
+    {
+      "id": "app/(app)/soul/page.tsx",
+      "type": "route",
+      "loc": 308,
+      "degree": 7
+    },
+    {
+      "id": "app/(auth)/layout.tsx",
+      "type": "route",
+      "loc": 25,
+      "degree": 0
+    },
+    {
+      "id": "app/(auth)/loading.tsx",
+      "type": "route",
+      "loc": 11,
+      "degree": 0
+    },
+    {
+      "id": "app/(auth)/login/page.tsx",
+      "type": "route",
+      "loc": 111,
+      "degree": 1
+    },
+    {
+      "id": "app/(auth)/register/page.tsx",
+      "type": "route",
+      "loc": 163,
+      "degree": 1
+    },
+    {
+      "id": "app/api/auth/google/callback/route.ts",
+      "type": "api",
+      "loc": 57,
+      "degree": 5
+    },
+    {
+      "id": "ext:Google OAuth",
+      "type": "external",
+      "degree": 4
+    },
+    {
+      "id": "ext:Sentry",
+      "type": "external",
+      "degree": 8
+    },
+    {
+      "id": "app/api/auth/google/route.ts",
+      "type": "api",
+      "loc": 31,
+      "degree": 3
+    },
+    {
+      "id": "app/api/google-calendar/events/route.ts",
+      "type": "api",
+      "loc": 43,
+      "degree": 5
+    },
+    {
+      "id": "app/api/health/ingest/route.ts",
+      "type": "api",
+      "loc": 146,
+      "degree": 6
+    },
+    {
+      "id": "db:health_sync_tokens",
+      "type": "table",
+      "degree": 2
+    },
+    {
+      "id": "db:daily_checkins",
+      "type": "table",
+      "degree": 3
+    },
+    {
+      "id": "app/api/health/token/route.ts",
+      "type": "api",
+      "loc": 55,
+      "degree": 3
+    },
+    {
+      "id": "app/api/parse-shift/route.ts",
+      "type": "api",
+      "loc": 59,
+      "degree": 5
+    },
+    {
+      "id": "ext:OpenAI GPT-4o",
+      "type": "external",
+      "degree": 2
+    },
+    {
+      "id": "app/api/planner/route.ts",
+      "type": "api",
+      "loc": 196,
+      "degree": 5
+    },
+    {
+      "id": "app/error.tsx",
+      "type": "route",
+      "loc": 50,
+      "degree": 1
+    },
+    {
+      "id": "app/layout.tsx",
+      "type": "route",
+      "loc": 34,
+      "degree": 3
+    },
+    {
+      "id": "app/manifest.ts",
+      "type": "route",
+      "loc": 19,
+      "degree": 0
+    },
+    {
+      "id": "app/page.tsx",
+      "type": "route",
+      "loc": 5,
+      "degree": 0
+    },
+    {
+      "id": "components/calendar/CalendarView.tsx",
+      "type": "component",
+      "loc": 522,
+      "degree": 11
+    },
+    {
+      "id": "db:calendar_events",
+      "type": "table",
+      "degree": 4
+    },
+    {
+      "id": "components/calendar/EventModal.tsx",
+      "type": "component",
+      "loc": 496,
+      "degree": 6
+    },
+    {
+      "id": "components/calendar/RoutinePlanningPanel.tsx",
+      "type": "component",
+      "loc": 110,
+      "degree": 4
+    },
+    {
+      "id": "components/charts/ProgressRing.tsx",
+      "type": "component",
+      "loc": 54,
+      "degree": 1
+    },
+    {
+      "id": "components/goals/GoalCard.tsx",
+      "type": "component",
+      "loc": 217,
+      "degree": 4
+    },
+    {
+      "id": "components/goals/GoalModal.tsx",
+      "type": "component",
+      "loc": 400,
+      "degree": 6
+    },
+    {
+      "id": "components/habits/BodyMetricForm.tsx",
+      "type": "component",
+      "loc": 55,
+      "degree": 2
+    },
+    {
+      "id": "components/habits/HabitForm.tsx",
+      "type": "component",
+      "loc": 351,
+      "degree": 15
+    },
+    {
+      "id": "components/habits/HabitModal.tsx",
+      "type": "component",
+      "loc": 39,
+      "degree": 7
+    },
+    {
+      "id": "components/habits/JournalingForm.tsx",
+      "type": "component",
+      "loc": 35,
+      "degree": 2
+    },
+    {
+      "id": "components/habits/MeditationForm.tsx",
+      "type": "component",
+      "loc": 65,
+      "degree": 2
+    },
+    {
+      "id": "components/habits/PrayerForm.tsx",
+      "type": "component",
+      "loc": 52,
+      "degree": 2
+    },
+    {
+      "id": "components/habits/ReadingForm.tsx",
+      "type": "component",
+      "loc": 59,
+      "degree": 3
+    },
+    {
+      "id": "components/habits/ShiftForm.tsx",
+      "type": "component",
+      "loc": 97,
+      "degree": 3
+    },
+    {
+      "id": "components/habits/StudyForm.tsx",
+      "type": "component",
+      "loc": 89,
+      "degree": 3
+    },
+    {
+      "id": "components/habits/TypePicker.tsx",
+      "type": "component",
+      "loc": 87,
+      "degree": 3
+    },
+    {
+      "id": "components/habits/WorkoutForm.tsx",
+      "type": "component",
+      "loc": 46,
+      "degree": 3
+    },
+    {
+      "id": "components/layout/BottomNav.tsx",
+      "type": "component",
+      "loc": 105,
+      "degree": 3
+    },
+    {
+      "id": "components/layout/MoreSheet.tsx",
+      "type": "component",
+      "loc": 101,
+      "degree": 2
+    },
+    {
+      "id": "components/layout/Sidebar.tsx",
+      "type": "component",
+      "loc": 112,
+      "degree": 5
+    },
+    {
+      "id": "components/pwa/NotificationCheck.tsx",
+      "type": "component",
+      "loc": 12,
+      "degree": 2
+    },
+    {
+      "id": "components/pwa/ServiceWorkerRegistration.tsx",
+      "type": "component",
+      "loc": 15,
+      "degree": 1
+    },
+    {
+      "id": "components/routines/RoutineCard.tsx",
+      "type": "component",
+      "loc": 79,
+      "degree": 2
+    },
+    {
+      "id": "components/routines/RoutineForm.tsx",
+      "type": "component",
+      "loc": 223,
+      "degree": 5
+    },
+    {
+      "id": "components/routines/SessionTimer.tsx",
+      "type": "component",
+      "loc": 184,
+      "degree": 3
+    },
+    {
+      "id": "components/routines/SessionView.tsx",
+      "type": "component",
+      "loc": 353,
+      "degree": 9
+    },
+    {
+      "id": "components/routines/SportTaskCard.tsx",
+      "type": "component",
+      "loc": 147,
+      "degree": 2
+    },
+    {
+      "id": "components/routines/TaskCountdownTimer.tsx",
+      "type": "component",
+      "loc": 142,
+      "degree": 1
+    },
+    {
+      "id": "components/routines/TaskItem.tsx",
+      "type": "component",
+      "loc": 164,
+      "degree": 2
+    },
+    {
+      "id": "components/routines/TaskListEditor.tsx",
+      "type": "component",
+      "loc": 225,
+      "degree": 2
+    },
+    {
+      "id": "components/ui/ConfirmDialog.tsx",
+      "type": "component",
+      "loc": 45,
+      "degree": 6
+    },
+    {
+      "id": "components/ui/DayProgramSheet.tsx",
+      "type": "component",
+      "loc": 348,
+      "degree": 3
+    },
+    {
+      "id": "components/ui/GlassCard.tsx",
+      "type": "component",
+      "loc": 25,
+      "degree": 11
+    },
+    {
+      "id": "components/ui/ModalShell.tsx",
+      "type": "component",
+      "loc": 94,
+      "degree": 5
+    },
+    {
+      "id": "components/ui/SessionTimer.tsx",
+      "type": "component",
+      "loc": 172,
+      "degree": 3
+    },
+    {
+      "id": "components/ui/ShiftParserModal.tsx",
+      "type": "component",
+      "loc": 271,
+      "degree": 5
+    },
+    {
+      "id": "lib/analytics.ts",
+      "type": "lib",
+      "loc": 318,
+      "degree": 11
+    },
+    {
+      "id": "db:routines",
+      "type": "table",
+      "degree": 4
+    },
+    {
+      "id": "db:routine_sessions",
+      "type": "table",
+      "degree": 3
+    },
+    {
+      "id": "lib/calendar.ts",
+      "type": "lib",
+      "loc": 53,
+      "degree": 8
+    },
+    {
+      "id": "lib/chart-theme.ts",
+      "type": "lib",
+      "loc": 74,
+      "degree": 5
+    },
+    {
+      "id": "lib/checkin.ts",
+      "type": "lib",
+      "loc": 127,
+      "degree": 6
+    },
+    {
+      "id": "lib/dayProgram.ts",
+      "type": "lib",
+      "loc": 66,
+      "degree": 1
+    },
+    {
+      "id": "lib/goals.ts",
+      "type": "lib",
+      "loc": 121,
+      "degree": 18
+    },
+    {
+      "id": "db:goals",
+      "type": "table",
+      "degree": 1
+    },
+    {
+      "id": "db:goal_habits",
+      "type": "table",
+      "degree": 1
+    },
+    {
+      "id": "db:goal_routines",
+      "type": "table",
+      "degree": 1
+    },
+    {
+      "id": "lib/google-calendar.ts",
+      "type": "lib",
+      "loc": 102,
+      "degree": 7
+    },
+    {
+      "id": "db:google_tokens",
+      "type": "table",
+      "degree": 1
+    },
+    {
+      "id": "ext:Google Calendar API",
+      "type": "external",
+      "degree": 1
+    },
+    {
+      "id": "lib/habits.ts",
+      "type": "lib",
+      "loc": 145,
+      "degree": 17
+    },
+    {
+      "id": "lib/health-readings.ts",
+      "type": "lib",
+      "loc": 163,
+      "degree": 3
+    },
+    {
+      "id": "db:health_readings",
+      "type": "table",
+      "degree": 1
+    },
+    {
+      "id": "lib/i18n.tsx",
+      "type": "lib",
+      "loc": 794,
+      "degree": 26
+    },
+    {
+      "id": "lib/integrations/health-connect.ts",
+      "type": "lib",
+      "loc": 58,
+      "degree": 3
+    },
+    {
+      "id": "ext:Google Health Connect",
+      "type": "external",
+      "degree": 1
+    },
+    {
+      "id": "lib/push.ts",
+      "type": "lib",
+      "loc": 62,
+      "degree": 2
+    },
+    {
+      "id": "lib/rate-limit.ts",
+      "type": "lib",
+      "loc": 48,
+      "degree": 8
+    },
+    {
+      "id": "ext:Upstash Redis",
+      "type": "external",
+      "degree": 1
+    },
+    {
+      "id": "lib/routines.ts",
+      "type": "lib",
+      "loc": 313,
+      "degree": 19
+    },
+    {
+      "id": "lib/shift-parser.ts",
+      "type": "lib",
+      "loc": 308,
+      "degree": 2
+    },
+    {
+      "id": "lib/supabase/admin.ts",
+      "type": "data-client",
+      "loc": 9,
+      "degree": 1
+    },
+    {
+      "id": "lib/supabase/client.ts",
+      "type": "data-client",
+      "loc": 11,
+      "degree": 27
+    },
+    {
+      "id": "lib/supabase/server.ts",
+      "type": "data-client",
+      "loc": 25,
+      "degree": 6
+    },
+    {
+      "id": "lib/theme.tsx",
+      "type": "lib",
+      "loc": 81,
+      "degree": 5
+    },
+    {
+      "id": "lib/types.ts",
+      "type": "lib",
+      "loc": 266,
+      "degree": 45
+    },
+    {
+      "id": "lib/utils.ts",
+      "type": "lib",
+      "loc": 33,
+      "degree": 14
+    },
+    {
+      "id": "lib/validation/schemas.ts",
+      "type": "lib",
+      "loc": 101,
+      "degree": 6
+    },
+    {
+      "id": "scripts/seed-routines.ts",
+      "type": "infra",
+      "loc": 253,
+      "degree": 1
+    },
+    {
+      "id": "proxy.ts",
+      "type": "infra",
+      "loc": 50,
+      "degree": 0
+    },
+    {
+      "id": "instrumentation.ts",
+      "type": "infra",
+      "loc": 28,
+      "degree": 1
+    },
+    {
+      "id": "instrumentation-client.ts",
+      "type": "infra",
+      "loc": 9,
+      "degree": 1
+    }
+  ],
+  "edges": [
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "lib/goals.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "lib/analytics.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "components/charts/ProgressRing.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "lib/chart-theme.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/analytics/page.tsx",
+      "target": "db:habit_logs",
+      "kind": "queries"
+    },
+    {
+      "source": "app/(app)/body/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/body/page.tsx",
+      "target": "lib/goals.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/body/page.tsx",
+      "target": "lib/health-readings.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/body/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/body/page.tsx",
+      "target": "lib/chart-theme.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/body/page.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/body/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/body/page.tsx",
+      "target": "db:habits",
+      "kind": "queries"
+    },
+    {
+      "source": "app/(app)/body/page.tsx",
+      "target": "db:habit_logs",
+      "kind": "queries"
+    },
+    {
+      "source": "app/(app)/calendar/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/calendar/page.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/calendar/page.tsx",
+      "target": "components/ui/ShiftParserModal.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/calendar/page.tsx",
+      "target": "components/calendar/RoutinePlanningPanel.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/checkin/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/checkin/page.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/checkin/page.tsx",
+      "target": "lib/checkin.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/checkin/page.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/checkin/page.tsx",
+      "target": "lib/calendar.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/checkin/page.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/checkin/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/checkin/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "lib/goals.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "lib/analytics.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "lib/theme.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "components/habits/HabitModal.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "components/ui/SessionTimer.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/dashboard/page.tsx",
+      "target": "components/ui/DayProgramSheet.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/goals/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/goals/page.tsx",
+      "target": "lib/goals.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/goals/page.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/goals/page.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/goals/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/goals/page.tsx",
+      "target": "components/goals/GoalCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/goals/page.tsx",
+      "target": "components/goals/GoalModal.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/goals/page.tsx",
+      "target": "db:habits",
+      "kind": "queries"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "components/habits/HabitModal.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "components/ui/ConfirmDialog.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "db:habit_logs",
+      "kind": "queries"
+    },
+    {
+      "source": "app/(app)/habits/[id]/page.tsx",
+      "target": "db:habits",
+      "kind": "queries"
+    },
+    {
+      "source": "app/(app)/habits/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/page.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/page.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/page.tsx",
+      "target": "components/habits/HabitModal.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/page.tsx",
+      "target": "components/ui/ConfirmDialog.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/habits/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/layout.tsx",
+      "target": "lib/supabase/server.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/layout.tsx",
+      "target": "components/layout/Sidebar.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/layout.tsx",
+      "target": "components/layout/BottomNav.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/layout.tsx",
+      "target": "components/pwa/NotificationCheck.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/mind/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/mind/page.tsx",
+      "target": "lib/checkin.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/mind/page.tsx",
+      "target": "lib/goals.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/mind/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/mind/page.tsx",
+      "target": "lib/chart-theme.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/mind/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/onboarding/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/onboarding/page.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/onboarding/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/onboarding/page.tsx",
+      "target": "components/habits/HabitForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/planner/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/planner/page.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/planner/page.tsx",
+      "target": "lib/goals.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/planner/page.tsx",
+      "target": "lib/checkin.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/planner/page.tsx",
+      "target": "lib/analytics.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/planner/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/planner/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/planner/page.tsx",
+      "target": "app/api/planner/route.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/planner/page.tsx",
+      "target": "db:habit_logs",
+      "kind": "queries"
+    },
+    {
+      "source": "app/(app)/routines/[id]/edit/page.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/[id]/edit/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/[id]/edit/page.tsx",
+      "target": "components/routines/RoutineForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/[id]/page.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/[id]/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/[id]/page.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/[id]/session/page.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/[id]/session/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/[id]/session/page.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/[id]/session/page.tsx",
+      "target": "components/routines/SessionView.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/new/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/new/page.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/new/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/new/page.tsx",
+      "target": "components/routines/RoutineForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/page.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/page.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/page.tsx",
+      "target": "components/ui/ConfirmDialog.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/routines/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/settings/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/settings/page.tsx",
+      "target": "lib/theme.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/settings/page.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/settings/page.tsx",
+      "target": "lib/integrations/health-connect.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/settings/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/settings/page.tsx",
+      "target": "lib/push.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/soul/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/soul/page.tsx",
+      "target": "lib/checkin.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/soul/page.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/soul/page.tsx",
+      "target": "lib/goals.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/soul/page.tsx",
+      "target": "components/ui/GlassCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/soul/page.tsx",
+      "target": "lib/chart-theme.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(app)/soul/page.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(auth)/login/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/(auth)/register/page.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/auth/google/callback/route.ts",
+      "target": "lib/supabase/server.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/auth/google/callback/route.ts",
+      "target": "lib/google-calendar.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/auth/google/callback/route.ts",
+      "target": "lib/rate-limit.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/auth/google/callback/route.ts",
+      "target": "ext:Google OAuth",
+      "kind": "calls"
+    },
+    {
+      "source": "app/api/auth/google/callback/route.ts",
+      "target": "ext:Sentry",
+      "kind": "calls"
+    },
+    {
+      "source": "app/api/auth/google/route.ts",
+      "target": "lib/supabase/server.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/auth/google/route.ts",
+      "target": "lib/rate-limit.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/auth/google/route.ts",
+      "target": "ext:Google OAuth",
+      "kind": "calls"
+    },
+    {
+      "source": "app/api/google-calendar/events/route.ts",
+      "target": "lib/supabase/server.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/google-calendar/events/route.ts",
+      "target": "lib/google-calendar.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/google-calendar/events/route.ts",
+      "target": "lib/validation/schemas.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/google-calendar/events/route.ts",
+      "target": "lib/rate-limit.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/google-calendar/events/route.ts",
+      "target": "ext:Sentry",
+      "kind": "calls"
+    },
+    {
+      "source": "app/api/health/ingest/route.ts",
+      "target": "lib/supabase/admin.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/health/ingest/route.ts",
+      "target": "lib/validation/schemas.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/health/ingest/route.ts",
+      "target": "lib/rate-limit.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/health/ingest/route.ts",
+      "target": "db:health_sync_tokens",
+      "kind": "queries"
+    },
+    {
+      "source": "app/api/health/ingest/route.ts",
+      "target": "db:daily_checkins",
+      "kind": "queries"
+    },
+    {
+      "source": "app/api/health/ingest/route.ts",
+      "target": "ext:Sentry",
+      "kind": "calls"
+    },
+    {
+      "source": "app/api/health/token/route.ts",
+      "target": "lib/supabase/server.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/health/token/route.ts",
+      "target": "lib/rate-limit.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/health/token/route.ts",
+      "target": "db:health_sync_tokens",
+      "kind": "queries"
+    },
+    {
+      "source": "app/api/parse-shift/route.ts",
+      "target": "lib/validation/schemas.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/parse-shift/route.ts",
+      "target": "lib/shift-parser.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/parse-shift/route.ts",
+      "target": "lib/rate-limit.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/parse-shift/route.ts",
+      "target": "ext:OpenAI GPT-4o",
+      "kind": "calls"
+    },
+    {
+      "source": "app/api/parse-shift/route.ts",
+      "target": "ext:Sentry",
+      "kind": "calls"
+    },
+    {
+      "source": "app/api/planner/route.ts",
+      "target": "lib/validation/schemas.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/planner/route.ts",
+      "target": "lib/rate-limit.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "app/api/planner/route.ts",
+      "target": "ext:OpenAI GPT-4o",
+      "kind": "calls"
+    },
+    {
+      "source": "app/api/planner/route.ts",
+      "target": "ext:Sentry",
+      "kind": "calls"
+    },
+    {
+      "source": "app/error.tsx",
+      "target": "ext:Sentry",
+      "kind": "calls"
+    },
+    {
+      "source": "app/layout.tsx",
+      "target": "lib/theme.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/layout.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "app/layout.tsx",
+      "target": "components/pwa/ServiceWorkerRegistration.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "lib/calendar.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "lib/google-calendar.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "components/calendar/EventModal.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "db:habits",
+      "kind": "queries"
+    },
+    {
+      "source": "components/calendar/CalendarView.tsx",
+      "target": "db:calendar_events",
+      "kind": "queries"
+    },
+    {
+      "source": "components/calendar/EventModal.tsx",
+      "target": "lib/calendar.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/EventModal.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/EventModal.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/EventModal.tsx",
+      "target": "components/ui/ModalShell.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/EventModal.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/RoutinePlanningPanel.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/RoutinePlanningPanel.tsx",
+      "target": "lib/analytics.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/calendar/RoutinePlanningPanel.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/goals/GoalCard.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/goals/GoalCard.tsx",
+      "target": "components/ui/ConfirmDialog.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/goals/GoalCard.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/goals/GoalModal.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/goals/GoalModal.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/goals/GoalModal.tsx",
+      "target": "lib/goals.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/goals/GoalModal.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/goals/GoalModal.tsx",
+      "target": "components/ui/ModalShell.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/BodyMetricForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "lib/validation/schemas.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "components/habits/TypePicker.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "components/habits/WorkoutForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "components/habits/ReadingForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "components/habits/StudyForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "components/habits/ShiftForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "components/habits/MeditationForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "components/habits/PrayerForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "components/habits/JournalingForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitForm.tsx",
+      "target": "components/habits/BodyMetricForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitModal.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitModal.tsx",
+      "target": "components/ui/ModalShell.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitModal.tsx",
+      "target": "components/habits/HabitForm.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/HabitModal.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/JournalingForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/MeditationForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/PrayerForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/ReadingForm.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/ReadingForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/ShiftForm.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/ShiftForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/StudyForm.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/StudyForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/TypePicker.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/TypePicker.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/WorkoutForm.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/habits/WorkoutForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/layout/BottomNav.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/layout/BottomNav.tsx",
+      "target": "components/layout/MoreSheet.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/layout/MoreSheet.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/layout/Sidebar.tsx",
+      "target": "lib/theme.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/layout/Sidebar.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/layout/Sidebar.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/layout/Sidebar.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/pwa/NotificationCheck.tsx",
+      "target": "lib/push.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/RoutineCard.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/RoutineCard.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/RoutineForm.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/RoutineForm.tsx",
+      "target": "lib/validation/schemas.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/RoutineForm.tsx",
+      "target": "components/routines/TaskListEditor.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionTimer.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionTimer.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionView.tsx",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionView.tsx",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionView.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionView.tsx",
+      "target": "components/routines/SessionTimer.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionView.tsx",
+      "target": "components/routines/SportTaskCard.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionView.tsx",
+      "target": "components/routines/TaskCountdownTimer.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionView.tsx",
+      "target": "components/routines/TaskItem.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SessionView.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/SportTaskCard.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/TaskItem.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/routines/TaskListEditor.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/ConfirmDialog.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/ConfirmDialog.tsx",
+      "target": "components/ui/ModalShell.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/DayProgramSheet.tsx",
+      "target": "lib/calendar.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/DayProgramSheet.tsx",
+      "target": "lib/dayProgram.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/GlassCard.tsx",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/SessionTimer.tsx",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/SessionTimer.tsx",
+      "target": "lib/habits.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/ShiftParserModal.tsx",
+      "target": "lib/calendar.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/ShiftParserModal.tsx",
+      "target": "lib/i18n.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/ShiftParserModal.tsx",
+      "target": "lib/shift-parser.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "components/ui/ShiftParserModal.tsx",
+      "target": "components/ui/ModalShell.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/analytics.ts",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/analytics.ts",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/analytics.ts",
+      "target": "lib/routines.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/analytics.ts",
+      "target": "db:routines",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/analytics.ts",
+      "target": "db:routine_sessions",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/analytics.ts",
+      "target": "db:daily_checkins",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/analytics.ts",
+      "target": "db:calendar_events",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/calendar.ts",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/calendar.ts",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/calendar.ts",
+      "target": "db:calendar_events",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/chart-theme.ts",
+      "target": "lib/theme.tsx",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/checkin.ts",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/checkin.ts",
+      "target": "db:daily_checkins",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "db:goals",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "db:goal_habits",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "db:habits",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "db:habit_logs",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "db:goal_routines",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "db:routines",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/goals.ts",
+      "target": "db:routine_sessions",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/google-calendar.ts",
+      "target": "lib/supabase/server.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/google-calendar.ts",
+      "target": "db:google_tokens",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/google-calendar.ts",
+      "target": "ext:Google Calendar API",
+      "kind": "calls"
+    },
+    {
+      "source": "lib/google-calendar.ts",
+      "target": "ext:Google OAuth",
+      "kind": "calls"
+    },
+    {
+      "source": "lib/habits.ts",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/habits.ts",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/habits.ts",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/habits.ts",
+      "target": "db:habits",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/habits.ts",
+      "target": "db:habit_logs",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/health-readings.ts",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/health-readings.ts",
+      "target": "db:health_readings",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/integrations/health-connect.ts",
+      "target": "ext:Google OAuth",
+      "kind": "calls"
+    },
+    {
+      "source": "lib/integrations/health-connect.ts",
+      "target": "ext:Google Health Connect",
+      "kind": "calls"
+    },
+    {
+      "source": "lib/rate-limit.ts",
+      "target": "ext:Upstash Redis",
+      "kind": "calls"
+    },
+    {
+      "source": "lib/routines.ts",
+      "target": "lib/supabase/client.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/routines.ts",
+      "target": "lib/types.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/routines.ts",
+      "target": "lib/utils.ts",
+      "kind": "imports"
+    },
+    {
+      "source": "lib/routines.ts",
+      "target": "db:routines",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/routines.ts",
+      "target": "db:routine_sessions",
+      "kind": "queries"
+    },
+    {
+      "source": "lib/routines.ts",
+      "target": "db:calendar_events",
+      "kind": "queries"
+    },
+    {
+      "source": "scripts/seed-routines.ts",
+      "target": "db:routines",
+      "kind": "queries"
+    },
+    {
+      "source": "instrumentation.ts",
+      "target": "ext:Sentry",
+      "kind": "calls"
+    },
+    {
+      "source": "instrumentation-client.ts",
+      "target": "ext:Sentry",
+      "kind": "calls"
+    }
+  ]
+}
