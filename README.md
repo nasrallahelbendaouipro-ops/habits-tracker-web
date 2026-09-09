@@ -4,7 +4,7 @@ A habit tracker built around three dimensions — Body, Mind, Soul — with stru
 routines, goal tracking, calendar planning (including Google Calendar sync), Apple
 Health data ingestion, and an AI-assisted daily planner.
 
-🔗 **Live:** <https://habits-tracker-web-gy38.vercel.app> (sign-in required — it
+🔗 **Live:** <https://habits-tracker-web.vercel.app> (sign-in required — it
 tracks personal data, so there is no public demo account)
 
 See [CLAUDE.md](./CLAUDE.md) for the full architecture reference (route map, data
@@ -61,7 +61,7 @@ Deploys are handled by Vercel's GitHub integration, not by CI (see Deployment be
 ## Deployment
 
 **Status: deployed on Vercel** at
-<https://habits-tracker-web-gy38.vercel.app>, built from this repo's default
+<https://habits-tracker-web.vercel.app>, built from this repo's default
 branch via Vercel's GitHub integration. Vercel provides CDN and static-asset
 caching by default, with no extra configuration.
 
