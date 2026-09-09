@@ -4,6 +4,9 @@ A habit tracker built around three dimensions — Body, Mind, Soul — with stru
 routines, goal tracking, calendar planning (including Google Calendar sync), Apple
 Health data ingestion, and an AI-assisted daily planner.
 
+🔗 **Live:** <https://habits-tracker-web-gy38.vercel.app> (sign-in required — it
+tracks personal data, so there is no public demo account)
+
 See [CLAUDE.md](./CLAUDE.md) for the full architecture reference (route map, data
 layer, Supabase schema, styling conventions) and [AGENTS.md](./AGENTS.md) for a note
 on Next.js version-specific behavior in this repo.
@@ -52,23 +55,25 @@ npm run typecheck   # tsc --noEmit
 ## CI
 
 `.github/workflows/ci.yml` runs `lint` + `build` on every push/PR to `my-feature-branch`.
-Build-only — no deploy step is wired in yet (see Deployment below).
+CI runs lint, type-check and build on every push (see `.github/workflows/ci.yml`).
+Deploys are handled by Vercel's GitHub integration, not by CI (see Deployment below).
 
 ## Deployment
 
-**Status: not yet deployed.** Target is Vercel first (zero-config, matches this
-Next.js setup already), with an AWS migration planned as a later, separate project —
-don't add AWS-specific config (Dockerfile, ECS/Amplify setup) until that migration
+**Status: deployed on Vercel** at
+<https://habits-tracker-web-gy38.vercel.app>, built from this repo's default
+branch via Vercel's GitHub integration. Vercel provides CDN and static-asset
+caching by default, with no extra configuration.
+
+An AWS migration is planned as a later, separate project — don't add
+AWS-specific config (Dockerfile, ECS/Amplify setup) until that migration
 actually starts.
 
-To deploy:
-1. Connect this GitHub repo to a new Vercel project.
-2. Set all env vars from `.env.example` in the Vercel dashboard (production values —
-   `SUPABASE_SERVICE_ROLE_KEY` and `GOOGLE_REDIRECT_URI` especially need real values,
-   not local-dev ones).
-3. Update the Google Cloud OAuth app's authorized redirect URI to match the
-   production domain.
-4. Set up free uptime monitoring (e.g. UptimeRobot, Better Uptime) against the live
-   URL once deployed — there's nothing to monitor before that.
+Environment variables are set in the Vercel dashboard from the list in
+[.env.example](./.env.example), with production values — `SUPABASE_SERVICE_ROLE_KEY`
+and `GOOGLE_REDIRECT_URI` in particular hold real production values there, not
+local-dev ones. The Google Cloud OAuth app's authorized redirect URI points at
+the production domain.
 
-Vercel provides CDN/static-asset caching by default with zero extra configuration.
+Still open: no uptime monitoring is wired up yet (e.g. UptimeRobot, Better
+Uptime) against the live URL.
